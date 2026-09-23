@@ -625,19 +625,31 @@
   ],
   [
    "PDR",
-   "100%"
+   "100 %"
+  ],
+  [
+   "Bytes received",
+   "15 000 bytes"
   ],
   [
    "Throughput",
    "120 bit/s"
   ],
   [
-   "Energy per sensor / sink",
-   "62.64 J / 62.64 J (of 100 J)"
+   "Energy consumed per sensor",
+   "62.64 J of 100 J (37.36 J left)"
   ],
   [
-   "Lifetime (1000 s run)",
-   "Not reached — all nodes alive"
+   "Energy consumed by the sink",
+   "62.64 J of 100 J"
+  ],
+  [
+   "Total energy (4 nodes)",
+   "250.54 J"
+  ],
+  [
+   "Lifetime",
+   "Not reached in 1000 s"
   ]
  ],
  "refs": [

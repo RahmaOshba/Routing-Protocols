@@ -17,40 +17,11 @@ function shot(slide,x,y,w,h,label){ // screenshot placeholder: right-click → C
 // numbering starts after title
 // ===== 2 Agenda
 {const s=content('Agenda',null,'Seven parts: background, related work, methodology, reproduction of existing protocols, the evolution of the proposed protocol, the final v8-Chain design, and the results.');
- const items=[['00','Work environment: ns-3 & first experiment'],['01','Background: WSNs & clustering'],['02','Related work & research gap'],['03','Methodology & simulation environment'],['04','Reproducing existing protocols'],['05','Proposed protocol: v1 → v7.2'],['06','Final design: v8-Chain'],['07','Results, findings, conclusion & references']];
+ const items=[['01','Background: WSNs & clustering'],['02','Related work & research gap'],['03','Methodology, ns-3 setup & first experiment'],['04','Reproducing existing protocols'],['05','Proposed protocol: v1 → v7.2'],['06','Final design: v8-Chain'],['07','Results, findings, conclusion & references']];
  items.forEach(([n,t],i)=>{const col=i<4?0:1,row=i<4?i:i-4; const x=0.9+col*5.9,y=1.6+row*1.2;
    s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x,y,w:5.5,h:0.95,rectRadius:0.12,fill:{color:C.WHITE},line:{color:C.LINE,width:1}});
    s.addText(n,{x:x+0.2,y,w:0.9,h:0.95,fontSize:26,bold:true,color:C.RED,valign:'middle',fontFace:FONT,margin:0,isTextBox:true});
    s.addText(t,{x:x+1.15,y,w:4.2,h:0.95,fontSize:16,color:C.CH,valign:'middle',fontFace:FONT,margin:0,isTextBox:true});});}
-
-// ===== SECTION 0 — work environment
-section('00','Work Environment','What I built this work on: VMware · Ubuntu · ns-3.41 · NetAnim — and the first simple network','Start the talk by showing the real environment: the virtual machine, ns-3, the first small experiment, then how every protocol in this thesis is run.');
-{const s=content('Tools & Setup','VMware · Ubuntu · ns-3',"Everything runs inside a VMware virtual machine with Ubuntu Linux. ns-3.41 is the network simulator; each protocol is a C++ file in the scratch folder. NetAnim replays the network as an animation; Python and Excel are used for the analysis.");
- arrowFlow(s,[{h:'VMware',t:'virtual machine'},{h:'Ubuntu Linux',t:'operating system'},{h:'ns-3.41',t:'C++ network simulator'},{h:'NetAnim',t:'network animation'},{h:'Python / Excel',t:'charts & comparison'}],0.9,1.55,11.6,1.05,{hs:15,ts:11.5});
- shot(s,0.9,2.9,7.3,3.55,'Screenshot 1 — VMware running Ubuntu with ns-3');
- card(s,8.5,2.9,4.0,3.55,'Where the code lives','~/ns-allinone-3.41/ns-3.41/scratch/\n\nOne .cc file per protocol / version (LEACH, HEED, PEGASIS, H-LEACH, SH-LEACH, v1 … v8-Chain).',{size:13.5});}
-{const s=content('First Experiment','A simple network to confirm the idea','The very first test: a tiny network with the full IEEE 802.15.4 stack (real PHY and MAC layers) — 3 sensors and 1 sink in a 20 × 20 m field, each sensor sending a 50-byte packet every 10 s for 1000 s. It confirmed that packets are delivered and energy is counted correctly before moving to 100-node experiments.');
- s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:0.9,y:1.55,w:4.2,h:4.1,rectRadius:0.1,fill:{color:'FFFFFF'},line:{color:C.LINE}});
- s.addShape(pres.shapes.RECTANGLE,{x:1.35,y:1.95,w:3.3,h:3.3,fill:{color:C.CREAM},line:{color:C.ROSE,width:1,dashType:'dash'}});
- [[1.8,2.4],[4.1,2.6],[2.2,4.7]].forEach(([x,y],i)=>{s.addShape(pres.shapes.LINE,{x:Math.min(x,3.0),y:Math.min(y,3.6),w:Math.abs(3.0-x),h:Math.abs(3.6-y),flipV:(3.0-x)*(3.6-y)<0,line:{color:C.GREY,width:1,dashType:'dash'}});
-   s.addShape(pres.shapes.OVAL,{x:x-0.17,y:y-0.17,w:0.34,h:0.34,fill:{color:C.RED},line:{color:C.RED}});
-   s.addText('S'+(i+1),{x:x-0.3,y:y+0.18,w:0.6,h:0.3,fontSize:11,bold:true,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});});
- s.addShape(pres.shapes.OVAL,{x:2.78,y:3.38,w:0.44,h:0.44,fill:{color:'FFC000'},line:{color:C.CH}});
- s.addText('Sink',{x:2.6,y:3.85,w:0.8,h:0.3,fontSize:11,bold:true,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});
- s.addText('20 × 20 m (illustration)',{x:0.9,y:5.28,w:4.2,h:0.3,fontSize:10,italic:true,color:C.GREY,align:'center',fontFace:FONT,margin:0,isTextBox:true});
- text(s,['IEEE 802.15.4 (LR-WPAN) PHY + MAC','50-byte packet every 10 s, 1000 s','Per-state (TX / RX / idle) energy'],{x:0.9,y:5.75,w:4.2,h:0.85,fontSize:12});
- table(s,['Metric','Result'],D.phy,{pos:{x:5.4,y:1.55,w:7.1,colW:[3.0,4.1]},center:9,boldFirst:true,rowH:0.5,fs:13});
- card(s,5.4,5.0,7.1,1.45,'Why it matters','Before trusting the 100-node analytical model, a real protocol stack showed 300/300 packets delivered and correct energy accounting.',{size:13.5,fill:C.PINK,border:C.ROSE});}
-{const s=content('First Experiment','Screenshots from ns-3','Replace the two frames with screenshots from the VM: the terminal output of the first experiment and its NetAnim view.');
- shot(s,0.9,1.55,5.65,4.9,'Screenshot 2 — terminal output of the first experiment');
- shot(s,6.85,1.55,5.65,4.9,'Screenshot 3 — NetAnim view of the 4-node network');}
-{const s=content('Running the Protocols','ns-3 terminal','Real output of the simulator for the center-BS run. The same command with scratch/hybrid-v8-chain-farBS runs the far-BS case. Each run also writes three CSV files and a NetAnim XML animation.');
- img(s,'img/terminal_center.png',5.7,1.35,6.9,5.35,1180,1040);
- card(s,0.9,1.55,4.5,2.3,'How it is run','./ns3 configure\n./ns3 run scratch/hybrid-v8-chain\n./ns3 run scratch/hybrid-v8-chain-farBS',{size:14});
- card(s,0.9,4.05,4.5,2.4,'What it produces','• Per-round results CSV (alive, CHs, PDR, energy…)\n• Per-node energy & lifetime CSVs\n• NetAnim XML — CHs in red, clusters coloured',{size:13.5});}
-{const s=content('NetAnim','The proposed protocol animated','Open hybrid-v8-chain-clustering.xml in NetAnim and take a screenshot mid-run: cluster heads are red, each cluster has its own colour, dead nodes are grey.');
- shot(s,0.9,1.55,8.0,4.9,'Screenshot 4 — NetAnim: v8-Chain clusters (CHs in red)');
- card(s,9.2,1.55,3.3,4.9,'Colours in NetAnim','• Red: cluster head\n• Same colour: same cluster\n• Light grey: no cluster\n• Dark grey: dead node\n• Yellow: sink (BS)',{size:13.5});}
 
 // ===== SECTION 1
 section('01','Background','Wireless sensor networks, clustering, and why energy decides everything');
@@ -124,6 +95,38 @@ section('03','Methodology','Reproduce → unify → modify → design → test')
  arrowFlow(s,[{h:'1',t:'Literature review'},{h:'2',t:'Protocol reconstruction'},{h:'3',t:'Unified environment'},{h:'4',t:'Targeted fixes'},{h:'5',t:'Proposed protocol'},{h:'6',t:'Controlled experiments'},{h:'7',t:'Analysis'}],0.9,1.75,11.6,1.55,{hs:22,ts:12.5,gap:0.3});
  card(s,0.9,3.7,5.65,2.7,'Two-step reproduction','Step 1 — paper-exact: our code with each paper\'s own field, radio, BS and packet size → validates the implementation.\nStep 2 — unified: the same code in one common environment → protocols become directly comparable.',{size:15});
  card(s,6.85,3.7,5.65,2.7,'One change per version','The proposed protocol was developed version by version, changing ONE mechanism each time, so every gain or loss can be attributed to its cause.',{size:15});}
+// ===== Work environment & first experiment (start of the experiments, inside Methodology)
+{const s=content('Tools & Setup','Where the experiments start',"All experiments run inside a VMware Workstation 17 virtual machine with Ubuntu Linux (6 GB RAM, 6 CPU cores, 40 GB disk, NAT network, snapshot 'clean + NS3'). ns-3.41 is the simulator; NetAnim replays the network; Python and Excel are used for analysis.");
+ arrowFlow(s,[{h:'VMware',t:'virtual machine'},{h:'Ubuntu Linux',t:'operating system'},{h:'ns-3.41',t:'C++ network simulator'},{h:'NetAnim',t:'network animation'},{h:'Python / Excel',t:'charts & comparison'}],0.9,1.5,11.6,0.95,{hs:15,ts:11.5});
+ img(s,'img/vm_settings.png',0.9,2.7,5.65,3.3,1920,1007);
+ img(s,'img/vm_ubuntu.png',6.85,2.7,5.65,3.3,1912,1002);
+ s.addText('VMware VM: 6 GB RAM · 6 cores · 40 GB · snapshot “clean + NS3”',{x:0.9,y:6.05,w:5.65,h:0.35,fontSize:11.5,italic:true,color:C.GREY,align:'center',fontFace:FONT,margin:0,isTextBox:true});
+ s.addText('Ubuntu desktop running inside the VM',{x:6.85,y:6.05,w:5.65,h:0.35,fontSize:11.5,italic:true,color:C.GREY,align:'center',fontFace:FONT,margin:0,isTextBox:true});}
+{const s=content('First Experiment','A simple network to confirm the idea','The very first test (scratch/wsn-first-packet.cc): 4 nodes with the full IEEE 802.15.4 stack — real PHY and MAC — so we see a packet actually travel from a sensor to the sink before building clustering on top.');
+ img(s,'img/first_netanim.png',0.9,1.5,6.1,3.9,1352,827);
+ s.addText('NetAnim view of the first network: nodes 0, 1, 2 = sensors · node 3 = sink',{x:0.9,y:5.45,w:6.1,h:0.35,fontSize:11.5,italic:true,color:C.GREY,align:'center',fontFace:FONT,margin:0,isTextBox:true});
+ table(s,['Setting','Value'],[['Nodes','3 sensors + 1 sink (MAC 00:01–00:04)'],['Placement','Random in a 20 × 20 m box'],['Stack','IEEE 802.15.4 LR-WPAN PHY + MAC, ACK on'],['Channel','Log-distance loss, constant-speed delay'],['Traffic','50 B every 10 s per sensor, 1000 s'],['Energy','100 J battery, 3.3 V · TX 17 mA · RX 19 mA']],{pos:{x:7.3,y:1.5,w:5.2,colW:[1.5,3.7]},center:9,boldFirst:true,rowH:0.62,fs:12});}
+{const s=content('First Experiment','Running it in ns-3','Build and run from the ns-3 folder; the program writes wsn-first-packet.xml, which NetAnim opens.');
+ img(s,'img/first_terminal.png',0.9,1.45,5.9,4.6,1146,885);
+ img(s,'img/netanim_cmd.png',0.9,6.1,5.9,0.52,836,72);
+ card(s,7.1,1.5,5.4,2.2,'Commands','cd ~/ns-allinone-3.41/ns-3.41\n./ns3 run scratch/wsn-first-packet\ncd ../netanim-3.109 && ./NetAnim',{size:13.5});
+ card(s,7.1,3.95,5.4,2.6,'What the terminal shows','• 4 node positions + colours for NetAnim\n• Each packet: 1 TX and 3 RX events — the channel is shared, so every node hears every frame\n• “No ipv4 object found” is normal: 802.15.4 here runs without IP',{size:13});}
+{const s=content('First Experiment','Results','Every sensor sent 100 packets; the sink received all 300.');
+ table(s,['Metric','Result'],D.phy,{pos:{x:0.9,y:1.5,w:6.6,colW:[2.9,3.7]},center:9,boldFirst:true,rowH:0.55,fs:13});
+ stat(s,8.0,1.6,4.5,'300 / 300','packets delivered — PDR 100 %');
+ stat(s,8.0,3.1,4.5,'120 bit/s','throughput (15 000 bytes in 1000 s)');
+ stat(s,8.0,4.6,4.5,'62.64 J','consumed by EVERY node — sensors and sink alike');}
+{const s=content('Lesson from the First Experiment','Energy','All four nodes spent the same 62.6 J although the sink received 300 packets and each sensor only sent 100. The radio stays in RX (listening) all the time, so the energy is set by listening time, not by traffic.');
+ card(s,0.9,1.5,5.65,2.35,'Why every node used 62.64 J','Radio always in RX mode (listening):\n3.3 V × 19 mA × 999 s ≈ 62.64 J\nActual transmitting: ≈ 2 ms per packet → about 0.2 s in the whole run.',{size:14});
+ card(s,6.85,1.5,5.65,2.35,'Consequence','At this rate every battery (100 J) empties after ≈ 1 600 s (≈ 27 min), even with no data at all. Idle listening, not sending, kills the node.',{size:14,fill:C.PINK,border:C.ROSE});
+ card(s,0.9,4.1,11.6,2.4,'How this shaped the thesis','• Nodes must sleep outside their turn → clustering with a TDMA schedule: members wake only in their slot, the CH listens for its cluster.\n• The 100-node study therefore uses the first-order radio model, which charges energy per transmitted / received bit (it assumes sleeping outside the slot).\n• The small experiment confirmed the delivery chain (sensor → MAC → channel → sink) and the energy tracking before scaling up.',{size:14});}
+{const s=content('Running the Protocols','ns-3 terminal','Real output of the simulator for the center-BS run. The same command with scratch/hybrid-v8-chain-farBS runs the far-BS case. Each run also writes three CSV files and a NetAnim XML animation.');
+ img(s,'img/terminal_center.png',5.7,1.35,6.9,5.35,1180,1040);
+ card(s,0.9,1.55,4.5,2.3,'How it is run','./ns3 run scratch/hybrid-v8-chain\n./ns3 run scratch/hybrid-v8-chain-farBS\n(one .cc file per protocol in scratch/)',{size:14});
+ card(s,0.9,4.05,4.5,2.4,'What it produces','• Per-round results CSV (alive, CHs, PDR, energy…)\n• Per-node energy & lifetime CSVs\n• NetAnim XML — CHs in red, clusters coloured',{size:13.5});}
+{const s=content('NetAnim','The proposed protocol animated','Open hybrid-v8-chain-clustering.xml in NetAnim and take a screenshot mid-run: cluster heads are red, each cluster has its own colour, dead nodes are grey.');
+ shot(s,0.9,1.55,8.0,4.9,'Screenshot — NetAnim: v8-Chain clusters (CHs in red)');
+ card(s,9.2,1.55,3.3,4.9,'Colours in NetAnim','• Red: cluster head\n• Same colour: same cluster\n• Light grey: no cluster\n• Dark grey: dead node\n• Yellow: sink (BS)',{size:13.5});}
 {const s=content('Unified Simulation Environment',null,'All results in the comparison use exactly these settings.');
  table(s,['Parameter','Value'],D.env.slice(0,8).concat([D.env[12],D.env[13],D.env[14]]),{pos:{x:0.9,y:1.55,w:7.2,colW:[2.6,4.6]},center:9,boldFirst:true});
  stat(s,8.7,1.7,3.8,'100','sensor nodes in a 100 × 100 m field');
