@@ -636,7 +636,7 @@ int main(int argc, char* argv[])
     cmd.Parse(argc, argv);
 
     cout << "\n========================================\n";
-    cout << "  HYBRID v6: v5b + epoch fix + proactive handover + orphan re-join + direct-to-BS + energy-gated CH\n";
+    cout << "  HYBRID v8-Chain: v8 + energy-aware CH-to-CH relay (v8 = v5b + epoch fix + proactive handover + orphan re-join + direct-to-BS + energy-gated CH)\n";
     cout << "========================================\n";
     cout << "Setup interval = " << SETUP_INTERVAL << " rounds (control overhead paid once per interval)\n";
     cout << "Selection = single-pass energy x connectivity score (no iteration)\n";

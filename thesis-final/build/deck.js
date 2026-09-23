@@ -193,6 +193,17 @@ section('06','Final Design: v8-Chain','Prevent CH death, relieve the CHs, relay 
 {const s=content('v8-Chain','Network structure in round 1','Real simulation state (seed 12345), not an illustration.');
  img(s,'img/v8_chain_topology.png',0.7,1.3,11.9,5.45,1800,974);}
 
+// ===== DEMO
+{const s=content('Demo','Running v8-Chain in ns-3','Real output of the simulator for the center-BS run. The same command with scratch/hybrid-v8-chain-farBS runs the far-BS case. Each run also writes three CSV files and a NetAnim XML animation.');
+ img(s,'img/terminal_center.png',5.7,1.35,6.9,5.35,1180,1040);
+ card(s,0.9,1.55,4.5,2.3,'How it is run','./ns3 configure\n./ns3 run scratch/hybrid-v8-chain\n./ns3 run scratch/hybrid-v8-chain-farBS',{size:14});
+ card(s,0.9,4.05,4.5,2.4,'What it produces','• Per-round results CSV (alive, CHs, PDR, energy…)\n• Per-node energy & lifetime CSVs\n• NetAnim XML — CHs in red, clusters coloured',{size:13.5});}
+{const s=content('Demo','The network over time (BS center)','Snapshots from the simulation output: round 1 (all alive), round 1300 (batteries half used, CHs rotate), round 2621 (first node dies — FND), round 2740 (near the end). Dark red = full battery, pale = almost empty, grey x = dead.');
+ img(s,'img/snap_center.png',0.7,1.4,11.9,4.4,2580,735);
+ card(s,0.9,5.75,11.6,0.75,'Batteries drain evenly: all 100 nodes are still alive at round 2621, and the last one dies 135 rounds later.',null,{headSize:14,headColor:C.CH});}
+{const s=content('Demo','The network over time (far BS)','Same view with the BS at (50, −100): CHs pass data to each other towards the BS (energy-aware relay). FND at round 1716.');
+ img(s,'img/snap_far.png',0.7,1.3,11.9,5.4,2580,945);}
+
 // ===== SECTION 7
 section('07','Results','Center vs. far BS · ablation · robustness · comparison');
 {const s=content('Results','BS at the field center','v8-Chain = v8 at the center (no relays). The big gains vs. v7: +1070 rounds FND and +0.84 pp PDR.');
