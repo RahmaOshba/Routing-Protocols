@@ -38,6 +38,9 @@ using namespace std;
 //       is the same or lower, and the CH saves RX + aggregation energy.
 //   I5. ENERGY-GATED CH ELECTION: nodes below the network's average residual
 //       energy may not volunteer as CH, so weak nodes are not overloaded.
+//   +   RELATIVE LOW-ENERGY THRESHOLD for Energy-Aware Repair: 5% of the live
+//       network average instead of 5% of E0, so Backup Failover keeps working
+//       late in the network's life instead of rejecting every backup.
 //
 // Each improvement can be switched off for an ablation study by compiling
 // with -DI1=0 ... -DI5=0.
@@ -176,11 +179,17 @@ static vector<int32_t> g_backupOf(N, -1);   // g_backupOf[chId] = backup node id
 static vector<bool> g_failedOver(N, false); // whether chId's backup has already been promoted this interval
 
 // ---- IMPROVEMENT 2: Energy-Aware Repair ----
-// Below this fraction of E0, a node is judged too close to death for a repair
-// transmission to have any real chance of succeeding, so it is left silent
-// (saving its last energy) instead of being forced into a doomed send.
+// Below this fraction of the network's CURRENT average residual energy, a node
+// is judged too close to death for a repair transmission to have any real
+// chance of succeeding, so it is left silent (saving its last energy) instead
+// of being forced into a doomed send.
+// v6 change: v5b compared against 5% of E0 (a fixed 0.025 J). Late in the
+// network's life EVERY node is below 0.025 J, so every backup was rejected and
+// failover never fired. Comparing against the live average ("weak relative to
+// its neighbours right now") keeps the mechanism working until the end.
 static constexpr double LOW_ENERGY_FRAC = 0.05;
-static bool LowEnergy(double energy) { return energy < LOW_ENERGY_FRAC * E0; }
+static double g_avgEnergy = E0;     // refreshed at the start of every round
+static bool LowEnergy(double energy) { return energy < LOW_ENERGY_FRAC * g_avgEnergy; }
 
 // ---- NEW: Chain/Cluster Repair -- promote backup, reconnect orphaned members, same round ----
 static void TryFailover(vector<SensorNode>& nodes, uint32_t deadCH, RoundResult& r)
@@ -370,6 +379,13 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
     r.wasSetupRound = isSetupRound;
 
     const double before = [&]() { double s = 0.0; for (const auto& n : nodes) s += n.energy; return s; }();
+
+    {   // v6: live average residual energy used by LowEnergy()
+        double sum = 0.0;
+        uint32_t alive = 0;
+        for (const auto& n : nodes) if (n.alive) { sum += n.energy; ++alive; }
+        g_avgEnergy = alive ? sum / alive : E0;
+    }
 
     // ---- Control overhead ONLY on setup rounds (the key saving) ----
     if (isSetupRound) {
