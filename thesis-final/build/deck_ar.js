@@ -1,6 +1,10 @@
 const L=require('./deck_ar_lib.js');const {pres,C,FONT,AR,net,frame,content,section,text,card,stat,table,lifeChart,pdrChart,img,arrowFlow}=L;
 const D=require('./data_ar.json');
 const pct=v=>(v*100).toFixed(2)+'%';
+function shot(slide,x,y,w,h,label){
+  slide.addShape(pres.shapes.ROUNDED_RECTANGLE,{x,y,w,h,rectRadius:0.1,fill:{color:'FFFFFF'},line:{color:C.ROSE,width:1.5,dashType:'dash'}});
+  slide.addText([{text:'📷',options:{fontSize:30,breakLine:true}},{text:label,options:{fontSize:13,bold:true,color:C.RED,breakLine:true}},{text:'(حطي هنا الـ screenshot من VMware)',options:{fontSize:11,italic:true,color:C.GREY}}],Object.assign({x:x+0.2,y:y+0.2,w:w-0.4,h:h-0.4,align:'center',valign:'middle',margin:0,isTextBox:true},AR));
+}
 const T=(o)=>Object.assign({},AR,o);
 
 // 1 Title
@@ -13,11 +17,40 @@ const T=(o)=>Object.assign({},AR,o);
  s.addNotes('عنوان الرسالة بالبلدي: إزاي نخلّي شبكة الحساسات تعيش أطول وتوصّل داتا أكتر، وتكون آمنة. ابدئي بتعريف نفسك والمشرفين، وقولي إن العرض هيمشي من الخلفية لحد البروتوكول النهائي v8-Chain ونتايجه.');}
 // 2 Agenda
 {const s=content('المحتوى',null,'خريطة العرض: 7 أجزاء. قوليها في جملة واحدة: هنبدأ بالخلفية، وبعدين اللي عمله الباحثين قبلنا، وبعدين طريقتي في الشغل، وبعدين البروتوكول بتاعي ونتايجه.');
- const items=[['01','الخلفية: شبكات الحساسات والـ Clustering'],['02','الأبحاث السابقة والفجوة البحثية'],['03','المنهجية وبيئة المحاكاة'],['04','إعادة بناء البروتوكولات الموجودة'],['05','البروتوكول المقترح: من v1 لـ v7.2'],['06','التصميم النهائي: v8-Chain'],['07','النتايج والخلاصة']];
+ const items=[['00','بيئة العمل: ns-3 وأول تجربة'],['01','الخلفية: شبكات الحساسات والـ Clustering'],['02','الأبحاث السابقة والفجوة البحثية'],['03','المنهجية وبيئة المحاكاة'],['04','إعادة بناء البروتوكولات الموجودة'],['05','البروتوكول المقترح: من v1 لـ v7.2'],['06','التصميم النهائي: v8-Chain'],['07','النتايج والخلاصة والمراجع']];
  items.forEach(([n,t],i)=>{const col=i<4?0:1,row=i<4?i:i-4; const x=7.0-col*5.9,y=1.6+row*1.2;
    s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x,y,w:5.5,h:0.95,rectRadius:0.12,fill:{color:C.WHITE},line:{color:C.LINE,width:1}});
    s.addText(n,{x:x+4.4,y,w:0.9,h:0.95,fontSize:26,bold:true,color:C.RED,valign:'middle',align:'right',fontFace:FONT,margin:0,isTextBox:true});
    s.addText(t,T({x:x+0.2,y,w:4.1,h:0.95,fontSize:16,color:C.CH,valign:'middle',align:'right',margin:0,isTextBox:true}));});}
+
+// ===== 00 بيئة العمل
+section('00','بيئة العمل','اشتغلت على إيه: VMware · Ubuntu · ns-3.41 · NetAnim — وأول شبكة بسيطة جربتها','ابدئي العرض بإنك توري البيئة الحقيقية: الـ virtual machine، وns-3، وأول تجربة صغيرة، وبعدين إزاي بتشغّلي أي بروتوكول في الرسالة.');
+{const s=content('الأدوات والتجهيز','VMware · Ubuntu · ns-3','كل الشغل شغّال جوه virtual machine على VMware، وعليها Ubuntu Linux. ns-3.41 هو المحاكي، وكل بروتوكول عبارة عن ملف C++ في فولدر scratch. NetAnim بيعرض الشبكة كأنيميشن، وPython وExcel للتحليل والرسومات.');
+ arrowFlow(s,[{h:'VMware',t:'جهاز افتراضي'},{h:'Ubuntu Linux',t:'نظام التشغيل'},{h:'ns-3.41',t:'محاكي شبكات بـ C++'},{h:'NetAnim',t:'أنيميشن للشبكة'},{h:'Python / Excel',t:'رسومات ومقارنة'}],0.9,1.55,11.6,1.05,{hs:15,ts:11.5});
+ shot(s,5.2,2.9,7.3,3.55,'Screenshot 1 — VMware وعليها Ubuntu وns-3');
+ card(s,0.9,2.9,4.0,3.55,'الكود موجود فين','\u200E~/ns-allinone-3.41/ns-3.41/scratch/\u200E\n\nملف .cc لكل بروتوكول أو نسخة (LEACH وHEED وPEGASIS وH-LEACH وSH-LEACH ومن v1 لـ v8-Chain).',{size:13.5});}
+{const s=content('أول تجربة','شبكة بسيطة أأكد بيها الفكرة','أول اختبار خالص: شبكة صغيرة جدًا بطبقات الشبكة الحقيقية (PHY وMAC بمعيار IEEE 802.15.4): 3 حساسات وsink في أرض 20×20 متر، وكل حساس بيبعت رسالة 50 بايت كل 10 ثواني لمدة 1000 ثانية. النتيجة إن كل الرسايل وصلت (300 من 300) والطاقة اتحسبت صح، فاطمأنينا قبل ما نروح لتجارب الـ 100 نود.');
+ s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:8.3,y:1.55,w:4.2,h:4.1,rectRadius:0.1,fill:{color:'FFFFFF'},line:{color:C.LINE}});
+ s.addShape(pres.shapes.RECTANGLE,{x:8.75,y:1.95,w:3.3,h:3.3,fill:{color:C.CREAM},line:{color:C.ROSE,width:1,dashType:'dash'}});
+ [[9.2,2.4],[11.5,2.6],[9.6,4.7]].forEach(([x,y],i)=>{s.addShape(pres.shapes.LINE,{x:Math.min(x,10.4),y:Math.min(y,3.6),w:Math.abs(10.4-x),h:Math.abs(3.6-y),flipV:(10.4-x)*(3.6-y)<0,line:{color:C.GREY,width:1,dashType:'dash'}});
+   s.addShape(pres.shapes.OVAL,{x:x-0.17,y:y-0.17,w:0.34,h:0.34,fill:{color:C.RED},line:{color:C.RED}});
+   s.addText('S'+(i+1),{x:x-0.3,y:y+0.18,w:0.6,h:0.3,fontSize:11,bold:true,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});});
+ s.addShape(pres.shapes.OVAL,{x:10.18,y:3.38,w:0.44,h:0.44,fill:{color:'FFC000'},line:{color:C.CH}});
+ s.addText('Sink',{x:10.0,y:3.85,w:0.8,h:0.3,fontSize:11,bold:true,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});
+ s.addText('20 × 20 م (رسمة توضيحية)',T({x:8.3,y:5.28,w:4.2,h:0.3,fontSize:10,italic:true,color:C.GREY,align:'center',margin:0,isTextBox:true}));
+ text(s,['طبقات PHY وMAC بمعيار IEEE 802.15.4','رسالة 50 بايت كل 10 ثواني، لمدة 1000 ثانية','طاقة حسب حالة الجهاز (إرسال / استقبال / خامل)'],{x:8.3,y:5.75,w:4.2,h:0.85,fontSize:12});
+ table(s,['المقياس','النتيجة'],D.phy,{pos:{x:0.9,y:1.55,w:7.1,colW:[3.0,4.1]},center:9,boldFirst:true,rowH:0.5,fs:13});
+ card(s,0.9,5.0,7.1,1.45,'ليه مهمة؟','قبل ما نعتمد على النموذج الحسابي للـ 100 نود، طبقات الشبكة الحقيقية بيّنت إن 300/300 رسالة وصلت والطاقة اتحسبت صح.',{size:13.5,fill:C.PINK,border:C.ROSE});}
+{const s=content('أول تجربة','Screenshots من ns-3','حطي مكان الإطارين دول صورتين من الـ VM: مخرجات التيرمينال بتاعة أول تجربة، وشكلها في NetAnim.');
+ shot(s,6.85,1.55,5.65,4.9,'Screenshot 2 — مخرجات التيرمينال لأول تجربة');
+ shot(s,0.9,1.55,5.65,4.9,'Screenshot 3 — الشبكة البسيطة (4 نودز) في NetAnim');}
+{const s=content('تشغيل البروتوكولات','من التيرمينال','ده الخرج الحقيقي للمحاكي لما الـ BS في النص. نفس الأمر مع scratch/hybrid-v8-chain-farBS بيشغّل حالة الـ BS البعيد. وكل تشغيل بيطلّع 3 ملفات CSV وملف XML للـ NetAnim (أنيميشن للشبكة). لو عايزة تعرضي لايف: شغّلي الأمر ده قدام اللجنة، أو افتحي ملف الـ XML في NetAnim.');
+ img(s,'img/terminal_center.png',0.7,1.35,6.9,5.35,1180,1040);
+ card(s,7.9,1.55,4.6,2.3,'طريقة التشغيل','./ns3 configure\n./ns3 run scratch/hybrid-v8-chain\n./ns3 run scratch/hybrid-v8-chain-farBS',{size:13,ltr:true});
+ card(s,7.9,4.05,4.6,2.4,'بيطلّع إيه','• ملف نتايج لكل round (العايشين، الـ CHs، الـ PDR، الطاقة…)\n• ملف طاقة وعمر كل نود\n• ملف NetAnim: الـ CHs بالأحمر وكل مجموعة بلون',{size:13.5});}
+{const s=content('NetAnim','البروتوكول المقترح كأنيميشن','افتحي ملف hybrid-v8-chain-clustering.xml في NetAnim وخدي screenshot في نص التشغيل: الـ CHs بالأحمر، وكل مجموعة ليها لون، والنودز الميتة رمادي.');
+ shot(s,4.6,1.55,7.9,4.9,'Screenshot 4 — NetAnim: مجموعات v8-Chain (الـ CHs بالأحمر)');
+ card(s,0.9,1.55,3.4,4.9,'الألوان في NetAnim','• أحمر: Cluster Head\n• نفس اللون: نفس المجموعة\n• رمادي فاتح: من غير مجموعة\n• رمادي غامق: نود ميت\n• أصفر: الـ Sink (BS)',{size:13.5});}
 
 // ===== 01
 section('01','الخلفية','شبكات الحساسات، والـ Clustering، وليه الطاقة هي اللي بتتحكم في كل حاجة','فاصل. العنوان الفرعي بيلخّص كل حاجة: الطاقة هي اللي بتتحكم في كل حاجة.');
@@ -59,6 +92,14 @@ section('02','الأبحاث السابقة','LEACH · HEED · PEGASIS · اله
  card(s,0.9,5.25,11.6,1.2,'الدرس','دمج LEACH وHEED بيحسّن اختيار الـ CH — بس محدش فيهم حل إعادة الاستخدام، ولا موت الـ CH، ولا التوصيل بين الـ CHs.',{size:15,fill:C.PINK,border:C.ROSE});}
 {const s=content('أبحاث حديثة','2024 – 2026','4 أبحاث حديثة، كل واحد حسّن حاجة محددة: EECH-HEED بيقسّم مناطق ومابيبعتش غير لما القراءة تتغير. DL-HEED بيستخدم شبكة عصبية (ذكاء اصطناعي) عشان يختار الـ CH. TLC-LEACH بيحل مشكلة النودز اللي على أطراف الـ clusters. RL-ILEACH بيستخدم التعلّم بالتجربة (Reinforcement Learning). آخر صف: مفيش بحث جمع كل الحلول مع بعض، وده الـ gap اللي رسالتك بتملاه.');
  table(s,['البحث','البروتوكول','الفكرة','الناقص مقارنة بشغلنا'],[['Kaur وآخرين، 2025','EECH-HEED','HEED + مناطق + إرسال بس لما القراءة تتغير','مش LEACH+HEED، ومفيش إعادة استخدام ولا حماية من الموت'],['Juwaied وJackowska-Strumillo، 2025','DL-HEED','شبكة عصبية بدل معادلة HEED','تكلفة تدريب، ومفيش إعادة استخدام ولا توصيل'],['Subedi وآخرين، 2024','TLC-LEACH','Clustering بمستويين + حل مشكلة الأطراف','مفيش حماية من موت الـ CH'],['El-Sayed وآخرين، 2026','RL-ILEACH','تعلّم بالتجربة جوه ILEACH','تحسين الـ PDR مش مؤكد إحصائيًا'],['Razaque 2016 / Shrestha 2015','H-LEACH / SH-LEACH','دمج مباشر لـ LEACH + HEED','مفيش إعادة استخدام ولا Backup ولا توصيل — ده الـ gap']],{pos:{x:0.9,y:1.6,w:11.6,colW:[2.8,1.8,3.6,3.4]},center:9,hl:i=>i===4,rowH:0.85});}
+{const s=content('آليات موجودة في الأبحاث','إيه اللي موجود، وإيه الجديد','كل آلية في v8-Chain موجودة في بحث ما لوحدها. الجديد إننا جمعناها كلها، وخلينا التوصيل بين الـ CHs قرار حسب الطاقة، وقسنا أثر كل آلية لوحدها. دي أهم شريحة لو المحكّم سأل: فيه حد عمل كده قبل كده؟');
+ table(s,['الآلية في v8-Chain','موجودة فين قبل كده','الرسالة زوّدت إيه'],[
+  ['دمج LEACH وHEED','H-LEACH [5]، SH-LEACH [4]','معادلة واحدة + إعادة استخدام؛ وتصليح البحثين'],
+  ['نائب للـ CH (Backup)','FTEC [10] (HEED + نائب)','نائب + إصلاح المجموعة بحد طاقة نسبي'],
+  ['تسليم الـ CH قبل ما طاقته تخلص','تغيير الـ CH بحد طاقة (مراجعة [11])','تسليم استباقي كل round حسب تكلفة الشغل'],
+  ['توصيل multi-hop بين المجموعات','EEUC [12]، EAUCA [13]','توصيل بس لما يبقى أرخص — بيتأقلم مع مكان الـ BS'],
+  ['نموذج راديو بمعادلتين','Heinzelman وآخرين 2002 [14]','نفس النموذج لكل البروتوكولات (مقارنة عادلة)']],{pos:{x:0.9,y:1.6,w:11.6,colW:[3.2,3.8,4.6]},center:9,boldFirst:true,rowH:0.6,fs:13});
+ card(s,0.9,5.8,11.6,0.7,'محدش من الأبحاث جمع الأربعة أعمدة — الجديد هو الدمج، والتقييم المضبوط خطوة بخطوة.',null,{headSize:14,headColor:C.CH});}
 {const s=content('الفجوة البحثية','إيه الناقص؟','4 أعمدة، وكل بحث قبلك حل عمود واحد أو اتنين بس: (1) اختيار CH ذكي (الطاقة × عدد الجيران)، (2) إعادة استخدام الـ clusters بدل ما نعيد التكوين كل round (نوفّر رسايل)، (3) التعامل مع موت الـ CH (نائب + إصلاح + وقاية)، (4) التوصيل بين الـ CHs بس لما يوفّر طاقة. الجملة الأخيرة: بروتوكول واحد بيجمع الأربعة.');
  [['1','اختيار CH ذكي','الطاقة × عدد الجيران'],['2','إعادة استخدام الـ clusters','رسايل تحكم أقل'],['3','حماية من موت الـ CH','نائب + إصلاح + وقاية'],['4','توصيل ذكي بين الـ CHs','بس لما يوفّر طاقة']].forEach(([n,h,b],i)=>card(s,9.75-i*2.97,1.7,2.75,2.6,h,b,{tag:n,size:16}));
  s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:0.9,y:4.75,w:11.6,h:1.6,rectRadius:0.12,fill:{color:C.RED},line:{color:C.RED}});
@@ -82,10 +123,6 @@ section('03','المنهجية','نعيد البناء ← نوحّد البيئ
   s.addText(b,T({x:x+0.15,y:2.75,w:2.45,h:0.5,fontSize:15,bold:true,color:C.CH,align:'center',margin:0,isTextBox:true}));
   s.addText(c2,T({x:x+0.2,y:3.3,w:2.35,h:1.8,fontSize:14,color:C.CH,align:'center',valign:'top',margin:0,isTextBox:true}));});
  card(s,0.9,5.5,11.6,0.95,'وكمان بنعدّ الرسايل اللي وصلت فعلًا — عشان نكشف النودز "العايشة والساكتة" اللي بتخلّي الـ LND يبان أحسن من الحقيقة.',null,{headSize:14,headColor:C.CH});}
-{const s=content('تأكيد بطبقات الشبكة الحقيقية','IEEE 802.15.4','قبل ما نعتمد على نموذج الطاقة الحسابي، عملنا تجربة صغيرة بطبقات الشبكة الحقيقية (PHY وMAC) في ns-3: 3 حساسات وsink، لمدة 1000 ثانية. كل الرسايل وصلت (300 من 300)، والطاقة اتحسبت صح. يعني طريقة الحساب اللي استخدمناها في باقي التجارب موثوقة.');
- text(s,['طبقات PHY وMAC حقيقية بمعيار IEEE 802.15.4، وفقد إشارة حسب المسافة، وطاقة حسب حالة الجهاز','4 نودز (3 حساسات + sink)، أرض 20×20 م، رسالة 50 بايت كل 10 ثواني، لمدة 1000 ثانية','بتأكد إن حساب الطاقة والتوصيل في النموذج الحسابي صح'],{x:6.6,y:1.7,w:5.9,h:3.8,fontSize:15});
- table(s,['المقياس','النتيجة'],D.phy,{pos:{x:0.9,y:1.7,w:5.4,colW:[2.4,3.0]},center:9,boldFirst:true,rowH:0.6});}
-
 // ===== 04
 section('04','إعادة بناء البروتوكولات الموجودة','المنشور ← بإعدادات البحث ← الموحّد ← بعد التحسين','فاصل: هنقارن أرقام الأبحاث بأرقامنا.');
 {const s=content('المنشور مقابل إعادة البناء','الخطوة 1: بإعدادات البحث','عمود "LND المنشور" هو الرقم المكتوب في البحث الأصلي. الأعمدة التانية هي أرقامنا لما شغّلنا الكود بتاعنا بإعدادات البحث نفسه. أرقام الأبحاث مش بتتقارن ببعض، لأن كل بحث استخدم مساحة ونموذج طاقة ومكان BS مختلف. النتيجة: PEGASIS طلع مطابق لبحثه بفرق أقل من 2.3%، يعني الكود صح.');
@@ -179,17 +216,6 @@ section('06','التصميم النهائي: v8-Chain','نمنع موت الـ C
 {const s=content('v8-Chain','شكل الشبكة في أول round','دي حالة المحاكاة الحقيقية مش رسمة توضيحية. الشمال: الـ BS في النص، فمفيش ولا توصيل بين CHs، والنقط الخضرا نودز قريبة من الـ BS بتبعتله على طول. اليمين: الـ BS بعيد تحت، فالـ CHs عملت سلسلة لوحدها (الأسهم البرتقاني) لحد CH واحد بيبعت للـ BS.');
  img(s,'img/v8_chain_topology.png',0.7,1.3,11.9,5.45,1800,974);}
 
-// ===== DEMO
-{const s=content('ديمو','تشغيل v8-Chain في ns-3','ده الخرج الحقيقي للمحاكي لما الـ BS في النص. نفس الأمر مع scratch/hybrid-v8-chain-farBS بيشغّل حالة الـ BS البعيد. وكل تشغيل بيطلّع 3 ملفات CSV وملف XML للـ NetAnim (أنيميشن للشبكة). لو عايزة تعرضي لايف: شغّلي الأمر ده قدام اللجنة، أو افتحي ملف الـ XML في NetAnim.');
- img(s,'img/terminal_center.png',0.7,1.35,6.9,5.35,1180,1040);
- card(s,7.9,1.55,4.6,2.3,'طريقة التشغيل','./ns3 configure\n./ns3 run scratch/hybrid-v8-chain\n./ns3 run scratch/hybrid-v8-chain-farBS',{size:13,ltr:true});
- card(s,7.9,4.05,4.6,2.4,'بيطلّع إيه','• ملف نتايج لكل round (العايشين، الـ CHs، الـ PDR، الطاقة…)\n• ملف طاقة وعمر كل نود\n• ملف NetAnim: الـ CHs بالأحمر وكل مجموعة بلون',{size:13.5});}
-{const s=content('ديمو','الشبكة مع الوقت (الـ BS في النص)','لقطات من نتايج المحاكاة: round 1 (الكل عايش، البطاريات مليانة)، round 1300 (البطاريات نصها خلص والـ CHs بتتغير)، round 2621 (أول نود مات = FND)، round 2740 (قرب النهاية). الأحمر الغامق = بطارية مليانة، الفاتح = قربت تخلص، الـ x الرمادي = نود ميت. لاحظي إن الـ 100 نود كانوا عايشين لحد round 2621، وآخر واحد مات بعدها بـ 135 round بس، يعني الحمل كان متوزع بالعدل.');
- img(s,'img/snap_center.png',0.7,1.4,11.9,4.4,2580,735);
- card(s,0.9,5.75,11.6,0.75,'البطاريات بتخلص بالتساوي: الـ 100 نود عايشين لحد round 2621، وآخر نود مات بعدها بـ 135 round بس.',null,{headSize:14,headColor:C.CH});}
-{const s=content('ديمو','الشبكة مع الوقت (الـ BS بعيد)','نفس اللقطات والـ BS تحت عند (50, −100): الـ CHs بتدّي الداتا لبعض في اتجاه الـ BS (التوجيه الذكي). أول نود مات عند round 1716.');
- img(s,'img/snap_far.png',0.7,1.3,11.9,5.4,2580,945);}
-
 // ===== 07
 section('07','النتايج','الـ BS في النص مقابل بعيد · Ablation · الثبات · المقارنة','فاصل: الأرقام.');
 {const s=content('النتايج','الـ BS في نص الأرض','v8-Chain في النص بيشتغل زي v8 (مفيش توصيل). مقارنة بـ v7: أول نود بيموت متأخر 1070 round (+69%)، والـ PDR أعلى 0.84 نقطة. ومقارنة بـ v5b: وصّل 33% رسايل أكتر بنفس الـ 50 جول. النجمة جنب 3203: ده الـ LND الوهمي بتاع v5b. لو المحكّم سأل ليه v5b عنده LND أعلى، قولي إنه وهمي والدليل الـ 59 رسالة.');
@@ -203,6 +229,12 @@ section('07','النتايج','الـ BS في النص مقابل بعيد · Ab
  stat(s,0.9,1.6,4.9,'+36%','الـ FND مقارنة بـ v7 (1266 ← 1716)',{size:44});
  stat(s,0.9,3.3,4.9,'+0.93 pp','الـ PDR مقارنة بـ v7 (98.14% ← 99.07%)',{size:44});
  card(s,6.3,4.3,6.2,2.1,'قراءة أمينة','الـ HND والـ LND في حدود 1% من v7 (1886 / 1956 مقابل 1891 / 1976) — زيه، مش أحسن. v8-Chain بيكسب في موت أول نود وفي الاعتمادية.');}
+{const s=content('الشبكة مع الوقت','الـ BS في النص','لقطات من نتايج المحاكاة: round 1 (الكل عايش، البطاريات مليانة)، round 1300 (البطاريات نصها خلص والـ CHs بتتغير)، round 2621 (أول نود مات = FND)، round 2740 (قرب النهاية). الأحمر الغامق = بطارية مليانة، الفاتح = قربت تخلص، الـ x الرمادي = نود ميت. لاحظي إن الـ 100 نود كانوا عايشين لحد round 2621، وآخر واحد مات بعدها بـ 135 round بس، يعني الحمل كان متوزع بالعدل.');
+ img(s,'img/snap_center.png',0.7,1.4,11.9,4.4,2580,735);
+ card(s,0.9,5.75,11.6,0.75,'البطاريات بتخلص بالتساوي: الـ 100 نود عايشين لحد round 2621، وآخر نود مات بعدها بـ 135 round بس.',null,{headSize:14,headColor:C.CH});}
+{const s=content('الشبكة مع الوقت','الـ BS بعيد','نفس اللقطات والـ BS تحت عند (50, −100): الـ CHs بتدّي الداتا لبعض في اتجاه الـ BS (التوجيه الذكي). أول نود مات عند round 1716.');
+ img(s,'img/snap_far.png',0.7,1.3,11.9,5.4,2580,945);}
+
 {const s=content('النص مقابل البعيد','نفس الكود، والـ BS بس اللي بيتحرك','الشمال: الـ BS في النص، وv8 وv8-Chain نفس الشكل تقريبًا وأعلى من v6 وv7 بكتير. اليمين: الـ BS بعيد، كل البروتوكولات خسرت عمر، وv8 من غير سلسلة خسر أكتر واحد. v8-Chain رجع قريب من v7 في الـ HND والـ LND، وأعلى منه في الـ FND.');
  const lab=['v6','v7','v8','v8-Chain'];
  lifeChart(s,lab,[1266,1266,1471,1716],[1910,1891,1646,1886],[2031,1976,1716,1956],{x:0.7,y:1.35,w:5.9,h:5.3},{title:'الـ BS بعيد'});
@@ -240,6 +272,9 @@ section('07','النتايج','الـ BS في النص مقابل بعيد · Ab
  text(s,['5 بروتوكولات موجودة اتبنت بشكل عادل في بيئة واحدة، واتصلّح 2 منهم.','بروتوكول جديد اتطوّر آلية آلية، من v1 لحد v8-Chain.','v8-Chain بيحمي الـ CH قبل الموت وبعده، وبيخلّي النودز القريبة من الـ BS تبعت مباشرة، ومابيخليش حد يبقى CH غير القوي، وبيوصّل بين الـ CHs بس لما يوفّر طاقة.'],{x:5.9,y:1.6,w:6.6,h:4.8,fontSize:16});
  s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:0.9,y:1.6,w:4.6,h:4.8,rectRadius:0.12,fill:{color:C.RED},line:{color:C.RED}});
  s.addText([{text:'v8-Chain',options:{bold:true,fontSize:24,breakLine:true}},{text:'الـ BS في النص',options:{bold:true,fontSize:14,color:'F3E3E1',breakLine:true}},{text:'FND 2621 · PDR 99.27%',options:{fontSize:17,breakLine:true}},{text:' ',options:{fontSize:8,breakLine:true}},{text:'الـ BS بعيد',options:{bold:true,fontSize:14,color:'F3E3E1',breakLine:true}},{text:'FND 1716 · PDR 99.07%',options:{fontSize:17,breakLine:true}},{text:' ',options:{fontSize:8,breakLine:true}},{text:'إعداد واحد للحالتين.',options:{italic:true,fontSize:14}}],T({x:1.2,y:1.8,w:4.0,h:4.4,color:C.WHITE,valign:'middle',align:'right',margin:0,paraSpaceAfter:4,isTextBox:true}));}
+// ===== المراجع
+{const R=D.refs; [[0,8],[8,15]].forEach(([a,b],k)=>{const s=content('المراجع',k?'(2/2)':'(1/2)','المراجع بالإنجليزي زي ما هي في الأبحاث. المراجع من 10 لـ 14 هي الأبحاث الجديدة اللي بتغطي الآليات اللي في v8-Chain — ارجعي اقريهم.');
+ s.addText(R.slice(a,b).map((r,i)=>({text:`[${a+i+1}]  ${r}`,options:{breakLine:i<b-a-1}})),{x:0.9,y:1.5,w:11.6,h:5.1,fontSize:12.5,color:C.CH,fontFace:FONT,valign:'top',paraSpaceAfter:9,margin:0,align:'left',rtlMode:false,isTextBox:true});});}
 {const s=pres.addSlide(); frame(s); net(s,3.2,0.22,1.05,C.RED,true); net(s,13.0,7.28,0.6,C.RED,true,true);
  s.addText('شكرًا',T({x:0.9,y:2.3,w:11.5,h:1.4,fontSize:54,bold:true,color:C.RED,align:'center',margin:0,isTextBox:true}));
  s.addText('أسئلة ومناقشة',T({x:0.9,y:3.7,w:11.5,h:0.8,fontSize:24,color:C.CH,align:'center',margin:0,isTextBox:true}));

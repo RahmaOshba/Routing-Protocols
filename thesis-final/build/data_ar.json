@@ -649,6 +649,12 @@
   "Kaur, Kour and Singh, “EECH-HEED: An Adaptive Hybrid Clustering Protocol for Energy Efficient Soil Monitoring,” Scientific Reports, 2025.",
   "Subedi, Acharya, Lee and Lee, “Two-Level Clustering Algorithm for Cluster Head Selection in Randomly Deployed WSNs,” Telecom (MDPI), 2024.",
   "Juwaied and Jackowska-Strumillo, “DL-HEED: A Deep Learning Approach to Energy-Efficient Clustering in Heterogeneous WSNs,” Applied Sciences (MDPI), 2025.",
-  "El-Sayed, Abd-Elgaber and Refaay, “An Intelligent RL Enhanced Improved LEACH Protocol for Prolonging WSN Lifetime,” Scientific Reports, 2026."
+  "El-Sayed, Abd-Elgaber and Refaay, “An Intelligent RL Enhanced Improved LEACH Protocol for Prolonging WSN Lifetime,” Scientific Reports, 2026.",
+  "J. Jassbi and S. Moridi, “Fault Tolerance and Energy Efficient Clustering Algorithm in Wireless Sensor Networks: FTEC,” Wireless Personal Communications, 2019. doi:10.1007/s11277-019-06281-6",
+  "R. Pachlor, D. Shrimankar, K. K. Nagwanshi and M. Paliwal, “Cluster-Head Rotation Approaches in Sensor Networks: A Review,” arXiv:2206.08892, 2022.",
+  "C. Li, M. Ye, G. Chen and J. Wu, “An Energy-Efficient Unequal Clustering Mechanism for Wireless Sensor Networks,” Proc. IEEE MASS, 2005.",
+  "V. Chauhan and S. Soni, “Energy Aware Unequal Clustering Algorithm with Multi-hop Routing via Low Degree Relay Nodes for Wireless Sensor Networks,” J. Ambient Intelligence and Humanized Computing, vol. 12, pp. 2469–2482, 2021. doi:10.1007/s12652-020-02385-1",
+  "W. B. Heinzelman, A. P. Chandrakasan and H. Balakrishnan, “An Application-Specific Protocol Architecture for Wireless Microsensor Networks,” IEEE Trans. Wireless Communications, 2002.",
+  "ns-3 Network Simulator, release 3.41, https://www.nsnam.org"
  ]
 }

@@ -1,66 +1,645 @@
 {
- "env": [["Network size","100 nodes"],["Field","100 × 100 m"],["Initial energy E0","0.5 J / node"],["Packet size","2000 bits (control 200 bits)"],["Data rate","250 kbps"],["BS position","(50, 50) center; far scenario (50, −100)"],["Communication range","25 m"],["Radio model","First-order, two-slope (d² / d⁴)"],["E_elec","50 nJ/bit"],["E_fs","10 pJ/bit/m²"],["E_mp","0.0013 pJ/bit/m⁴"],["E_DA","5 nJ/bit/signal"],["d0 = √(E_fs/E_mp)","≈ 87.7 m"],["Random seed","12345 (robustness: 8 seeds)"],["Simulator","ns-3.41, C++ (analytical energy model)"]],
+ "env": [
+  [
+   "Network size",
+   "100 nodes"
+  ],
+  [
+   "Field",
+   "100 × 100 m"
+  ],
+  [
+   "Initial energy E0",
+   "0.5 J / node"
+  ],
+  [
+   "Packet size",
+   "2000 bits (control 200 bits)"
+  ],
+  [
+   "Data rate",
+   "250 kbps"
+  ],
+  [
+   "BS position",
+   "(50, 50) center; far scenario (50, −100)"
+  ],
+  [
+   "Communication range",
+   "25 m"
+  ],
+  [
+   "Radio model",
+   "First-order, two-slope (d² / d⁴)"
+  ],
+  [
+   "E_elec",
+   "50 nJ/bit"
+  ],
+  [
+   "E_fs",
+   "10 pJ/bit/m²"
+  ],
+  [
+   "E_mp",
+   "0.0013 pJ/bit/m⁴"
+  ],
+  [
+   "E_DA",
+   "5 nJ/bit/signal"
+  ],
+  [
+   "d0 = √(E_fs/E_mp)",
+   "≈ 87.7 m"
+  ],
+  [
+   "Random seed",
+   "12345 (robustness: 8 seeds)"
+  ],
+  [
+   "Simulator",
+   "ns-3.41, C++ (analytical energy model)"
+  ]
+ ],
  "published": [
-  ["LEACH",932,null,1312,null,"Heinzelman et al., 2000 — Table 2 (0.5 J)"],
-  ["HEED",null,null,null,null,"Younis & Fahmy, 2004 — graph only (Fig. 8a/8b)"],
-  ["PEGASIS",1578,2082,2192,null,"Lindsey & Raghavendra, 2002 — Table 1 (50×50 m)"],
-  ["SH-LEACH",null,null,null,null,"Shrestha et al., 2015 — graph only (Fig. 2)"],
-  ["H-LEACH",null,null,4312,null,"Razaque et al., 2016 — ≈ read from Fig. 2"],
-  ["EECH-HEED",1250,1650,2200,0.95,"Kaur, Kour & Singh, 2025 — Table 7"]],
+  [
+   "LEACH",
+   932,
+   null,
+   1312,
+   null,
+   "Heinzelman et al., 2000 — Table 2 (0.5 J)"
+  ],
+  [
+   "HEED",
+   null,
+   null,
+   null,
+   null,
+   "Younis & Fahmy, 2004 — graph only (Fig. 8a/8b)"
+  ],
+  [
+   "PEGASIS",
+   1578,
+   2082,
+   2192,
+   null,
+   "Lindsey & Raghavendra, 2002 — Table 1 (50×50 m)"
+  ],
+  [
+   "SH-LEACH",
+   null,
+   null,
+   null,
+   null,
+   "Shrestha et al., 2015 — graph only (Fig. 2)"
+  ],
+  [
+   "H-LEACH",
+   null,
+   null,
+   4312,
+   null,
+   "Razaque et al., 2016 — ≈ read from Fig. 2"
+  ],
+  [
+   "EECH-HEED",
+   1250,
+   1650,
+   2200,
+   0.95,
+   "Kaur, Kour & Singh, 2025 — Table 7"
+  ]
+ ],
  "paperExact": [
-  ["LEACH",882,970,1321,0.9802,"50×50 m, far BS, single-term radio"],
-  ["HEED",1106,1626,1996,0.9997,"Table 2 config, far BS, E0 = 2 J, 800-bit packet"],
-  ["PEGASIS",1614,2036,2167,0.9775,"50×50 m, far BS, single-term radio"],
-  ["SH-LEACH",493,747,884,0.9953,"N = 100, Cprob = 0.10"],
-  ["H-LEACH",1080,1160,1210,0.9475,"With required fallback (literal gate deadlocks)"],
-  ["EECH-HEED",792,1079,1129,0.9043,"4000-bit packet"]],
+  [
+   "LEACH",
+   882,
+   970,
+   1321,
+   0.9802,
+   "50×50 m, far BS, single-term radio"
+  ],
+  [
+   "HEED",
+   1106,
+   1626,
+   1996,
+   0.9997,
+   "Table 2 config, far BS, E0 = 2 J, 800-bit packet"
+  ],
+  [
+   "PEGASIS",
+   1614,
+   2036,
+   2167,
+   0.9775,
+   "50×50 m, far BS, single-term radio"
+  ],
+  [
+   "SH-LEACH",
+   493,
+   747,
+   884,
+   0.9953,
+   "N = 100, Cprob = 0.10"
+  ],
+  [
+   "H-LEACH",
+   1080,
+   1160,
+   1210,
+   0.9475,
+   "With required fallback (literal gate deadlocks)"
+  ],
+  [
+   "EECH-HEED",
+   792,
+   1079,
+   1129,
+   0.9043,
+   "4000-bit packet"
+  ]
+ ],
  "unified": [
-  ["Baseline","LEACH","Edited",1409,1626,1962,0.9837,"Randomised CH rotation"],
-  ["Baseline","HEED","Edited",323,570,1362,0.9969,"Iterative energy + cost CH negotiation"],
-  ["Baseline","HEED (fairness)","Edited + variant",338,549,1502,0.9967,"+ rotation-fairness penalty"],
-  ["Baseline","PEGASIS","Edited",1324,2353,2887,0.9867,"Greedy chain, rotating leader"],
-  ["Literature hybrid","SH-LEACH","Edited",1440,1584,1604,0.9917,"LEACH + HEED, single doubling"],
-  ["Literature hybrid","SH-LEACH","Improved",1247,1600,1649,0.9979,"True iterative doubling, Cprob 0.10→0.03"],
-  ["Literature hybrid","H-LEACH","Edited",2177,2255,2305,0.9733,"Energy gate 1.0× average"],
-  ["Literature hybrid","H-LEACH","Improved",2347,2449,2499,0.9733,"Energy gate relaxed to 0.8×"],
-  ["Context","EECH-HEED","Edited",1653,2134,2184,0.9168,"HEED + EECH (not LEACH+HEED)"],
-  ["Context","EECH-HEED","Improved",2502,3758,3808,0.9214,"+ adaptive threshold-based sensing (transmits less)"]],
+  [
+   "Baseline",
+   "LEACH",
+   "Edited",
+   1409,
+   1626,
+   1962,
+   0.9837,
+   "Randomised CH rotation"
+  ],
+  [
+   "Baseline",
+   "HEED",
+   "Edited",
+   323,
+   570,
+   1362,
+   0.9969,
+   "Iterative energy + cost CH negotiation"
+  ],
+  [
+   "Baseline",
+   "HEED (fairness)",
+   "Edited + variant",
+   338,
+   549,
+   1502,
+   0.9967,
+   "+ rotation-fairness penalty"
+  ],
+  [
+   "Baseline",
+   "PEGASIS",
+   "Edited",
+   1324,
+   2353,
+   2887,
+   0.9867,
+   "Greedy chain, rotating leader"
+  ],
+  [
+   "Literature hybrid",
+   "SH-LEACH",
+   "Edited",
+   1440,
+   1584,
+   1604,
+   0.9917,
+   "LEACH + HEED, single doubling"
+  ],
+  [
+   "Literature hybrid",
+   "SH-LEACH",
+   "Improved",
+   1247,
+   1600,
+   1649,
+   0.9979,
+   "True iterative doubling, Cprob 0.10→0.03"
+  ],
+  [
+   "Literature hybrid",
+   "H-LEACH",
+   "Edited",
+   2177,
+   2255,
+   2305,
+   0.9733,
+   "Energy gate 1.0× average"
+  ],
+  [
+   "Literature hybrid",
+   "H-LEACH",
+   "Improved",
+   2347,
+   2449,
+   2499,
+   0.9733,
+   "Energy gate relaxed to 0.8×"
+  ],
+  [
+   "Context",
+   "EECH-HEED",
+   "Edited",
+   1653,
+   2134,
+   2184,
+   0.9168,
+   "HEED + EECH (not LEACH+HEED)"
+  ],
+  [
+   "Context",
+   "EECH-HEED",
+   "Improved",
+   2502,
+   3758,
+   3808,
+   0.9214,
+   "+ adaptive threshold-based sensing (transmits less)"
+  ]
+ ],
  "proposed": [
-  ["v1","Center",5,"HEED-style CH selection + LEACH clustering, no reuse",330,557,1318,0.9974],
-  ["v2","Center",5,"+ rotation-fairness penalty",345,534,1393,0.9979],
-  ["v3","Center",5,"Single-pass energy × connectivity score + 5-round reuse",1730,2081,2703,0.9772],
-  ["v4","Center",15,"Setup interval 5 → 15 rounds",1513,2219,2521,0.9467],
-  ["v5","Center",15,"+ Backup CH failover",1513,2127,2416,0.9705],
-  ["v5-exp (Int 5)","Center",5,"Interval 5 + Backup + Cluster Repair",1730,2086,2156,0.9827],
-  ["v5-exp (Int 10)","Center",10,"Interval 10 + Backup + Cluster Repair",1621,2141,2291,0.9794],
-  ["v6 (Center)","Center",5,"CH-to-CH ordered chain",1551,1981,2106,0.97494],
-  ["v7 (Center)","Center",5,"Chain + Backup + Chain Repair",1551,1976,2066,0.98432],
-  ["v6 (Far BS)","Far",5,"CH-to-CH ordered chain",1266,1910,2031,0.97075],
-  ["v7 (Far BS)","Far",5,"Chain + Backup + Chain Repair",1266,1891,1976,0.98135],
-  ["v7.1 Multihop (Int 5)","Center",5,"Greedy multihop tree + Backup + Routing Repair",1491,1991,2086,0.9849],
-  ["v7.2 Multihop (Int 10)","Center",10,"Same multihop, interval 10",1381,2071,2241,0.97878],
-  ["v5b (Energy-Aware)","Center",5,"v5-exp + Energy-Aware Repair (5% of E0) — LND inflated",1730,2091,3203,0.973087],
-  ["v8 (Center)","Center",5,"v5b + I1–I5 + relative low-energy threshold",2621,2711,2761,0.992224],
-  ["v8 (Far BS)","Far",5,"Same v8 code, BS (50, −100)",1471,1646,1716,0.986599],
-  ["v8-Chain (Center)","Center",5,"v8 + energy-aware CH relay (0 relays)",2621,2711,2756,0.992668],
-  ["v8-Chain (Far BS)","Far",5,"v8 + energy-aware CH relay (4,710 relays)",1716,1886,1956,0.990719]],
+  [
+   "v1",
+   "Center",
+   5,
+   "HEED-style CH selection + LEACH clustering, no reuse",
+   330,
+   557,
+   1318,
+   0.9974
+  ],
+  [
+   "v2",
+   "Center",
+   5,
+   "+ rotation-fairness penalty",
+   345,
+   534,
+   1393,
+   0.9979
+  ],
+  [
+   "v3",
+   "Center",
+   5,
+   "Single-pass energy × connectivity score + 5-round reuse",
+   1730,
+   2081,
+   2703,
+   0.9772
+  ],
+  [
+   "v4",
+   "Center",
+   15,
+   "Setup interval 5 → 15 rounds",
+   1513,
+   2219,
+   2521,
+   0.9467
+  ],
+  [
+   "v5",
+   "Center",
+   15,
+   "+ Backup CH failover",
+   1513,
+   2127,
+   2416,
+   0.9705
+  ],
+  [
+   "v5-exp (Int 5)",
+   "Center",
+   5,
+   "Interval 5 + Backup + Cluster Repair",
+   1730,
+   2086,
+   2156,
+   0.9827
+  ],
+  [
+   "v5-exp (Int 10)",
+   "Center",
+   10,
+   "Interval 10 + Backup + Cluster Repair",
+   1621,
+   2141,
+   2291,
+   0.9794
+  ],
+  [
+   "v6 (Center)",
+   "Center",
+   5,
+   "CH-to-CH ordered chain",
+   1551,
+   1981,
+   2106,
+   0.97494
+  ],
+  [
+   "v7 (Center)",
+   "Center",
+   5,
+   "Chain + Backup + Chain Repair",
+   1551,
+   1976,
+   2066,
+   0.98432
+  ],
+  [
+   "v6 (Far BS)",
+   "Far",
+   5,
+   "CH-to-CH ordered chain",
+   1266,
+   1910,
+   2031,
+   0.97075
+  ],
+  [
+   "v7 (Far BS)",
+   "Far",
+   5,
+   "Chain + Backup + Chain Repair",
+   1266,
+   1891,
+   1976,
+   0.98135
+  ],
+  [
+   "v7.1 Multihop (Int 5)",
+   "Center",
+   5,
+   "Greedy multihop tree + Backup + Routing Repair",
+   1491,
+   1991,
+   2086,
+   0.9849
+  ],
+  [
+   "v7.2 Multihop (Int 10)",
+   "Center",
+   10,
+   "Same multihop, interval 10",
+   1381,
+   2071,
+   2241,
+   0.97878
+  ],
+  [
+   "v5b (Energy-Aware)",
+   "Center",
+   5,
+   "v5-exp + Energy-Aware Repair (5% of E0) — LND inflated",
+   1730,
+   2091,
+   3203,
+   0.973087
+  ],
+  [
+   "v8 (Center)",
+   "Center",
+   5,
+   "v5b + I1–I5 + relative low-energy threshold",
+   2621,
+   2711,
+   2761,
+   0.992224
+  ],
+  [
+   "v8 (Far BS)",
+   "Far",
+   5,
+   "Same v8 code, BS (50, −100)",
+   1471,
+   1646,
+   1716,
+   0.986599
+  ],
+  [
+   "v8-Chain (Center)",
+   "Center",
+   5,
+   "v8 + energy-aware CH relay (0 relays)",
+   2621,
+   2711,
+   2756,
+   0.992668
+  ],
+  [
+   "v8-Chain (Far BS)",
+   "Far",
+   5,
+   "v8 + energy-aware CH relay (4,710 relays)",
+   1716,
+   1886,
+   1956,
+   0.990719
+  ]
+ ],
  "ablation": [
-  ["v8 (full)","—",2621,2711,2761,0.992224,268610],
-  ["v8 − I1","Epoch-exhaustion fix",2621,2711,2761,0.992224,268610],
-  ["v8 − I2","Proactive CH handover",2585,2726,2766,0.989804,268509],
-  ["v8 − I3","Orphan re-join",2621,2711,2761,0.992224,268610],
-  ["v8 − I4","Direct-to-BS",1821,2001,2076,0.993171,198218],
-  ["v8 − I5","Energy-gated CH election",2171,2641,2746,0.990522,258228],
-  ["Threshold fix only","All of I1–I5",1730,2086,2166,0.981630,201565]],
+  [
+   "v8 (full)",
+   "—",
+   2621,
+   2711,
+   2761,
+   0.992224,
+   268610
+  ],
+  [
+   "v8 − I1",
+   "Epoch-exhaustion fix",
+   2621,
+   2711,
+   2761,
+   0.992224,
+   268610
+  ],
+  [
+   "v8 − I2",
+   "Proactive CH handover",
+   2585,
+   2726,
+   2766,
+   0.989804,
+   268509
+  ],
+  [
+   "v8 − I3",
+   "Orphan re-join",
+   2621,
+   2711,
+   2761,
+   0.992224,
+   268610
+  ],
+  [
+   "v8 − I4",
+   "Direct-to-BS",
+   1821,
+   2001,
+   2076,
+   0.993171,
+   198218
+  ],
+  [
+   "v8 − I5",
+   "Energy-gated CH election",
+   2171,
+   2641,
+   2746,
+   0.990522,
+   258228
+  ],
+  [
+   "Threshold fix only",
+   "All of I1–I5",
+   1730,
+   2086,
+   2166,
+   0.98163,
+   201565
+  ]
+ ],
  "routing": [
-  ["Direct CH→BS (v8)","Center",2621,2711,2761,0.992224,2618,2720,2766,0.9926],
-  ["Ordered chain","Center",2566,2661,2692,0.991087,2571,2664,2704,0.9922],
-  ["Energy-aware relay (v8-Chain)","Center",2621,2711,2756,0.992668,2618,2720,2765,0.9925],
-  ["Direct CH→BS (v8)","Far",1471,1646,1716,0.986599,1487,1673,1730,0.9886],
-  ["Ordered chain","Far",1696,1901,1961,0.990255,1740,1932,1992,0.9907],
-  ["Energy-aware relay (v8-Chain)","Far",1716,1886,1956,0.990719,1743,1932,1995,0.9905]],
- "robust": [["v5b","Center",1688,2119,2374,0.9756],["v8","Center",2618,2720,2766,0.9926],["v5b","Far",1152,1674,2001,0.9772],["v8","Far",1487,1673,1732,0.9882]],
- "phy": [["Packets sent / received","300 / 300"],["PDR","100%"],["Throughput","120 bit/s"],["Energy per sensor / sink","62.64 J / 62.64 J (of 100 J)"],["Lifetime (1000 s run)","Not reached — all nodes alive"]],
+  [
+   "Direct CH→BS (v8)",
+   "Center",
+   2621,
+   2711,
+   2761,
+   0.992224,
+   2618,
+   2720,
+   2766,
+   0.9926
+  ],
+  [
+   "Ordered chain",
+   "Center",
+   2566,
+   2661,
+   2692,
+   0.991087,
+   2571,
+   2664,
+   2704,
+   0.9922
+  ],
+  [
+   "Energy-aware relay (v8-Chain)",
+   "Center",
+   2621,
+   2711,
+   2756,
+   0.992668,
+   2618,
+   2720,
+   2765,
+   0.9925
+  ],
+  [
+   "Direct CH→BS (v8)",
+   "Far",
+   1471,
+   1646,
+   1716,
+   0.986599,
+   1487,
+   1673,
+   1730,
+   0.9886
+  ],
+  [
+   "Ordered chain",
+   "Far",
+   1696,
+   1901,
+   1961,
+   0.990255,
+   1740,
+   1932,
+   1992,
+   0.9907
+  ],
+  [
+   "Energy-aware relay (v8-Chain)",
+   "Far",
+   1716,
+   1886,
+   1956,
+   0.990719,
+   1743,
+   1932,
+   1995,
+   0.9905
+  ]
+ ],
+ "robust": [
+  [
+   "v5b",
+   "Center",
+   1688,
+   2119,
+   2374,
+   0.9756
+  ],
+  [
+   "v8",
+   "Center",
+   2618,
+   2720,
+   2766,
+   0.9926
+  ],
+  [
+   "v5b",
+   "Far",
+   1152,
+   1674,
+   2001,
+   0.9772
+  ],
+  [
+   "v8",
+   "Far",
+   1487,
+   1673,
+   1732,
+   0.9882
+  ]
+ ],
+ "phy": [
+  [
+   "Packets sent / received",
+   "300 / 300"
+  ],
+  [
+   "PDR",
+   "100%"
+  ],
+  [
+   "Throughput",
+   "120 bit/s"
+  ],
+  [
+   "Energy per sensor / sink",
+   "62.64 J / 62.64 J (of 100 J)"
+  ],
+  [
+   "Lifetime (1000 s run)",
+   "Not reached — all nodes alive"
+  ]
+ ],
  "refs": [
   "W. R. Heinzelman, A. Chandrakasan and H. Balakrishnan, “Energy-Efficient Communication Protocol for Wireless Microsensor Networks,” Proc. HICSS, 2000.",
   "O. Younis and S. Fahmy, “HEED: A Hybrid, Energy-Efficient, Distributed Clustering Approach for Ad Hoc Sensor Networks,” IEEE Trans. Mobile Computing, 2004.",
@@ -70,5 +649,12 @@
   "Kaur, Kour and Singh, “EECH-HEED: An Adaptive Hybrid Clustering Protocol for Energy Efficient Soil Monitoring,” Scientific Reports, 2025.",
   "Subedi, Acharya, Lee and Lee, “Two-Level Clustering Algorithm for Cluster Head Selection in Randomly Deployed WSNs,” Telecom (MDPI), 2024.",
   "Juwaied and Jackowska-Strumillo, “DL-HEED: A Deep Learning Approach to Energy-Efficient Clustering in Heterogeneous WSNs,” Applied Sciences (MDPI), 2025.",
-  "El-Sayed, Abd-Elgaber and Refaay, “An Intelligent RL Enhanced Improved LEACH Protocol for Prolonging WSN Lifetime,” Scientific Reports, 2026."]
+  "El-Sayed, Abd-Elgaber and Refaay, “An Intelligent RL Enhanced Improved LEACH Protocol for Prolonging WSN Lifetime,” Scientific Reports, 2026.",
+  "J. Jassbi and S. Moridi, “Fault Tolerance and Energy Efficient Clustering Algorithm in Wireless Sensor Networks: FTEC,” Wireless Personal Communications, 2019. doi:10.1007/s11277-019-06281-6",
+  "R. Pachlor, D. Shrimankar, K. K. Nagwanshi and M. Paliwal, “Cluster-Head Rotation Approaches in Sensor Networks: A Review,” arXiv:2206.08892, 2022.",
+  "C. Li, M. Ye, G. Chen and J. Wu, “An Energy-Efficient Unequal Clustering Mechanism for Wireless Sensor Networks,” Proc. IEEE MASS, 2005.",
+  "V. Chauhan and S. Soni, “Energy Aware Unequal Clustering Algorithm with Multi-hop Routing via Low Degree Relay Nodes for Wireless Sensor Networks,” J. Ambient Intelligence and Humanized Computing, vol. 12, pp. 2469–2482, 2021. doi:10.1007/s12652-020-02385-1",
+  "W. B. Heinzelman, A. P. Chandrakasan and H. Balakrishnan, “An Application-Specific Protocol Architecture for Wireless Microsensor Networks,” IEEE Trans. Wireless Communications, 2002.",
+  "ns-3 Network Simulator, release 3.41, https://www.nsnam.org"
+ ]
 }

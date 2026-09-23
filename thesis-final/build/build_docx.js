@@ -72,10 +72,13 @@ children.push(table(['Protocol (year)','Core mechanism','Strength','Limitation a
  ['SH-LEACH (2015) [4]','LEACH + HEED-style probability doubling','Delays first node death','Formula applies one doubling only; no failure recovery'],
  ['H-LEACH (2016) [5]','Energy-gated CH eligibility (energy > average)','Energy-aware election','Literal gate never fires with equal energy (deadlock)'],
  ['EECH-HEED (2025) [6]','HEED + EECH zones + adaptive threshold sensing','Longest raw lifetime (fewer transmissions)','Not a LEACH+HEED hybrid; used as context only'],
+ ['FTEC (2019) [10]','HEED-based clustering with a backup CH for fault tolerance','CH failure is tolerated','No cluster reuse and no energy-based relay'],
+ ['CH rotation review (2022) [11]','Survey of threshold-based and periodic CH rotation','Shows handover before depletion is known','Survey: no single integrated protocol'],
+ ['EEUC (2005) [12], EAUCA (2021) [13]','Unequal clusters and multi-hop CH-to-CH relaying toward the sink','Balances the load near the sink','No failure recovery; relay is not decided by an energy test per round'],
  ['TLC-LEACH (2024) [7], DL-HEED (2025) [8], RL-ILEACH (2026) [9]','Two-level grids; graph neural network; Q-learning in CH selection','Specialised gains','No cluster reuse, failure recovery or relay combined']],
  [1900,2900,1900,2938],{size:16}));
 children.push(P('',{after:60}));
-children.push(P([t('Research gap. ',{b:true}),t('Each approach improves one part of the problem. None combines (1) energy- and connectivity-aware CH selection, (2) low-overhead multi-round cluster reuse, (3) cluster-head failure recovery and (4) an inter-cluster relay that adapts to where the sink is. The proposed protocol integrates all four.')]));
+children.push(P([t('Research gap. ',{b:true}),t('Each approach improves one part of the problem. None combines (1) energy- and connectivity-aware CH selection, (2) low-overhead multi-round cluster reuse, (3) cluster-head failure recovery and (4) an inter-cluster relay that adapts to where the sink is. The proposed protocol integrates all four. Each mechanism exists individually in the literature (backup CH [10], threshold-based handover [11], multi-hop relay [12,13]); the contribution is their integration, the per-round energy test that decides every relay hop, and the controlled step-by-step evaluation under one two-slope radio model [14].')]));
 
 // ---- 4 Methodology
 children.push(H1('4. Methodology'));

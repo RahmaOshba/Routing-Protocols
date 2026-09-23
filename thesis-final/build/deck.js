@@ -1,6 +1,10 @@
 const L=require('./deck_lib.js');const {pres,C,FONT,net,frame,content,section,text,card,stat,table,lifeChart,pdrChart,img,arrowFlow}=L;
 const D=require('./data.json');
 const pct=v=>(v*100).toFixed(2)+'%';
+function shot(slide,x,y,w,h,label){ // screenshot placeholder: right-click → Change Picture, or delete and paste the screenshot
+  slide.addShape(pres.shapes.ROUNDED_RECTANGLE,{x,y,w,h,rectRadius:0.1,fill:{color:'FFFFFF'},line:{color:C.ROSE,width:1.5,dashType:'dash'}});
+  slide.addText([{text:'📷',options:{fontSize:30,breakLine:true}},{text:label,options:{fontSize:13,bold:true,color:C.RED,breakLine:true}},{text:'(paste your VMware screenshot here)',options:{fontSize:11,italic:true,color:C.GREY}}],{x:x+0.2,y:y+0.2,w:w-0.4,h:h-0.4,align:'center',valign:'middle',fontFace:FONT,margin:0,isTextBox:true});
+}
 
 // ===== 1 Title
 {const s=pres.addSlide(); frame(s); net(s,10.1,0.22,1.05); net(s,0.3,7.28,0.6,C.RED,false,true); 
@@ -13,11 +17,40 @@ const pct=v=>(v*100).toFixed(2)+'%';
 // numbering starts after title
 // ===== 2 Agenda
 {const s=content('Agenda',null,'Seven parts: background, related work, methodology, reproduction of existing protocols, the evolution of the proposed protocol, the final v8-Chain design, and the results.');
- const items=[['01','Background: WSNs & clustering'],['02','Related work & research gap'],['03','Methodology & simulation environment'],['04','Reproducing existing protocols'],['05','Proposed protocol: v1 → v7.2'],['06','Final design: v8-Chain'],['07','Results, findings & conclusion']];
+ const items=[['00','Work environment: ns-3 & first experiment'],['01','Background: WSNs & clustering'],['02','Related work & research gap'],['03','Methodology & simulation environment'],['04','Reproducing existing protocols'],['05','Proposed protocol: v1 → v7.2'],['06','Final design: v8-Chain'],['07','Results, findings, conclusion & references']];
  items.forEach(([n,t],i)=>{const col=i<4?0:1,row=i<4?i:i-4; const x=0.9+col*5.9,y=1.6+row*1.2;
    s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x,y,w:5.5,h:0.95,rectRadius:0.12,fill:{color:C.WHITE},line:{color:C.LINE,width:1}});
    s.addText(n,{x:x+0.2,y,w:0.9,h:0.95,fontSize:26,bold:true,color:C.RED,valign:'middle',fontFace:FONT,margin:0,isTextBox:true});
    s.addText(t,{x:x+1.15,y,w:4.2,h:0.95,fontSize:16,color:C.CH,valign:'middle',fontFace:FONT,margin:0,isTextBox:true});});}
+
+// ===== SECTION 0 — work environment
+section('00','Work Environment','What I built this work on: VMware · Ubuntu · ns-3.41 · NetAnim — and the first simple network','Start the talk by showing the real environment: the virtual machine, ns-3, the first small experiment, then how every protocol in this thesis is run.');
+{const s=content('Tools & Setup','VMware · Ubuntu · ns-3',"Everything runs inside a VMware virtual machine with Ubuntu Linux. ns-3.41 is the network simulator; each protocol is a C++ file in the scratch folder. NetAnim replays the network as an animation; Python and Excel are used for the analysis.");
+ arrowFlow(s,[{h:'VMware',t:'virtual machine'},{h:'Ubuntu Linux',t:'operating system'},{h:'ns-3.41',t:'C++ network simulator'},{h:'NetAnim',t:'network animation'},{h:'Python / Excel',t:'charts & comparison'}],0.9,1.55,11.6,1.05,{hs:15,ts:11.5});
+ shot(s,0.9,2.9,7.3,3.55,'Screenshot 1 — VMware running Ubuntu with ns-3');
+ card(s,8.5,2.9,4.0,3.55,'Where the code lives','~/ns-allinone-3.41/ns-3.41/scratch/\n\nOne .cc file per protocol / version (LEACH, HEED, PEGASIS, H-LEACH, SH-LEACH, v1 … v8-Chain).',{size:13.5});}
+{const s=content('First Experiment','A simple network to confirm the idea','The very first test: a tiny network with the full IEEE 802.15.4 stack (real PHY and MAC layers) — 3 sensors and 1 sink in a 20 × 20 m field, each sensor sending a 50-byte packet every 10 s for 1000 s. It confirmed that packets are delivered and energy is counted correctly before moving to 100-node experiments.');
+ s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:0.9,y:1.55,w:4.2,h:4.1,rectRadius:0.1,fill:{color:'FFFFFF'},line:{color:C.LINE}});
+ s.addShape(pres.shapes.RECTANGLE,{x:1.35,y:1.95,w:3.3,h:3.3,fill:{color:C.CREAM},line:{color:C.ROSE,width:1,dashType:'dash'}});
+ [[1.8,2.4],[4.1,2.6],[2.2,4.7]].forEach(([x,y],i)=>{s.addShape(pres.shapes.LINE,{x:Math.min(x,3.0),y:Math.min(y,3.6),w:Math.abs(3.0-x),h:Math.abs(3.6-y),flipV:(3.0-x)*(3.6-y)<0,line:{color:C.GREY,width:1,dashType:'dash'}});
+   s.addShape(pres.shapes.OVAL,{x:x-0.17,y:y-0.17,w:0.34,h:0.34,fill:{color:C.RED},line:{color:C.RED}});
+   s.addText('S'+(i+1),{x:x-0.3,y:y+0.18,w:0.6,h:0.3,fontSize:11,bold:true,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});});
+ s.addShape(pres.shapes.OVAL,{x:2.78,y:3.38,w:0.44,h:0.44,fill:{color:'FFC000'},line:{color:C.CH}});
+ s.addText('Sink',{x:2.6,y:3.85,w:0.8,h:0.3,fontSize:11,bold:true,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});
+ s.addText('20 × 20 m (illustration)',{x:0.9,y:5.28,w:4.2,h:0.3,fontSize:10,italic:true,color:C.GREY,align:'center',fontFace:FONT,margin:0,isTextBox:true});
+ text(s,['IEEE 802.15.4 (LR-WPAN) PHY + MAC','50-byte packet every 10 s, 1000 s','Per-state (TX / RX / idle) energy'],{x:0.9,y:5.75,w:4.2,h:0.85,fontSize:12});
+ table(s,['Metric','Result'],D.phy,{pos:{x:5.4,y:1.55,w:7.1,colW:[3.0,4.1]},center:9,boldFirst:true,rowH:0.5,fs:13});
+ card(s,5.4,5.0,7.1,1.45,'Why it matters','Before trusting the 100-node analytical model, a real protocol stack showed 300/300 packets delivered and correct energy accounting.',{size:13.5,fill:C.PINK,border:C.ROSE});}
+{const s=content('First Experiment','Screenshots from ns-3','Replace the two frames with screenshots from the VM: the terminal output of the first experiment and its NetAnim view.');
+ shot(s,0.9,1.55,5.65,4.9,'Screenshot 2 — terminal output of the first experiment');
+ shot(s,6.85,1.55,5.65,4.9,'Screenshot 3 — NetAnim view of the 4-node network');}
+{const s=content('Running the Protocols','ns-3 terminal','Real output of the simulator for the center-BS run. The same command with scratch/hybrid-v8-chain-farBS runs the far-BS case. Each run also writes three CSV files and a NetAnim XML animation.');
+ img(s,'img/terminal_center.png',5.7,1.35,6.9,5.35,1180,1040);
+ card(s,0.9,1.55,4.5,2.3,'How it is run','./ns3 configure\n./ns3 run scratch/hybrid-v8-chain\n./ns3 run scratch/hybrid-v8-chain-farBS',{size:14});
+ card(s,0.9,4.05,4.5,2.4,'What it produces','• Per-round results CSV (alive, CHs, PDR, energy…)\n• Per-node energy & lifetime CSVs\n• NetAnim XML — CHs in red, clusters coloured',{size:13.5});}
+{const s=content('NetAnim','The proposed protocol animated','Open hybrid-v8-chain-clustering.xml in NetAnim and take a screenshot mid-run: cluster heads are red, each cluster has its own colour, dead nodes are grey.');
+ shot(s,0.9,1.55,8.0,4.9,'Screenshot 4 — NetAnim: v8-Chain clusters (CHs in red)');
+ card(s,9.2,1.55,3.3,4.9,'Colours in NetAnim','• Red: cluster head\n• Same colour: same cluster\n• Light grey: no cluster\n• Dark grey: dead node\n• Yellow: sink (BS)',{size:13.5});}
 
 // ===== SECTION 1
 section('01','Background','Wireless sensor networks, clustering, and why energy decides everything');
@@ -71,6 +104,14 @@ section('02','Related Work','LEACH · HEED · PEGASIS · literature hybrids · r
   ['Subedi et al., 2024','TLC-LEACH','Two-level grid clustering, angular boundary fix','No failure recovery; no energy × connectivity score'],
   ['El-Sayed et al., 2026','RL-ILEACH','Q-learning inside ILEACH CH selection','PDR gain not significant; no relay'],
   ['Razaque 2016 / Shrestha 2015','H-LEACH / SH-LEACH','Direct LEACH + HEED fusion','No reuse, failover or relay — the gap targeted here']],{pos:{x:0.9,y:1.6,w:11.6,colW:[2.6,1.8,3.7,3.5]},center:9,hl:i=>i===4,rowH:0.85});}
+{const s=content('Related Mechanisms','What exists vs. what is new','Each mechanism of v8-Chain exists somewhere on its own; the contribution is combining them, making relaying an energy decision, and evaluating them one at a time.');
+ table(s,['Mechanism in v8-Chain','Where it already appears','What this thesis adds'],[
+  ['LEACH + HEED fusion','H-LEACH [5], SH-LEACH [4]','Single-pass score + reuse; fixes to both papers'],
+  ['Backup cluster head','FTEC [10] (HEED + backup CH)','Backup + cluster repair with a live-average energy test'],
+  ['CH hand-over before depletion','Threshold-based CH rotation (review [11])','Proactive hand-over per round, cost-based trigger'],
+  ['Inter-cluster multi-hop','EEUC [12], EAUCA [13]','Relay only when cheaper than direct — adapts to BS position'],
+  ['Two-slope radio model','Heinzelman et al. 2002 [14]','Same model for every protocol (fair comparison)']],{pos:{x:0.9,y:1.6,w:11.6,colW:[3.2,3.8,4.6]},center:9,boldFirst:true,rowH:0.6,fs:13});
+ card(s,0.9,5.8,11.6,0.7,'No reviewed work combines all four pillars — the novelty is the integration and its controlled, step-by-step evaluation.',null,{headSize:14,headColor:C.CH});}
 {const s=content('Research Gap','What is still missing','Four pillars. None of the reviewed works combines all four.');
  const p=[['1','Energy-aware CH selection','Energy × connectivity score'],['2','Multi-round cluster reuse','Less setup overhead'],['3','CH failure recovery','Backup CH + repair (and prevention)'],['4','Adaptive inter-cluster relay','CH-to-CH only when it saves energy']];
  p.forEach(([n,h,b],i)=>{card(s,0.9+i*2.97,1.7,2.75,2.6,h,b,{tag:n,size:16});});
@@ -95,10 +136,6 @@ section('03','Methodology','Reproduce → unify → modify → design → test')
   s.addText(b,{x:x+0.15,y:2.75,w:2.45,h:0.5,fontSize:14,bold:true,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});
   s.addText(c,{x:x+0.2,y:3.3,w:2.35,h:1.8,fontSize:14,color:C.CH,align:'center',valign:'top',fontFace:FONT,margin:0,isTextBox:true});});
  card(s,0.9,5.5,11.6,0.95,'Also reported: total delivered packets — it exposes "alive but silent" nodes that make LND look better than the network really is.',null,{headSize:13.5,headColor:C.CH});}
-{const s=content('Validation','Full IEEE 802.15.4 stack','Before relying on the analytical model, a small scenario was run with real PHY/MAC layers in ns-3.');
- text(s,['IEEE 802.15.4 (LR-WPAN) PHY + MAC, log-distance path loss, per-state energy source','4 nodes (3 sensors + 1 sink), 20 × 20 m, 50-byte packet every 10 s, 1000 s','Confirms the energy accounting and delivery logic used by the analytical model'],{x:0.9,y:1.7,w:5.9,h:3.5,fontSize:15});
- table(s,['Metric','Result'],D.phy,{pos:{x:7.1,y:1.7,w:5.4,colW:[2.4,3.0]},center:9,boldFirst:true,rowH:0.6});}
-
 // ===== SECTION 4
 section('04','Reproducing Existing Protocols','Published → paper-exact → unified → improved');
 {const s=content('Published vs. Our Reproduction','Step 1: paper-exact','Paper numbers cannot be compared with each other directly — every paper used different settings.');
@@ -193,17 +230,6 @@ section('06','Final Design: v8-Chain','Prevent CH death, relieve the CHs, relay 
 {const s=content('v8-Chain','Network structure in round 1','Real simulation state (seed 12345), not an illustration.');
  img(s,'img/v8_chain_topology.png',0.7,1.3,11.9,5.45,1800,974);}
 
-// ===== DEMO
-{const s=content('Demo','Running v8-Chain in ns-3','Real output of the simulator for the center-BS run. The same command with scratch/hybrid-v8-chain-farBS runs the far-BS case. Each run also writes three CSV files and a NetAnim XML animation.');
- img(s,'img/terminal_center.png',5.7,1.35,6.9,5.35,1180,1040);
- card(s,0.9,1.55,4.5,2.3,'How it is run','./ns3 configure\n./ns3 run scratch/hybrid-v8-chain\n./ns3 run scratch/hybrid-v8-chain-farBS',{size:14});
- card(s,0.9,4.05,4.5,2.4,'What it produces','• Per-round results CSV (alive, CHs, PDR, energy…)\n• Per-node energy & lifetime CSVs\n• NetAnim XML — CHs in red, clusters coloured',{size:13.5});}
-{const s=content('Demo','The network over time (BS center)','Snapshots from the simulation output: round 1 (all alive), round 1300 (batteries half used, CHs rotate), round 2621 (first node dies — FND), round 2740 (near the end). Dark red = full battery, pale = almost empty, grey x = dead.');
- img(s,'img/snap_center.png',0.7,1.4,11.9,4.4,2580,735);
- card(s,0.9,5.75,11.6,0.75,'Batteries drain evenly: all 100 nodes are still alive at round 2621, and the last one dies 135 rounds later.',null,{headSize:14,headColor:C.CH});}
-{const s=content('Demo','The network over time (far BS)','Same view with the BS at (50, −100): CHs pass data to each other towards the BS (energy-aware relay). FND at round 1716.');
- img(s,'img/snap_far.png',0.7,1.3,11.9,5.4,2580,945);}
-
 // ===== SECTION 7
 section('07','Results','Center vs. far BS · ablation · robustness · comparison');
 {const s=content('Results','BS at the field center','v8-Chain = v8 at the center (no relays). The big gains vs. v7: +1070 rounds FND and +0.84 pp PDR.');
@@ -217,6 +243,12 @@ section('07','Results','Center vs. far BS · ablation · robustness · compariso
  stat(s,7.6,1.6,4.9,'+36%','FND vs v7 (1266 → 1716)',{size:44});
  stat(s,7.6,3.3,4.9,'+0.93 pp','PDR vs v7 (98.14% → 99.07%)',{size:44});
  card(s,0.9,4.3,6.2,2.1,'Honest reading','HND and LND are within 1% of v7 (1886 / 1956 vs 1891 / 1976) — equal, not better. v8-Chain wins on first death and reliability.',{size:14.5});}
+{const s=content('Network Over Time','BS at the field center','Snapshots from the simulation output: round 1 (all alive), round 1300 (batteries half used, CHs rotate), round 2621 (first node dies — FND), round 2740 (near the end). Dark red = full battery, pale = almost empty, grey x = dead.');
+ img(s,'img/snap_center.png',0.7,1.4,11.9,4.4,2580,735);
+ card(s,0.9,5.75,11.6,0.75,'Batteries drain evenly: all 100 nodes are still alive at round 2621, and the last one dies 135 rounds later.',null,{headSize:14,headColor:C.CH});}
+{const s=content('Network Over Time','Far BS','Same view with the BS at (50, −100): CHs pass data to each other towards the BS (energy-aware relay). FND at round 1716.');
+ img(s,'img/snap_far.png',0.7,1.3,11.9,5.4,2580,945);}
+
 {const s=content('Center vs. Far BS','Same code, only the BS moves');
  const lab=['v6','v7','v8','v8-Chain'];
  lifeChart(s,lab,[1551,1551,2621,2621],[1981,1976,2711,2711],[2106,2066,2761,2756],{x:0.7,y:1.35,w:5.9,h:5.3},{title:'BS at center'});
@@ -258,6 +290,9 @@ section('07','Results','Center vs. far BS · ablation · robustness · compariso
  text(s,['Five existing protocols were reproduced fairly in one environment; two published hybrids were corrected.','An original protocol was evolved one mechanism at a time, from v1 to v8-Chain.','v8-Chain protects cluster heads before and after failure, lets nodes near the sink bypass their CH, restricts the CH role to strong nodes, and relays only when it saves energy.'],{x:0.9,y:1.6,w:6.6,h:4.8,fontSize:16});
  s.addShape(pres.shapes.ROUNDED_RECTANGLE,{x:7.9,y:1.6,w:4.6,h:4.8,rectRadius:0.12,fill:{color:C.RED},line:{color:C.RED}});
  s.addText([{text:'v8-Chain',options:{bold:true,fontSize:24,breakLine:true}},{text:'Center BS',options:{bold:true,fontSize:14,color:'F3E3E1',breakLine:true}},{text:'FND 2621 · PDR 99.27%',options:{fontSize:17,breakLine:true}},{text:' ',options:{fontSize:8,breakLine:true}},{text:'Far BS',options:{bold:true,fontSize:14,color:'F3E3E1',breakLine:true}},{text:'FND 1716 · PDR 99.07%',options:{fontSize:17,breakLine:true}},{text:' ',options:{fontSize:8,breakLine:true}},{text:'One configuration for both deployments.',options:{italic:true,fontSize:14}}],{x:8.2,y:1.8,w:4.0,h:4.4,color:C.WHITE,fontFace:FONT,valign:'middle',margin:0,paraSpaceAfter:4,isTextBox:true});}
+// ===== References
+{const R=D.refs; [[0,8],[8,15]].forEach(([a,b],k)=>{const s=content('References',k?'(2/2)':'(1/2)');
+ s.addText(R.slice(a,b).map((r,i)=>({text:`[${a+i+1}]  ${r}`,options:{breakLine:i<b-a-1}})),{x:0.9,y:1.5,w:11.6,h:5.1,fontSize:12.5,color:C.CH,fontFace:FONT,valign:'top',paraSpaceAfter:9,margin:0,isTextBox:true});});}
 {const s=pres.addSlide(); frame(s); net(s,10.1,0.22,1.05); net(s,0.3,7.28,0.6,C.RED,false,true);
  s.addText('Thank you',{x:0.9,y:2.3,w:11.5,h:1.4,fontSize:54,bold:true,color:C.RED,align:'center',fontFace:FONT,margin:0,isTextBox:true});
  s.addText('Questions & Discussion',{x:0.9,y:3.7,w:11.5,h:0.8,fontSize:24,color:C.CH,align:'center',fontFace:FONT,margin:0,isTextBox:true});
