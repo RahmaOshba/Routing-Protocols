@@ -1,31 +1,27 @@
 // ============================================================================
-// H-LEACH -- EDITED + IMPROVED (unified environment, PLUS a relaxed
-// energy-gating condition)
+// H-LEACH -- EDITED + IMPROVED (unified environment + two fixes)
 // ns-3.41 / C++
 //
-// WHY THIS FILE EXISTS:
-//   Even WITH the necessary fallback (see ORIGINAL file's header), a
-//   Python verification found the primary selection mechanism (the
-//   energy-weighted threshold draw combined with the strict "energy >
-//   average" gate) still fails to find ANY qualifying candidate in a
-//   meaningful fraction of rounds (~12% in the paper's own environment),
-//   silently falling back to a naive "pick the single highest-energy
-//   node" rule instead of the paper's intended energy-weighted
-//   probabilistic mechanism. This means the paper's own selection logic
-//   is doing less work than intended, most of the time defaulting to the
-//   same naive heuristic HEED/LEACH already avoid.
+// SAME ALGORITHM as hleach_ORIGINAL.cc (Algorithm 1: e0(i) = P*E/Emax,
+// t(n) = e0/(1 - e0*mod(r, round(1/e0))), CH if rand < t(n) AND
+// e_i > GATE*E_avg with E_avg over all n nodes; disclosed highest-energy
+// fallback; nearest-CH join) -- the ENVIRONMENT is standardized: packet =
+// 2000 bits, and LEACH-style setup messages (advertisement, join, TDMA
+// schedule) are charged, as for every protocol in the unified environment.
+// Field 100x100 m, BS at the centre, two-slope radio, E0 = 0.5 J, P = 0.1
+// already match the paper.
 //
-// WHAT CHANGED (only the gating threshold; the core e0(i)/t(n) formula,
-// fallback, join, aggregation, and radio model are all untouched):
-//   - Old: candidate if energy_i > 1.0 * (average energy of alive nodes)
-//   - New: candidate if energy_i > 0.8 * (average energy of alive nodes)
-//   A Python parameter sweep (0.5 to 1.0) found 0.8 to be the best
-//   balance: it lets more genuinely energy-weighted candidates qualify
-//   (reducing reliance on the naive fallback) without admitting so many
-//   low-energy nodes that cluster-head quality degrades.
-//
-// HONESTY NOTE: exact resulting FND/HND/LND numbers should be confirmed
-// by compiling and running this file.
+// IMPROVED (two fixes to the paper's own flaws, same unified environment):
+//   1. Gate "e_i > E_avg" -> "e_i >= E_avg": with equal initial energy no node
+//      is strictly above the average, so the literal gate deadlocks (no CH
+//      ever) and only the fallback keeps the network running.
+//   2. LEACH's G-set is restored: a node that served as CH cannot be CH again
+//      until the epoch (1/P = 10 rounds) ends. The paper dropped G, so nothing
+//      guaranteed that the CH role rotates.
+//   (An earlier version relaxed the gate to 0.8 x E_avg; once setup messages
+//   are charged, that creates more CHs and shortens lifetime, so it was
+//   replaced by these two fixes.)
+// For the paper-faithful reproduction, see hleach_ORIGINAL.cc.
 // ============================================================================
 
 #include "ns3/core-module.h"
@@ -52,6 +48,7 @@ struct SensorNode {
     double energy = 0.0;
     bool alive = true;
     bool finalCH = false;
+    bool servedEpoch = false;   // IMPROVED: LEACH G-set
     uint32_t clusterHead = numeric_limits<uint32_t>::max();
 };
 
@@ -83,13 +80,11 @@ static constexpr double E0 = 0.5;
 
 // ------------------------------- Protocol params ----------------------------
 static constexpr double P_CH = 0.1;             // paper's "Probability to become CH"
-static constexpr double GATE_FACTOR = 0.8;      // IMPROVED: relaxed from the paper's literal 1.0 --
-                                                 // a Python sweep found 0.8 reduces reliance on the
-                                                 // naive highest-energy fallback while still favoring
-                                                 // above-average-energy nodes as candidates
+static constexpr double GATE_FACTOR = 1.0;      // same factor as the paper; IMPROVED uses >=
+static constexpr uint32_t EPOCH_G = 10;         // IMPROVED: G-set epoch = 1/P
 
 // --------------------------- Radio / traffic -------------------------------
-static constexpr uint32_t PACKET_BITS = 2000;   // UNIFIED (paper's own value is 4000 -- see ORIGINAL file)
+static constexpr uint32_t PACKET_BITS = 2000;   // UNIFIED (paper: 4000)
 static constexpr double E_ELEC = 50e-9;
 static constexpr double E_FS = 10e-12;
 static constexpr double E_MP = 0.0013e-12;
@@ -97,7 +92,10 @@ static constexpr double E_DA = 5e-9;
 static constexpr double DATA_RATE = 250000.0;
 static constexpr double LIGHT = 3.0e8;
 
-static constexpr uint32_t MAX_ROUNDS = 5000;
+static constexpr uint32_t MAX_ROUNDS = 20000; // run until the last node dies
+static constexpr bool COUNT_SETUP_ENERGY = true;    // UNIFIED: setup overhead charged for every protocol
+static constexpr uint32_t CONTROL_BITS = 200;
+static const double ADV_RANGE = AREA * std::sqrt(2.0);
 static constexpr uint32_t SEED = 12345;
 
 // ----------------------------- Geometry ------------------------------------
@@ -126,11 +124,13 @@ static uint32_t RunSelection(vector<SensorNode>& nodes, uint32_t round, mt19937&
     double sumEnergy = 0.0;
     uint32_t aliveCount = 0;
     for (const auto& n : nodes) if (n.alive) { sumEnergy += n.energy; ++aliveCount; }
-    const double eAvg = aliveCount ? sumEnergy / aliveCount : 0.0;
+    (void)aliveCount;
+    const double eAvg = sumEnergy / static_cast<double>(N);   // Algorithm 1 line 4: sum(e_n) / n, n = all nodes
 
+    if ((round - 1) % EPOCH_G == 0) for (auto& n : nodes) n.servedEpoch = false;   // IMPROVED: G-set reset every 1/P rounds
     vector<uint32_t> candidates;
     for (auto& n : nodes) {
-        if (!n.alive) continue;
+        if (!n.alive || n.servedEpoch) continue;   // IMPROVED: not CH again in this epoch
         const double e0i = P_CH * (n.energy / E0);
         if (e0i <= 0.0) continue;
         const uint32_t epoch = max<uint32_t>(1, static_cast<uint32_t>(lround(1.0 / e0i)));
@@ -138,7 +138,7 @@ static uint32_t RunSelection(vector<SensorNode>& nodes, uint32_t round, mt19937&
         double tn = (denom > 1e-9) ? (e0i / denom) : 1.0;
         tn = min(1.0, max(0.0, tn));
 
-        if (U(rng) < tn && n.energy > GATE_FACTOR * eAvg) {
+        if (U(rng) < tn && n.energy >= GATE_FACTOR * eAvg - 1e-12   /* IMPROVED: >= instead of > */) {
             candidates.push_back(n.id);
         }
     }
@@ -156,7 +156,7 @@ static uint32_t RunSelection(vector<SensorNode>& nodes, uint32_t round, mt19937&
         if (best != numeric_limits<uint32_t>::max()) candidates.push_back(best);
     }
 
-    for (uint32_t id : candidates) nodes[id].finalCH = true;
+    for (uint32_t id : candidates) { nodes[id].finalCH = true; nodes[id].servedEpoch = true; }
 
     uint32_t chCount = 0;
     for (const auto& n : nodes) if (n.alive && n.finalCH) ++chCount;
@@ -195,8 +195,39 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, mt19
     RunSelection(nodes, round, rng, fallbackFired);
     r.fallbackUsed = fallbackFired;
 
+    // ---- Setup control messages (LEACH-style) -- only in the unified files ----
+    if (COUNT_SETUP_ENERGY) {
+        auto spend = [&](uint32_t i, double e) -> bool {
+            if (!nodes[i].alive) return false;
+            if (e > nodes[i].energy) { nodes[i].energy = 0.0; nodes[i].alive = false; nodes[i].finalCH = false; return false; }
+            nodes[i].energy -= e; return true;
+        };
+        for (uint32_t c = 0; c < N; ++c) {                       // CH advertisement, heard by all
+            if (!nodes[c].alive || !nodes[c].finalCH) continue;
+            if (!spend(c, TxEnergy(CONTROL_BITS, ADV_RANGE))) continue;
+            for (uint32_t v = 0; v < N; ++v) if (v != c) spend(v, RxEnergy(CONTROL_BITS));
+        }
+        for (uint32_t i = 0; i < N; ++i) {                       // join request
+            if (!nodes[i].alive || nodes[i].finalCH) continue;
+            const uint32_t c = nodes[i].clusterHead;
+            if (c >= N || !nodes[c].alive) continue;
+            if (spend(i, TxEnergy(CONTROL_BITS, Dist(nodes[i], nodes[c])))) spend(c, RxEnergy(CONTROL_BITS));
+        }
+        for (uint32_t c = 0; c < N; ++c) {                       // TDMA schedule to the farthest member
+            if (!nodes[c].alive || !nodes[c].finalCH) continue;
+            double far = 0.0; bool any = false;
+            for (uint32_t i = 0; i < N; ++i)
+                if (nodes[i].alive && !nodes[i].finalCH && nodes[i].clusterHead == c) { any = true; far = max(far, Dist(nodes[i], nodes[c])); }
+            if (!any || !spend(c, TxEnergy(CONTROL_BITS, far))) continue;
+            for (uint32_t i = 0; i < N; ++i)
+                if (nodes[i].alive && !nodes[i].finalCH && nodes[i].clusterHead == c) spend(i, RxEnergy(CONTROL_BITS));
+        }
+    }
+
     for (const auto& n : nodes) if (n.alive && n.finalCH) ++r.chCount;
     for (const auto& n : nodes) if (n.alive) ++r.generated;
+    uint32_t directDelivered = 0;
+    double directDelaySum = 0.0;
 
     vector<uint32_t> membersPerCH(N, 0);
     vector<bool> memberDelivered(N, false);
@@ -205,7 +236,16 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, mt19
     for (uint32_t i = 0; i < N; ++i) {
         if (!nodes[i].alive || nodes[i].finalCH) continue;
         const uint32_t c = nodes[i].clusterHead;
-        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) continue;
+        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) {
+            // no CH: transmit directly to the BS
+            const double dBS = DistBS(nodes[i]);
+            const double txBS = TxEnergy(PACKET_BITS, dBS);
+            if (txBS > nodes[i].energy) { nodes[i].energy = 0.0; nodes[i].alive = false; continue; }
+            nodes[i].energy -= txBS;
+            ++r.dataTx; ++r.dataRx; ++directDelivered;
+            directDelaySum += DelayMs(PACKET_BITS, dBS);
+            continue;
+        }
         const double d = Dist(nodes[i], nodes[c]);
         const double tx = TxEnergy(PACKET_BITS, d);
         const double rx = RxEnergy(PACKET_BITS);
@@ -224,7 +264,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, mt19
     for (uint32_t c = 0; c < N; ++c) {
         if (!nodes[c].alive || !nodes[c].finalCH) continue;
         const uint32_t members = membersPerCH[c];
-        const double agg = static_cast<double>(members) * AggEnergy(PACKET_BITS);
+        const double agg = static_cast<double>(members + 1) * AggEnergy(PACKET_BITS); // members' + own signal
         if (agg > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; continue; }
         nodes[c].energy -= agg;
         const double dBS = DistBS(nodes[c]);
@@ -239,6 +279,8 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, mt19
                 delaySum += delayToCH[i] + DelayMs(PACKET_BITS, dBS);
     }
 
+    deliveredSources += directDelivered;
+    delaySum += directDelaySum;
     r.delivered = min(deliveredSources, r.generated);
     r.lost = r.generated - r.delivered;
 
@@ -289,7 +331,7 @@ int main(int argc, char* argv[])
     cmd.Parse(argc, argv);
 
     cout << "\n========================================\n";
-    cout << "  H-LEACH -- EDITED+IMPROVED (relaxed energy gate)\n";
+    cout << "  H-LEACH -- EDITED+IMPROVED (>= gate + LEACH G-set)\n";
     cout << "========================================\n";
     cout << "Nodes = " << N << " | Area = " << AREA << "x" << AREA << " m | BS = (" << BSX << "," << BSY << ")\n";
     cout << "P = " << P_CH << " | E0 = " << E0 << " J | Gate factor = " << GATE_FACTOR << " (paper's literal \"energy>average\")\n";
@@ -389,9 +431,7 @@ int main(int argc, char* argv[])
         if (r.alive == 0) { LND = round; break; }
     }
 
-    if (LND == 0) {
-        for (uint32_t d : deathRound) LND = max(LND, d);
-    }
+    // LND is only reported when the last node really died.
 
     for (uint32_t i = 0; i < N; ++i)
         lifetime << i << ',' << (deathRound[i] ? to_string(deathRound[i]) : "Not_Dead") << '\n';
@@ -413,7 +453,7 @@ int main(int argc, char* argv[])
     cout << fixed << setprecision(6);
     cout << "Total Energy Used = " << totalUsed << " J\n";
     cout << "Overall PDR = " << overallPdr << "\n";
-    cout << "Rounds where fallback CH selection fired = " << totalFallbacks << " / " << MAX_ROUNDS << "\n";
+    cout << "Rounds where fallback CH selection fired = " << totalFallbacks << "\n";
     cout << "\nCSV outputs: hleach-EDITED-IMPROVED-results.csv, hleach-EDITED-IMPROVED-node-energy.csv,\n";
     cout << "             hleach-EDITED-IMPROVED-node-lifetime.csv, hleach-EDITED-IMPROVED-clustering.xml\n";
     cout << "========================================\n";

@@ -40,31 +40,34 @@ using namespace std;
 // reproduction of the ONLY published paper found (2015-2026 search) that
 // combines LEACH and HEED specifically by name.
 //
-// DESIGN (per the paper):
-//   - Keeps LEACH's round-based structure: setup phase (advertise, join,
-//     TDMA schedule) + steady-state data phase, every round.
-//   - Replaces LEACH's purely-random threshold with a HEED-style,
-//     energy-based stochastic probability:
-//         CHprob_i = Cprob * (E_i / Emax), doubled once per round
-//         (a simplified single-doubling stand-in for HEED's iterative
-//         mechanism, embedded in a single LEACH round)
-//   - Adds a CHcho-based fairness penalty (reduces probability for nodes
-//     that have already served as CH many times), the paper's stated
-//     improvement over plain HEED.
+// DESIGN (per the paper, Sec. 3.3, Eq. 3):
+//   - Keeps LEACH's round structure: setup (advertise, join, TDMA) +
+//     steady-state data phase, every round. No G-set/epoch: "unlike
+//     selecting each node in turns", every node draws a random number.
+//   - CH probability (paper Eq. 3):
 //
-// HONESTY NOTE: the paper's core equation (their formula 3) did not
-// extract cleanly from the PDF (OCR/formatting issues with the math
-// notation). This is a best-effort reconstruction based on the paper's
-// textual description of the mechanism. Verify against the original PDF
-// equation image before citing the exact formula in the thesis text.
+//        CHprob = Cprob * (Eresidual / Emax) * (Cprob * r)
+//                 ---------------------------------------------
+//                     1 + ( CHcho mod (1 / Cprob) )
 //
-// PARAMETERS: taken DIRECTLY from the paper's Table 1/2 (these extracted
-// cleanly): N=100, 100x100m field, Cprob=0.10, Emax=0.5J, Eelec=50nJ/bit,
-// Efs=100pJ/bit/m^2 (the paper reports only ONE amplifier constant --
-// free-space model only, no multipath/d0 split), 2000 rounds. Packet size
-// (4000 bits) and sink location (center) are NOT explicitly stated in the
-// paper and are carried over as the same assumptions used in the Python
-// reproduction (sh_leach_reproduction.py) for consistency.
+//     r = current round; CHcho = number of nodes selected as CH so far
+//     (whole network, up to the present round). A node becomes CH if
+//     random(0,1) < CHprob (capped at 1).
+//   - Everything else follows plain LEACH (as reproduced in leach_ORIGINAL):
+//     CH advertisement heard by the whole field, nearest-CH join, TDMA
+//     schedule to the farthest member, fusion of members + own signal, a
+//     node with no CH transmits directly to the BS.
+//   - NOT in the paper (documented gap-filling): if no node becomes CH in a
+//     round (Eq. 3 gives ~0 in the first rounds), the highest-energy alive
+//     node is made CH. The paper itself states that the method "does not
+//     ensure the number of cluster heads".
+//
+// PARAMETERS: taken DIRECTLY from the paper's Table 1/2: N=100, 100x100m
+// field, Cprob=0.10, Emax=0.5J, Eelec=50nJ/bit, one amplifier constant
+// 100pJ/bit/m^2 (d^2 only). Packet size and sink location are NOT stated in
+// the paper: packet = 2000 bits and sink at the field centre are documented
+// assumptions. The paper plots 2000 rounds; the simulation here runs until
+// the last node dies.
 // ============================================================================
 
 struct SensorNode {
@@ -116,11 +119,11 @@ static constexpr double CPROB = 0.10; // paper's Cprob
 // citing their original papers' numbers verbatim.
 static constexpr double E_ELEC = 50e-9;   // J/bit (paper)
 static constexpr double E_FS = 100e-12;   // J/bit/m^2 (ORIGINAL: paper's ONLY amplifier constant, no multipath term)
-static constexpr uint32_t MAX_ROUNDS = 2000;  // paper simulates exactly 2000 rounds
+static constexpr uint32_t MAX_ROUNDS = 20000; // run until the last node dies (paper plots 2000 rounds)
 static constexpr uint32_t SEED = 12345;
 
 // --------------------- Assumptions NOT explicitly stated in the paper ------
-static constexpr double RANGE = 25.0;       // m, reference control TX distance (assumed, matches other files)
+static const double ADV_RANGE = AREA * std::sqrt(2.0); // m: CH advertisement heard by the whole field (as in LEACH)
 static constexpr uint32_t PACKET_BITS = 2000;   // UNIFIED (was 4000 -- an assumption either way, paper doesn't state this)
 static constexpr uint32_t CONTROL_BITS = 200;   // bits -- ASSUMPTION
 static constexpr double E_DA = 5e-9;            // J/bit aggregation -- ASSUMPTION (standard value)
@@ -142,29 +145,26 @@ static double TxTimeSec(uint32_t bits) { return static_cast<double>(bits) / DATA
 static double DelayMs(uint32_t bits, double d) { return (TxTimeSec(bits) + d / LIGHT) * 1000.0; }
 
 // ------------------------ SH-LEACH CH selection -----------------------------
-// RECONSTRUCTED formula (see header honesty note): HEED-style energy-based
-// probability, doubled once, penalized by how many times the node has
-// already served as CH (CHcho), embedded in LEACH's per-round structure
-// (no epoch/G-set reset like plain LEACH -- the paper doesn't describe one;
-// fairness comes entirely from the CHcho penalty term instead).
-static uint32_t RunSHLEACH(vector<SensorNode>& nodes, mt19937& rng)
+// Paper Eq. 3. CHcho = number of CH selections in the network so far.
+static uint64_t g_chCho = 0;
+
+static uint32_t RunSHLEACH(vector<SensorNode>& nodes, uint32_t round, mt19937& rng)
 {
     uniform_real_distribution<double> U(0.0, 1.0);
 
     for (auto& n : nodes) { n.finalCH = false; n.clusterHead = numeric_limits<uint32_t>::max(); }
 
+    const uint64_t period = static_cast<uint64_t>(llround(1.0 / CPROB));   // 1/Cprob
+    const double denom = 1.0 + static_cast<double>(g_chCho % period);
     vector<uint32_t> candidates;
     for (auto& n : nodes) {
         if (!n.alive) continue;
-        double baseProb = CPROB * (n.energy / EMAX);
-        double prob = min(1.0, baseProb * 2.0);  // single doubling (see header note)
-        double penalty = 1.0 / (1.0 + static_cast<double>(n.chTimesServed % max<uint32_t>(1, static_cast<uint32_t>(1.0 / CPROB))));
-        prob = min(1.0, prob * penalty);
-        if (U(rng) <= prob) candidates.push_back(n.id);
+        const double prob = min(1.0, CPROB * (n.energy / EMAX) * (CPROB * static_cast<double>(round)) / denom);
+        if (U(rng) < prob) candidates.push_back(n.id);
     }
 
     if (candidates.empty()) {
-        // Fallback: force the alive node with highest energy to be CH
+        // NOT in the paper (see header): force the highest-energy alive node
         double bestE = -1.0;
         int best = -1;
         for (const auto& n : nodes) {
@@ -177,6 +177,7 @@ static uint32_t RunSHLEACH(vector<SensorNode>& nodes, mt19937& rng)
         nodes[id].finalCH = true;
         nodes[id].chTimesServed++;
     }
+    g_chCho += candidates.size();
 
     uint32_t chCount = static_cast<uint32_t>(candidates.size());
 
@@ -213,7 +214,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round)
     // ---- Setup phases: same LEACH-style overhead structure (advertise, join, TDMA) ----
     for (uint32_t c = 0; c < N; ++c) {
         if (!nodes[c].alive || !nodes[c].finalCH) continue;
-        const double tx = TxEnergy(CONTROL_BITS, RANGE);
+        const double tx = TxEnergy(CONTROL_BITS, ADV_RANGE);
         if (tx > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; continue; }
         nodes[c].energy -= tx;
         ++r.controlTx;
@@ -266,10 +267,11 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round)
     for (uint32_t c = 0; c < N; ++c) {
         if (!nodes[c].alive || !nodes[c].finalCH) continue;
         bool hasMember = false;
+        double farthest = 0.0;
         for (uint32_t i = 0; i < N; ++i)
-            if (nodes[i].alive && !nodes[i].finalCH && nodes[i].clusterHead == c) { hasMember = true; break; }
+            if (nodes[i].alive && !nodes[i].finalCH && nodes[i].clusterHead == c) { hasMember = true; farthest = max(farthest, Dist(nodes[i], nodes[c])); }
         if (!hasMember) continue;
-        const double tx = TxEnergy(CONTROL_BITS, RANGE);
+        const double tx = TxEnergy(CONTROL_BITS, farthest);   // TDMA schedule to the farthest member
         if (tx > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; continue; }
         nodes[c].energy -= tx;
         ++r.controlTx;
@@ -309,11 +311,23 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round)
     vector<uint32_t> membersPerCH(N, 0);
     vector<bool> memberDelivered(N, false);
     vector<double> delayToCH(N, 0.0);
+    uint32_t directDelivered = 0;
+    double directDelaySum = 0.0;
 
     for (uint32_t i = 0; i < N; ++i) {
         if (!nodes[i].alive || nodes[i].finalCH) continue;
         const uint32_t c = nodes[i].clusterHead;
-        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) { ++r.unclustered; continue; }
+        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) {
+            // no CH: transmit directly to the BS (as in LEACH)
+            ++r.unclustered;
+            const double dBS = DistBS(nodes[i]);
+            const double txBS = TxEnergy(PACKET_BITS, dBS);
+            if (txBS > nodes[i].energy) { nodes[i].energy = 0.0; nodes[i].alive = false; continue; }
+            nodes[i].energy -= txBS;
+            ++r.dataTx; ++r.dataRx; ++directDelivered;
+            directDelaySum += DelayMs(PACKET_BITS, dBS);
+            continue;
+        }
         const double d = Dist(nodes[i], nodes[c]);
         const double tx = TxEnergy(PACKET_BITS, d);
         const double rx = RxEnergy(PACKET_BITS);
@@ -332,7 +346,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round)
     for (uint32_t c = 0; c < N; ++c) {
         if (!nodes[c].alive || !nodes[c].finalCH) continue;
         const uint32_t members = membersPerCH[c];
-        const double agg = static_cast<double>(members) * AggEnergy(PACKET_BITS);
+        const double agg = static_cast<double>(members + 1) * AggEnergy(PACKET_BITS); // members' + own signal
         if (agg > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; ++r.lost; continue; }
         nodes[c].energy -= agg;
         const double dBS = DistBS(nodes[c]);
@@ -347,6 +361,8 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round)
                 delaySum += delayToCH[i] + DelayMs(PACKET_BITS, dBS);
     }
 
+    deliveredSources += directDelivered;
+    delaySum += directDelaySum;
     r.delivered = min(deliveredSources, r.generated);
     r.lost = r.generated - r.delivered;
 
@@ -413,8 +429,8 @@ int main(int argc, char* argv[])
     cout << "========================================\n";
     cout << "Nodes = " << N << " | Area = " << AREA << "x" << AREA << " m\n";
     cout << "Cprob = " << CPROB << " | Emax = " << EMAX << " J | Radio: FREE-SPACE ONLY (per paper)\n";
-    cout << "Rounds = " << MAX_ROUNDS << " (exact match to paper)\n";
-    cout << "NOTE: packet size (4000 bits) and sink location (center) are\n";
+    cout << "CH probability = paper Eq. 3: Cprob*(E/Emax)*(Cprob*r)/(1 + CHcho mod 1/Cprob)\n";
+    cout << "NOTE: packet size (" << PACKET_BITS << " bits) and sink location (center) are\n";
     cout << "      ASSUMPTIONS -- not explicitly stated in the paper.\n";
     cout << "========================================\n";
 
@@ -474,7 +490,7 @@ int main(int argc, char* argv[])
     cout << "\nSimulation starts...\n";
 
     for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
-        RunSHLEACH(nodes, electionRng);
+        RunSHLEACH(nodes, round, electionRng);
         RoundResult r = SimulateRound(nodes, round);
 
         const vector<SensorNode> visualSnapshot = nodes;
@@ -513,10 +529,7 @@ int main(int argc, char* argv[])
         if (r.alive == 0) { LND = round; break; }
     }
 
-    if (LND == 0) {
-        for (const auto& n : nodes) if (n.alive) { LND = 0; break; }
-        if (LND == 0) for (uint32_t d : deathRound) LND = max(LND, d);
-    }
+    // LND is only reported when the last node really died.
 
     for (uint32_t i = 0; i < N; ++i)
         lifetime << i << ',' << (deathRound[i] ? to_string(deathRound[i]) : "Not_Dead") << '\n';
@@ -538,8 +551,8 @@ int main(int argc, char* argv[])
     cout << fixed << setprecision(6);
     cout << "Total Energy Used = " << totalUsed << " J\n";
     cout << "Overall PDR = " << overallPdr << "\n";
-    cout << "\nCSV outputs: hybrid-SHLEACH-results.csv, hybrid-SHLEACH-node-energy.csv,\n";
-    cout << "             hybrid-SHLEACH-node-lifetime.csv, hybrid-SHLEACH-clustering.xml\n";
+    cout << "\nCSV outputs: hybrid-SHLEACH-ORIGINAL-results.csv, hybrid-SHLEACH-ORIGINAL-node-energy.csv,\n";
+    cout << "             hybrid-SHLEACH-ORIGINAL-node-lifetime.csv, hybrid-SHLEACH-ORIGINAL-clustering.xml\n";
     cout << "========================================\n";
 
     return 0;
