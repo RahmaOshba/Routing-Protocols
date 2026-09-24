@@ -13,6 +13,7 @@ Every number in the deck, the reports and the workbook is read from
 | `build_litreview.js` | `../Literature_Review.docx` |
 | `build_results_xlsx.py` | `../Results_Comparison.xlsx` (then recalculate the formulas, e.g. open it in Excel) |
 | `build_litreview_xlsx.py` | `../Literature_Review_Comparison.xlsx` — literature review as a comparison table |
+| `build_parameters.js` | `../Simulation_Parameters_Guide.docx` — meaning, role and choice of every simulation parameter |
 
 `common.js` (data, references, environment) and `docx_lib.js` (Word helpers) are shared.
 The Node scripts need `pptxgenjs`, `docx`, `react`, `react-dom`, `react-icons` and `sharp`.
