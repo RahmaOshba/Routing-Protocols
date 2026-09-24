@@ -138,27 +138,27 @@
   ],
   [
    "SH-LEACH",
-   493,
-   747,
-   884,
-   0.9953,
-   "N = 100, Cprob = 0.10"
+   484,
+   583,
+   689,
+   0.9966,
+   "N = 100, Cprob = 0.10, Eq. 3 literal (≈29 CHs/round), single-term radio"
   ],
   [
    "H-LEACH",
-   1080,
-   1160,
-   1210,
-   0.9475,
-   "With required fallback (literal gate deadlocks)"
+   1078,
+   1157,
+   1207,
+   0.9504,
+   "Algorithm 1, E_avg over all nodes; fallback needed in 132 rounds"
   ],
   [
    "EECH-HEED",
-   792,
-   1079,
-   1129,
-   0.9043,
-   "4000-bit packet"
+   1121,
+   1954,
+   3783,
+   0.9978,
+   "Paper scenario: 30/70 zones, 56 J, 4000-bit, Eq. 7 sensing on"
   ]
  ],
  "unified": [
@@ -206,61 +206,61 @@
    "Literature hybrid",
    "SH-LEACH",
    "Edited",
-   1440,
-   1584,
-   1604,
-   0.9917,
-   "LEACH + HEED, single doubling"
+   647,
+   702,
+   721,
+   0.9858,
+   "Eq. 3 literal: round factor keeps growing (≈29 CHs/round)"
   ],
   [
    "Literature hybrid",
    "SH-LEACH",
    "Improved",
-   1247,
-   1600,
-   1649,
-   0.9979,
-   "True iterative doubling, Cprob 0.10→0.03"
+   1480,
+   1542,
+   1558,
+   0.9921,
+   "Round factor made periodic (r mod 1/Cprob)"
   ],
   [
    "Literature hybrid",
    "H-LEACH",
    "Edited",
-   2177,
-   2255,
-   2305,
-   0.9733,
-   "Energy gate 1.0× average"
+   1384,
+   1419,
+   1434,
+   0.993,
+   "Energy gate (> average) + LEACH threshold"
   ],
   [
    "Literature hybrid",
    "H-LEACH",
    "Improved",
-   2347,
-   2449,
-   2499,
-   0.9733,
-   "Energy gate relaxed to 0.8×"
+   1473,
+   1509,
+   1525,
+   0.9936,
+   "≥ gate + LEACH G-set (once per 10-round epoch)"
   ],
   [
    "Context",
    "EECH-HEED",
    "Edited",
-   1653,
-   2134,
-   2184,
-   0.9168,
-   "HEED + EECH (not LEACH+HEED)"
+   1311,
+   1382,
+   1545,
+   0.9974,
+   "HEED zone + EECH zone, Eq. 6 threshold, sensing off"
   ],
   [
    "Context",
    "EECH-HEED",
    "Improved",
-   2502,
-   3758,
-   3808,
-   0.9214,
-   "+ adaptive threshold-based sensing (transmits less)"
+   1368,
+   1385,
+   1767,
+   0.9951,
+   "Zone-2 rotation at the paper's 10 % CH target"
   ]
  ],
  "proposed": [

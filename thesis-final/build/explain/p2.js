@@ -28,8 +28,9 @@ detail:[
 'LEACH: البحث 1312 وإحنا 1327، يعني الفرق 1.1%. والـ FND عندنا 1035 والبحث 932.',
 'HEED وSH-LEACH: البحث حاطط رسم بس من غير أرقام (graph only). وHEED اشتغل بـ 500 نود زي البحث.',
 'ملاحظة: وإحنا بنراجع الأكواد قدام الأبحاث لقينا غلطة في طريقة حساب الـ LND: لو المحاكاة وقفت عند آخر round والنودز لسه عايشة، كان بيتكتب آخر موت على إنه LND. اتصلّحت، ودلوقتي كل بروتوكول بيشتغل لحد ما آخر نود تموت فعلًا.',
-'H-LEACH: البحث بيقول ≈ 4312، وإحنا 1210، ده بعد ما حطينا حل احتياطي عشان يشتغل أصلًا، لأن الـ gate بتاعته بيعمل deadlock.',
-'EECH-HEED: أقل من البحث (2200 ← 1129) لأن الـ adaptive sensing بتاعه، يعني النود مابتبعتش غير لما القراية تتغير، ماكانش اتنفّذ في المرحلة دي.',
+'H-LEACH: البحث بيقول ≈ 4312، وإحنا 1207، ده بعد ما حطينا حل احتياطي عشان يشتغل أصلًا (اشتغل في 132 round)، لأن الـ gate بتاعته بيعمل deadlock.',
+'SH-LEACH: معادلة 3 زي ما هي مكتوبة بتطلّع حوالي 29 CH كل round (رقم الـ round بيكبر ومابيتصفرش)، عشان كده عمره قصير: FND 484 وLND 689.',
+'EECH-HEED: بنيناه من معادلاته كلها، ومعاه الـ adaptive sensing (النود مابتبعتش غير لما القراية تعدّي الحد وتتغير). الـ FND عندنا 1121 والبحث 1250 (فرق حوالي 10%). الـ HND والـ LND بيعتمدوا على شكل قراءات الحرارة، والبحث ماقالش شكلها، فافترضنا دورة يومية 20–35 درجة مع noise 1 درجة.',
 'ملاحظة مهمة: أرقام الأبحاث ماينفعش تتقارن ببعض مباشرة، لأن كل بحث استخدم إعدادات مختلفة.'],
 say:'First we reproduced each protocol in its own paper\'s settings. PEGASIS matched its LND within 0.3 percent and LEACH within 1.1 percent, which validates our implementation.',qa:[]},
 
@@ -39,7 +40,7 @@ detail:[
 'LEACH: FND 1383 وLND 1842 وPDR 99.40%.',
 'HEED: FND 634 بس! أول نود بتموت بدري جدًا بسبب رسايل التفاوض كل round، بس الـ PDR بتاعه عالي (99.68%). وHEED (fairness) قريب منه (743).',
 'PEGASIS: أطول LND (3504) بسبب السلسلة والمسافات القصيرة، بس FND 1324.',
-'SH-LEACH: FND 1440 وLND 1604. وH-LEACH (بعد التعديل عشان يشتغل): FND 2177 وLND 2305. وEECH-HEED: FND 1653 بس PDR 91.68%.',
+'SH-LEACH: FND 647 وLND 721 بس، لأن معادلته بتطلّع حوالي 29 CH كل round. وH-LEACH: FND 1384 وLND 1434. وEECH-HEED (من غير الـ sensing عشان يبقى زي الباقي): FND 1311 وLND 1545.',
 'الرسم البياني بيحط FND وHND وLND جنب بعض لكل بروتوكول.'],
 say:'In the unified environment, differences come only from the algorithms. HEED dies earliest because of its negotiation overhead; PEGASIS has the longest last-node lifetime.',qa:[]},
 
@@ -53,11 +54,11 @@ qa:[['يعني إيه single-term → two-slope؟','بعض الأبحاث الق
 
 {n:31,about:'تحسين الـ hybrids اللي في الأبحاث: التصليحات اللي عملتيها.',
 detail:[
-'SH-LEACH: صلّحتي المعادلة بحيث المضاعفة تبقى متكررة زي HEED الحقيقي، ونزّلتي Cprob من 0.10 لـ 0.03. النتيجة: HND وLND وPDR زادوا (PDR بقى 99.79%)، بس FND قلّ 13% (من 1440 لـ 1247)، لأن عدد الـ clusters بقى أقل وحجمها أكبر.',
-'H-LEACH: خففتي شرط الطاقة من "أكبر من 1.0 × المتوسط" لـ "أكبر من 0.8 × المتوسط". كده القاعدة اللي بتعتمد على الطاقة بقت هي اللي بتقرر فعلًا، والنتيجة FND وHND وLND زادوا من 7.8% لـ 8.6% من غير ما الـ PDR يقل (FND 2347).',
-'EECH-HEED (للسياق بس): لما ضفنا الـ adaptive threshold sensing بتاعه، طلع أطول عمر رقمي (LND 3808). بس ده لأن النودز بتبعت أقل، مش لأن الـ clustering أحسن. فحطيناه للسياق ومش بنقارن نفسنا بيه مباشرة.'],
-say:'I corrected both literature hybrids: a true iterative doubling for SH-LEACH and a relaxed 0.8 energy gate for H-LEACH, which improved its lifetime by about 8 percent.',
-qa:[['ليه EECH-HEED مش المنافس المباشر مع إن LND بتاعه 3808؟','لأنه بيكسب عمر عن طريق إنه يقلل عدد الرسايل (مابيبعتش غير لما القراية تتغير). ده بيغيّر التطبيق نفسه مش الـ clustering. لو طبّقنا نفس الفكرة على أي بروتوكول تاني عمره هيزيد برضو.']]},
+'SH-LEACH: المشكلة إن معادلة 3 بتضرب في رقم الـ round (r) والرقم ده بيفضل يكبر، فالاحتمال بيكبر لحد ما حوالي 29 نود يبقوا CH كل round. التصليح: خلينا الـ r يلف كل 1/Cprob = 10 rounds (زي LEACH بالظبط). النتيجة: FND من 647 لـ 1480 (+129%)، وHND +120%، وLND من 721 لـ 1558 (+116%).',
+'H-LEACH: غيّرنا الشرط من "أكبر من المتوسط" لـ "أكبر من أو يساوي المتوسط" (عشان مايقفش)، وضفنا مجموعة G بتاعة LEACH: النود اللي بقت CH ماترجعش CH غير بعد 10 rounds. النتيجة: FND من 1384 لـ 1473، وFND وHND وLND زادوا 6.3–6.4%. (جربنا نخفف الشرط لـ 0.8 زي الأول، بس لما طاقة الـ setup بقت محسوبة طلع أسوأ).',
+'EECH-HEED (للسياق بس): في المنطقة 2 المعادلة 5 بتدي احتمال قريب من 1، فالتناوب (كل 1/P round) بيبقى كل round أو اتنين، ونفس النودز اللي على حدود المنطقة 1 بيبقوا CH على طول. التصليح: التناوب في المنطقة 2 بقى على نسبة الـ 10% بتاعة البحث نفسه، والمعادلة 5 فضلت كوزن. النتيجة: FND من 1311 لـ 1368 (+4.3%) وLND من 1545 لـ 1767 (+14.4%).'],
+say:'For SH-LEACH, the round factor in Eq. 3 never resets, so about 29 nodes become CH every round; making it periodic like LEACH more than doubled the lifetime. For H-LEACH, a greater-or-equal gate plus the LEACH G-set added about 6 percent. For EECH-HEED, rotating Zone 2 at the paper\'s own 10 percent target added 4 percent to FND and 14 percent to LND.',
+qa:[['ليه قفلنا الـ sensing بتاع EECH-HEED في البيئة الموحدة؟','لأنه بيكسب عمر عن طريق إنه يقلل عدد الرسايل (مابيبعتش غير لما القراية تتغير). ده بيغيّر التطبيق نفسه مش الـ clustering. لو طبّقنا نفس الفكرة على أي بروتوكول تاني عمره هيزيد برضو، فعشان المقارنة تبقى عادلة كل البروتوكولات بتبعت كل round.'],['ليه أرقام SH-LEACH وH-LEACH نزلت عن النسخة القديمة؟','لأننا طابقنا الكود على الأبحاث بالظبط: SH-LEACH بقى بمعادلة 3 زي ما هي، وH-LEACH بقى المتوسط فيه على كل النودز، وكل البروتوكولات بقت بتدفع طاقة الـ setup. الأرقام الجديدة أدق وأأمن.']]},
 
 {n:32,about:'الدروس اللي اتنقلت للبروتوكول الجديد.',
 detail:[

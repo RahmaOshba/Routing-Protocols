@@ -58,17 +58,17 @@ say:'Across eight random topologies the ranking never changes, so the gain is no
 {n:57,about:'المقارنة الشاملة: أحسن واحد من كل عيلة (الـ BS في النص).',
 detail:[
 'الرسم فيه LEACH وHEED وPEGASIS وSH-LEACH+ وH-LEACH+ (+ يعني النسخة المحسّنة) وv3 وv7 وv7.1 وv8-Chain.',
-'v8-Chain عنده أحسن FND في الكل (2621)، وH-LEACH+ تاني (2347).',
+'v8-Chain عنده أحسن FND في الكل (2621)، وبعده v3 (1730). وأحسن بروتوكول من الأبحاث هو SH-LEACH+ (1480)، يعني v8-Chain أحسن منه بـ 77%.',
 'PEGASIS عنده LND أطول (3504) بسبب السلسلة الواحدة والقفزات القصيرة، بس أول نود فيه بتموت قبلنا بحوالي 1300 round (1324).'],
 say:'v8-Chain has the latest first node death of all protocols. PEGASIS keeps a longer last-node lifetime, but its first node dies about 1300 rounds earlier.',
 qa:[['PEGASIS عنده LND أحسن، ليه مش الأحسن؟','لأن FND بتاعه 1324 بس، يعني أجزاء من الأرض بتبطّل تتراقب بدري جدًا. وكمان فيه تأخير كبير وsingle point of failure. إحنا بنعتبر FND والـ PDR أهم للتغطية والاعتمادية.']]},
 
 {n:58,about:'المقارنة الشاملة: الاعتمادية (PDR).',
 detail:[
-'LEACH (99.40%) وPEGASIS (99.42%) وHEED (99.68%) وSH-LEACH+ (99.79%) بيوصّلوا أكتر شوية من v8-Chain (99.27%)، بس أول نود فيهم بتموت قبلنا بـ 1,200 لـ 2,000 round.',
+'LEACH (99.40%) وPEGASIS (99.42%) وHEED (99.68%) وH-LEACH+ (99.36%) بيوصّلوا أكتر شوية من v8-Chain (99.27%)، بس أول نود فيهم بتموت قبلنا بـ 1,100 لـ 2,000 round. وSH-LEACH+ (99.21%) أقل مننا.',
 'بين البروتوكولات اللي أول نود فيها بتعيش بعد round 2000، v8-Chain عنده أعلى PDR. ومهم تقوليها بأمانة: إحنا مش الأعلى في الـ PDR بشكل مطلق، بس الفرق أقل من نص نقطة.',
 'مهم تقوليها بأمانة: إحنا مش الأعلى في الـ PDR بشكل مطلق.'],
-say:'LEACH, PEGASIS, HEED and improved SH-LEACH deliver up to half a point more, but their first node dies 1,200 to 2,000 rounds earlier. Among protocols whose first node lives past round 2000, v8-Chain has the highest PDR.',qa:[]},
+say:'LEACH, PEGASIS, HEED and improved H-LEACH deliver up to half a point more, but their first node dies 1,100 to 2,000 rounds earlier. Among protocols whose first node lives past round 2000, v8-Chain has the highest PDR.',qa:[]},
 
 {n:59,about:'أهم الاستنتاجات (5 نقاط).',
 detail:[

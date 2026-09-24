@@ -179,7 +179,7 @@ for i,p in enumerate(pick):
         c.number_format=PCT if j==6 else INT
 lastd=5+len(pick)-1
 ws.cell(lastd+2,1,'Headline').font=F(bold=True,size=11,color=RED)
-kp=[('v8-Chain FND vs best literature hybrid (H-LEACH Improved)',f'=C{lastd}/C9-1',DPCT),
+kp=[('v8-Chain FND vs best literature hybrid (SH-LEACH Improved)',f'=C{lastd}/C8-1',DPCT),
     ('v8-Chain FND vs LEACH',f'=C{lastd}/C5-1',DPCT),
     ('v8-Chain PDR vs v7 (Center)',f'=(F{lastd}-F11)*100',DPP),
     ('v8-Chain Far-BS FND vs v7 Far-BS',"='Center vs Far BS'!F9/'Center vs Far BS'!F7-1",DPCT)]
