@@ -16,7 +16,7 @@ using namespace ns3;
 using namespace std;
 
 // ============================================================================
-// HYBRID PROTOCOL v6: v5b (Backup Failover + Chain/Cluster Repair +
+// HYBRID PROTOCOL v8 (file name: hybrid-v6-optimized.cc): v5b (Backup Failover + Chain/Cluster Repair +
 //                     Energy-Aware Repair) + 5 lifetime/PDR improvements
 // ns-3.41 / C++   --  SETUP_INTERVAL = 5
 //
@@ -558,7 +558,7 @@ int main(int argc, char* argv[])
     cmd.Parse(argc, argv);
 
     cout << "\n========================================\n";
-    cout << "  HYBRID v6: v5b + epoch fix + proactive handover + orphan re-join + direct-to-BS + energy-gated CH\n";
+    cout << "  HYBRID v8: v5b + epoch fix + proactive handover + orphan re-join + direct-to-BS + energy-gated CH\n";
     cout << "========================================\n";
     cout << "Setup interval = " << SETUP_INTERVAL << " rounds (control overhead paid once per interval)\n";
     cout << "Selection = single-pass energy x connectivity score (no iteration)\n";
