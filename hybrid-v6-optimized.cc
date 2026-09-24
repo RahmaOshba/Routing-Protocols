@@ -20,7 +20,7 @@ using namespace std;
 //                     Energy-Aware Repair) + 5 lifetime/PDR improvements
 // ns-3.41 / C++   --  SETUP_INTERVAL = 5
 //
-// Everything from v5b is kept. v6 adds:
+// Everything from v5b is kept. v8 adds:
 //
 //   I1. EPOCH-EXHAUSTION FIX (bug fix): in v5b, once every alive node had
 //       already been CH in the current epoch, the selection had NO eligible
@@ -82,8 +82,8 @@ struct RoundResult {
     bool wasSetupRound = false;
     uint32_t backupPromotions = 0;   // NEW: successful backup->CH promotions this round
     uint32_t backupRejected = 0;    // NEW: CH deaths where no usable backup was available
-    uint32_t proactiveHandovers = 0; // v6: CH role handed over before the CH could die mid-round
-    uint32_t directToBS = 0;         // v6: packets a node sent straight to the BS
+    uint32_t proactiveHandovers = 0; // v8: CH role handed over before the CH could die mid-round
+    uint32_t directToBS = 0;         // v8: packets a node sent straight to the BS
 };
 
 // ----------------------------- Network -------------------------------------
@@ -113,7 +113,7 @@ static constexpr double LIGHT = 3.0e8;
 static constexpr uint32_t MAX_ROUNDS = 5000;  // RAISED from 3000 -- SETUP_INTERVAL=15 may extend LND further
 static constexpr uint32_t SEED = 12345;
 
-// ------------------------- v6 improvements (ablation toggles) ---------------
+// ------------------------- v8 improvements (ablation toggles) ---------------
 // Each can be disabled with -DI1=0 etc. at compile time to measure its effect.
 #ifndef I1
 #define I1 1
@@ -183,7 +183,7 @@ static vector<bool> g_failedOver(N, false); // whether chId's backup has already
 // is judged too close to death for a repair transmission to have any real
 // chance of succeeding, so it is left silent (saving its last energy) instead
 // of being forced into a doomed send.
-// v6 change: v5b compared against 5% of E0 (a fixed 0.025 J). Late in the
+// v8 change: v5b compared against 5% of E0 (a fixed 0.025 J). Late in the
 // network's life EVERY node is below 0.025 J, so every backup was rejected and
 // failover never fired. Comparing against the live average ("weak relative to
 // its neighbours right now") keeps the mechanism working until the end.
@@ -210,7 +210,7 @@ static void TryFailover(vector<SensorNode>& nodes, uint32_t deadCH, RoundResult&
     ++r.backupPromotions;
 }
 
-// ---- v6: shared helpers ----
+// ---- v8: shared helpers ----
 static uint32_t NearestAliveCH(const vector<SensorNode>& nodes, const SensorNode& n)
 {
     double bestDistance = numeric_limits<double>::infinity();
@@ -232,7 +232,7 @@ static double ExpectedCHCost(const vector<SensorNode>& nodes, uint32_t ch, uint3
     return members * (RxEnergy(PACKET_BITS) + AggEnergy(PACKET_BITS)) + TxEnergy(PACKET_BITS, DistBS(nodes[ch]));
 }
 
-// ---- v6 IMPROVEMENT: Proactive CH handover ----
+// ---- v8 IMPROVEMENT: Proactive CH handover ----
 // v5 only reacts AFTER a CH has died, by which point the members' packets of
 // that round are already lost. Here the CH checks, before the data phase,
 // whether its residual energy can cover this round's CH workload. If not, it
@@ -283,7 +283,7 @@ static uint32_t RunSelection(vector<SensorNode>& nodes, const vector<vector<uint
     if (setupIndex % EPOCH == 0)
         for (auto& n : nodes) n.selectedThisEpoch = false;
 
-    // v6 FIX: v5 could run whole intervals with ZERO CHs once every alive node
+    // v8 FIX: v5 could run whole intervals with ZERO CHs once every alive node
     // had already served in the current epoch (e.g. rounds 196-200 with all
     // 100 nodes alive). Start a fresh epoch early whenever that happens.
     if (FIX_EPOCH_EXHAUSTION) {
@@ -292,7 +292,7 @@ static uint32_t RunSelection(vector<SensorNode>& nodes, const vector<vector<uint
         if (!anyEligible) for (auto& n : nodes) n.selectedThisEpoch = false;
     }
 
-    // v6: energy gate -- a node below the network's average residual energy
+    // v8: energy gate -- a node below the network's average residual energy
     // is not allowed to volunteer as CH (it would be the first to die).
     double avgEnergy = 0.0;
     uint32_t aliveCount = 0;
@@ -380,7 +380,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
 
     const double before = [&]() { double s = 0.0; for (const auto& n : nodes) s += n.energy; return s; }();
 
-    {   // v6: live average residual energy used by LowEnergy()
+    {   // v8: live average residual energy used by LowEnergy()
         double sum = 0.0;
         uint32_t alive = 0;
         for (const auto& n : nodes) if (n.alive) { sum += n.energy; ++alive; }
@@ -418,7 +418,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
     for (auto& n : nodes) {
         if (n.alive && n.clusterHead < N && !nodes[n.clusterHead].alive)
             n.clusterHead = numeric_limits<uint32_t>::max();
-        // v6: orphans re-join the nearest surviving CH. Every node already
+        // v8: orphans re-join the nearest surviving CH. Every node already
         // heard all CH advertisements at setup, so this needs no new message.
         if (ORPHAN_REJOIN && n.alive && !n.finalCH && n.clusterHead >= N)
             n.clusterHead = NearestAliveCH(nodes, n);
@@ -449,7 +449,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
         if (!nodes[i].alive || nodes[i].finalCH) continue;
         const uint32_t c = nodes[i].clusterHead;
         const bool hasCH = c < N && nodes[c].alive && nodes[c].finalCH;
-        // v6: if the BS is no farther than the CH (or there is no CH at all),
+        // v8: if the BS is no farther than the CH (or there is no CH at all),
         // send straight to the BS: same/lower TX cost for the node, and the
         // CH is spared the RX + aggregation energy for this packet.
         if (DIRECT_TO_BS && (!hasCH || DistBS(nodes[i]) <= Dist(nodes[i], nodes[c]))) {
@@ -620,7 +620,7 @@ int main(int argc, char* argv[])
     double totalUsed = 0.0;
     uint32_t setupIndex = 0;
     uint64_t totalPromotions = 0, totalRejected = 0; // NEW
-    uint64_t totalHandovers = 0, totalDirect = 0;    // v6
+    uint64_t totalHandovers = 0, totalDirect = 0;    // v8
 
     cout << "\nSimulation starts...\n";
 
@@ -646,8 +646,8 @@ int main(int argc, char* argv[])
         totalUsed += r.energyUsed;
         totalPromotions += r.backupPromotions;   // NEW
         totalRejected += r.backupRejected;       // NEW
-        totalHandovers += r.proactiveHandovers;  // v6
-        totalDirect += r.directToBS;             // v6
+        totalHandovers += r.proactiveHandovers;  // v8
+        totalDirect += r.directToBS;             // v8
 
         rounds << fixed << setprecision(10)
                << r.round << ',' << r.alive << ',' << r.dead << ',' << r.chCount << ','
