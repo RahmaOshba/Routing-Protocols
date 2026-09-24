@@ -1,0 +1,11 @@
+             FINAL RESULTS
+========================================
+FND = 322 rounds
+HND = 530 rounds
+LND = 1217 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.997502
+
+CSV outputs: v1_heed_election_leach_join-results.csv, v1_heed_election_leach_join-node-energy.csv,
+             v1_heed_election_leach_join-node-lifetime.csv, v1_heed_election_leach_join-clustering.xml
+========================================

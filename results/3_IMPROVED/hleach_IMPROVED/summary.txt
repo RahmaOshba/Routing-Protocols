@@ -1,0 +1,12 @@
+             FINAL RESULTS
+========================================
+FND = 1473 rounds
+HND = 1509 rounds
+LND = 1525 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.993617
+Rounds where fallback CH selection fired = 245
+
+CSV outputs: hleach_IMPROVED-results.csv, hleach_IMPROVED-node-energy.csv,
+             hleach_IMPROVED-node-lifetime.csv, hleach_IMPROVED-clustering.xml
+========================================

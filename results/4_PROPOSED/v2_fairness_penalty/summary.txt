@@ -1,0 +1,11 @@
+             FINAL RESULTS
+========================================
+FND = 338 rounds
+HND = 528 rounds
+LND = 1276 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.996435
+
+CSV outputs: v2_fairness_penalty-results.csv, v2_fairness_penalty-node-energy.csv,
+             v2_fairness_penalty-node-lifetime.csv, v2_fairness_penalty-clustering.xml
+========================================

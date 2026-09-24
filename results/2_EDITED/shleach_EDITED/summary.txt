@@ -1,0 +1,11 @@
+             FINAL RESULTS
+========================================
+FND = 647 rounds
+HND = 702 rounds
+LND = 721 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.985844
+
+CSV outputs: shleach_EDITED-results.csv, shleach_EDITED-node-energy.csv,
+             shleach_EDITED-node-lifetime.csv, shleach_EDITED-clustering.xml
+========================================

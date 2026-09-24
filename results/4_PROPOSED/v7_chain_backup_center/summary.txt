@@ -1,0 +1,15 @@
+             FINAL RESULTS
+========================================
+FND = 1415 rounds
+HND = 1911 rounds
+LND = 2001 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.991026
+Backup CH Promotions = 8 (successful) / 1 (rejected -- insufficient energy even for 1 round)
+  of which Partial (backup could not cover the WHOLE remaining interval) = 0
+Emergency (Tier-2, non-designated member) Promotions = 0 -- these are the rounds the v1 backup logic would have left at CH_Count=0
+Chain Repairs via Backup = 8 (mid-chain CH deaths repaired instead of breaking the relay path)
+
+CSV outputs: v7_chain_backup_center-results.csv, v7_chain_backup_center-node-energy.csv,
+             v7_chain_backup_center-node-lifetime.csv, v7_chain_backup_center-clustering.xml
+========================================

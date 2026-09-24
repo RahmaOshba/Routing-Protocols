@@ -1,0 +1,15 @@
+             FINAL RESULTS
+========================================
+FND = 1421 rounds
+HND = 1991 rounds
+LND = 2193 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.982688
+Backup CH Promotions = 24 (successful) / 0 (rejected -- insufficient energy even for 1 round)
+  of which Partial (backup could not cover the WHOLE remaining interval) = 0
+Emergency (Tier-2, non-designated member) Promotions = 0 -- these are the rounds the v1 backup logic would have left at CH_Count=0
+Routing Repairs via Backup = 7 (CHs redirected to a promoted backup instead of losing their relay parent)
+
+CSV outputs: v7_2_multihop_int10-results.csv, v7_2_multihop_int10-node-energy.csv,
+             v7_2_multihop_int10-node-lifetime.csv, v7_2_multihop_int10-clustering.xml
+========================================

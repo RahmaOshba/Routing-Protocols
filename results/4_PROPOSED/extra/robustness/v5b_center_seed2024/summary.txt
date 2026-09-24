@@ -1,0 +1,12 @@
+             FINAL RESULTS
+========================================
+FND = 1611 rounds
+HND = 2020 rounds
+LND = 2201 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.980777
+Backup Promotions = 20 successful / 10 rejected
+
+CSV outputs: v5b_energy_aware_repair-results.csv, v5b_energy_aware_repair-node-energy.csv,
+             v5b_energy_aware_repair-node-lifetime.csv, v5b_energy_aware_repair-clustering.xml
+========================================
