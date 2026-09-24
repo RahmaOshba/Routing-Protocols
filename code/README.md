@@ -100,7 +100,7 @@ v8 improvements (switch one off with `-DI1=0` … `-DI5=0`):
 | `archive/v3_old_farBS_25_-100`, `v6_old_farBS_25_-100`, `v7_old_farBS_25_-100` | Early far-BS tests (50 × 50 m, BS at (25, −100)); replaced by the `*_farBS` files at (50, −100) |
 | `archive/v6_old_center_no_zeroCH_fix` | First centre-BS v6; replaced by `v6_chain_center` (which has the zero-CH fix) |
 | `archive/leach_old_with_packets`, `modified_heed_old_with_packets` | Old versions with a WiFi packet-animation layer; replaced by `1_ORIGINAL` / `2_EDITED` |
-| `0_FIRST_EXPERIMENTS/demo_clustered_wsn` | **Demo** — 12 sensors in 3 clusters + sink over real IEEE 802.15.4 (lr-wpan) packets: CH rotation, TDMA slots, fused packets to the sink, energy model and NetAnim packet animation (`./ns3 run "scratch/demo_clustered_wsn --rounds=6"`, open `demo-clustered-wsn.xml`). Tested on ns-3.41: 72/72 readings delivered in 18 packets |
+| `0_FIRST_EXPERIMENTS/demo_clustered_wsn` | **Demo** (prints every packet; one Wireshark `.pcap` per node, `--pcap=0` to turn off) — 12 sensors in 3 clusters + sink over real IEEE 802.15.4 (lr-wpan) packets: CH rotation, TDMA slots, fused packets to the sink, energy model and NetAnim packet animation (`./ns3 run "scratch/demo_clustered_wsn --rounds=6"`, open `demo-clustered-wsn.xml`). Tested on ns-3.41: 72/72 readings delivered in 18 packets |
 | `0_FIRST_EXPERIMENTS/WSN-Day3_first_lrwpan_experiment` | First experiment: 3 sensors + sink over IEEE 802.15.4 (lr-wpan) |
 | `0_FIRST_EXPERIMENTS/wsn_first_packet` | First WSN run with energy models and packet statistics (fixed: it crashed at exit because the energy-source container was a global object) |
 | `0_FIRST_EXPERIMENTS/scratch_simulator_template` | The empty ns-3 scratch template |

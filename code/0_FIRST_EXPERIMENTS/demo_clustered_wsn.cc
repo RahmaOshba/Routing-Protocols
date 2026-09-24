@@ -12,12 +12,21 @@
 //                   the sink.
 //   - The CH role rotates as energy is spent (the CH transmits more).
 //   - Stats tab -> Node Counters: remaining energy, packets sent / received.
+//   - Packets tab: one row per packet (time, from, to) with its 802.15.4
+//     headers (packet metadata is enabled).
+//
+// Terminal: every packet is printed (member -> CH, CH -> sink, ACK result).
+// Wireshark: one .pcap file per node, demo-clustered-wsn-<node>-<dev>.pcap,
+//   captured in promiscuous mode (a node records every frame it hears)
+//   (turn off with --pcap=0). Open it to see the MAC header, the short
+//   addresses, the 40-byte payload and the ACK frames.
 //
 // Real MAC/PHY: LR-WPAN (802.15.4, 250 kb/s, CSMA/CA, ACKs) installed with
 // LrWpanHelper (shared channel, log-distance path loss), energy model from the radio state (TX / RX / idle current).
 //
 // Run:   ./ns3 run "scratch/demo_clustered_wsn --rounds=6"
-// Output: demo-clustered-wsn.xml (NetAnim) + a summary in the terminal.
+// Output: demo-clustered-wsn.xml (NetAnim), demo-clustered-wsn-*.pcap
+//         (Wireshark) and a packet log + summary in the terminal.
 // ============================================================================
 #include "ns3/core-module.h"
 #include "ns3/energy-module.h"
@@ -73,6 +82,22 @@ static Mac16Address
 AddrOf(uint32_t id)
 {
     return g_addr[id];
+}
+
+static std::string
+Name(uint32_t id)
+{
+    if (id == SINK)
+        return "SINK";
+    return "S" + std::to_string(id);
+}
+
+static std::string
+Stamp()
+{
+    std::ostringstream o;
+    o << std::fixed << std::setprecision(2) << Simulator::Now().GetSeconds() << "s  ";
+    return o.str();
 }
 
 static double
@@ -172,6 +197,12 @@ DataIndication(uint32_t id, McpsDataIndicationParams params, Ptr<Packet>)
     else
     {
         g_readingsAtCH[id]++;
+        uint32_t from = 0;
+        for (uint32_t k = 0; k < g_addr.size(); ++k)
+            if (g_addr[k] == params.m_srcAddr)
+                from = k;
+        std::cout << Stamp() << "CH" << id << " <- " << Name(from) << " : reading received ("
+                  << g_readingsAtCH[id] << " so far)" << std::endl;
     }
 }
 
@@ -183,7 +214,19 @@ MemberSend(uint32_t i)
     if (ch == i)
         return;
     g_readingsGenerated++;
+    std::cout << Stamp() << Name(i) << " -> CH" << ch << " : reading (" << PACKET_SIZE
+              << " bytes, TDMA slot)" << std::endl;
     Send(i, ch, static_cast<uint8_t>(g_round));
+}
+
+// The MAC reports whether the ACK came back
+static void
+DataConfirm(uint32_t id, McpsDataConfirmParams params)
+{
+    const bool ok = (params.m_status == LrWpanMacStatus::SUCCESS);
+    if (!ok)
+        std::cout << Stamp() << Name(id) << " : no ACK (status "
+                  << static_cast<int>(params.m_status) << ")" << std::endl;
 }
 
 // The CH fuses the readings (+ its own) and sends one packet to the sink
@@ -260,8 +303,10 @@ int
 main(int argc, char* argv[])
 {
     uint32_t rounds = 6;
+    bool pcap = true;
     CommandLine cmd(__FILE__);
     cmd.AddValue("rounds", "Number of rounds (10 s each)", rounds);
+    cmd.AddValue("pcap", "Write one Wireshark .pcap file per node", pcap);
     cmd.Parse(argc, argv);
 
     // ---- nodes and positions: 3 clusters of 4 sensors + sink on top ----
@@ -309,6 +354,7 @@ main(int argc, char* argv[])
         Ptr<LrWpanNetDevice> dev = DynamicCast<LrWpanNetDevice>(devices.Get(i));
         g_addr.push_back(dev->GetMac()->GetShortAddress());
         dev->GetMac()->SetMcpsDataIndicationCallback(MakeBoundCallback(&DataIndication, i));
+        dev->GetMac()->SetMcpsDataConfirmCallback(MakeBoundCallback(&DataConfirm, i));
         dev->GetPhy()->TraceConnectWithoutContext("TrxState", MakeBoundCallback(&PhyStateChange, i));
         devs.push_back(dev);
 
@@ -319,6 +365,10 @@ main(int argc, char* argv[])
         em->SetCurrentA(RX_CURRENT);
         models.push_back(em);
     }
+
+    // ---- Wireshark captures (one file per node) ----
+    if (pcap)
+        lrWpanHelper.EnablePcapAll("demo-clustered-wsn", true);
 
     // ---- NetAnim ----
     AnimationInterface anim("demo-clustered-wsn.xml");
@@ -354,6 +404,8 @@ main(int argc, char* argv[])
         std::cout << "Sensor " << std::setw(2) << i << " (cluster " << g_clusterOf[i]
                   << "): sent " << g_sent[i] << ", received " << g_recv[i] << ", energy left "
                   << std::setprecision(3) << Remaining(i) << " J\n";
+    if (pcap)
+        std::cout << "Wireshark files: demo-clustered-wsn-<node>-<device>.pcap\n";
     std::cout << "NetAnim file: demo-clustered-wsn.xml\n========================================\n";
 
     std::cout << std::flush;
