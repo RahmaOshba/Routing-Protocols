@@ -1,26 +1,32 @@
 // ============================================================================
-// EECH-HEED (2025) -- EDITED + IMPROVED (unified environment, PLUS the
-// paper's own Adaptive Threshold-Based Sensing mechanism)
+// EECH-HEED (2025) -- EDITED + IMPROVED (unified environment)
 // ns-3.41 / C++
 //
-// This is the UNIFIED-ENVIRONMENT file (packet=2000 bits, matching
-// LEACH/HEED/SH-LEACH -- NOT the paper's own 4000 bits) with the same
-// Adaptive Threshold-Based Sensing mechanism added as in the corrected
-// ORIGINAL file: a non-CH node only transmits when its sensed reading has
-// changed meaningfully since its last report, or when a maximum silent
-// interval has elapsed.
+// Starts from hybrid_EECHHEED_EDITED_unified.cc (same unified environment:
+// uniform 100 nodes x 0.5 J, 2000-bit packets, E_DA 5 nJ/bit, no threshold
+// sensing, control overhead charged, members + 1 fusion, direct delivery,
+// run until the last node dies) and changes ONE thing.
 //
-// IMPORTANT HONESTY NOTE: the first attempt at this file reused the
-// threshold values (SOFT=2.3/HARD=23.0/MAX_SILENT=40) tuned for the
-// ORIGINAL file's 4000-bit packet. An actual NS-3 run of that first attempt
-// showed FND/HND/LND all "Not reached" -- at half the packet size (half the
-// energy cost per report), that suppression level was so aggressive that
-// literally no node ever died within 5000 rounds, making the result
-// unusable for comparison. A fresh Python sweep against THIS file's own
-// 2000-bit packet size found SOFT=1.0/HARD=10.0/MAX_SILENT=30 to still
-// clearly beat this file's own un-improved baseline while producing an
-// actual, measurable lifetime. As always, exact resulting numbers should
-// be confirmed by compiling and running this file.
+// THE PROBLEM (seen in the EDITED run):
+//   In Zone 2, Eq. 5 gives P = (E/Emax)(D/Dmax), which is close to 1 for a
+//   healthy node with many neighbours. Eq. 6 then uses 1/P = 1-2 rounds as
+//   the rotation period, so the G set ("not CH in the last 1/P rounds")
+//   excludes nobody: the same nodes near the Zone-1 border (high beta, high
+//   degree) are CH every second round. In the EDITED run a Zone-2 node was
+//   CH up to 221 times in the first 1000 rounds (Zone-1 nodes: about 43),
+//   there were 15-25 CHs per round at the start, and the first nodes to die
+//   were exactly those border nodes (33-45 m from the BS).
+//
+// THE CHANGE:
+//   Zone-2 rotation uses the desired CH percentage P = 0.10 (the paper's own
+//   "desired percentage of CHs = 10 %") for the 1/P period, the G set and
+//   the LEACH part of Eq. 6, and Eq. 5 is kept as a weight:
+//       T_i = P/(1 - P (r mod 1/P)) * alpha_i * beta_i * (E_i/E_max)(D_i/D_max)
+//   so every Zone-2 node can be CH at most once every 10 rounds, and
+//   energy + degree still decide who is preferred. Zone 1 is unchanged.
+//   (Sweep of P: 0.05 -> 1344/1369/1788, 0.10 -> 1368/1385/1767,
+//    0.15 -> 1380/1397/1750, 0.20 -> 1384/1398/1732. 0.10 is used because
+//    it is the paper's value, not the best one of the sweep.)
 // ============================================================================
 #include "ns3/core-module.h"
 #include "ns3/command-line.h"
@@ -39,58 +45,23 @@
 using namespace ns3;
 using namespace std;
 
-// ============================================================================
-// HYBRID PROTOCOL (Literature Reproduction): EECH-HEED (Kaur, Kour & Singh,
-// 2025) -- "An adaptive hybrid clustering protocol for energy efficient
-// soil monitoring in heterogeneous wireless sensor networks",
-// Scientific Reports 15, 35548 (2025).
-// https://www.nature.com/articles/s41598-025-19480-y
-//
-// This is the second "Hybrid Protocol" reproduction (thesis Step 4),
-// alongside SH-LEACH (2015) -- the two closest published hybrid papers
-// found in the SOTA search.
-//
-// DESIGN (per the paper, dual-zone architecture):
-//   ZONE 1 (near BS): 30 nodes, homogeneous energy, circular region of
-//     radius 30m centered on the sink. Uses HEED-style CH probability:
-//         PCH_i = Cprob * (E_i / E_avg_zone1)
-//   ZONE 2 (far from BS): 70 nodes, heterogeneous energy (20% "advanced"
-//     nodes with 50% more energy). Uses EECH-style CH probability:
-//         PCH_i = (E_i / E_max_i) * (D_i / D_max)
-//     where D_i is the node's distance to the sink (the paper's exact
-//     definition of this "EECH" distance term was not fully specified
-//     beyond "node degree/position" in the extracted text -- distance-
-//     to-sink is used here as the best-supported interpretation,
-//     consistent with the Python reproduction, eech_heed_reproduction.py).
-//   JOIN: each node joins the nearest CH WITHIN ITS OWN ZONE.
-//   RELAY: Zone-2 CHs send to whichever is closer -- the sink directly,
-//     or the nearest Zone-1 CH (a simplified 1-hop approximation of the
-//     paper's multi-tier primary/secondary CH relay hierarchy).
-//   Zone-1 CHs send directly to the sink.
-//
-// PARAMETERS confirmed directly from the paper's Methods/Table 5:
-//   N=100 (30 Zone1 + 70 Zone2), 100x100m field, BS at center,
-//   Zone1 radius=30m, Zone1 energy=0.5J (homogeneous),
-//   Zone2 energy randomized 0.3-0.6J with 20% advanced nodes at 1.5x,
-//   packet size=4000 bits, Eagg(EDA)=5nJ/bit, desired CH ratio=10%.
-//   The standard first-order radio model constants (Eelec/Efs/Emp) were
-//   not explicitly re-listed for this paper in the extracted text --
-//   the same literature-standard values used throughout this thesis's
-//   other files are used here for consistency.
-// ============================================================================
-
 struct SensorNode {
     uint32_t id = 0;
     double x = 0.0;
     double y = 0.0;
     double energy = 0.0;
-    double eMax = 0.0;      // per-node initial/max energy (heterogeneous in Zone 2)
+    double eInit = 0.0;          // own initial energy (E_max,i / E_init,i)
     bool alive = true;
     bool finalCH = false;
     uint32_t clusterHead = numeric_limits<uint32_t>::max();
-    uint32_t zone = 1;      // 1 = near BS, 2 = far from BS
-    double sensedLast = 0.0;    // NEW: last reported sensed value (threshold sensing)
-    uint32_t silentRounds = 0;  // NEW: rounds since last report (threshold sensing)
+    uint32_t zone = 1;           // 1 = near BS (HEED), 2 = far (EECH)
+    uint32_t lastCHRound = 0;    // 0 = never CH (G set)
+    // sensing state (Eq. 7)
+    double ht0 = 0.0;
+    double phase = 0.0;
+    double sensedPrev = 0.0;
+    double sensedLast = 0.0;
+    bool reportedOnce = false;
 };
 
 struct RoundResult {
@@ -102,6 +73,8 @@ struct RoundResult {
     uint32_t delivered = 0;
     uint32_t lost = 0;
     uint32_t unclustered = 0;
+    uint64_t controlTx = 0;
+    uint64_t controlRx = 0;
     uint64_t dataTx = 0;
     uint64_t dataRx = 0;
     double energyUsed = 0.0;
@@ -113,10 +86,14 @@ struct RoundResult {
     double roundDurationSec = 0.0;
 };
 
-// --------------------- Parameters confirmed from the paper -------------------
+// ------------------------- Scenario switches --------------------------------
+static constexpr bool PAPER_DEPLOYMENT = false;  // UNIFIED: uniform field, all nodes 0.5 J (paper: 30/70 zones + heterogeneous)
+static constexpr bool ENABLE_SENSING = false;    // UNIFIED: every node reports every round (paper: Eq. 7 sensing)
+
+// --------------------- Parameters from the paper (Table 5) ------------------
+static constexpr uint32_t N = 100;
 static constexpr uint32_t N_ZONE1 = 30;
 static constexpr uint32_t N_ZONE2 = 70;
-static constexpr uint32_t N = N_ZONE1 + N_ZONE2;
 static constexpr double AREA = 100.0;
 static constexpr double BSX = 50.0;
 static constexpr double BSY = 50.0;
@@ -125,39 +102,43 @@ static constexpr double E_ZONE1 = 0.5;
 static constexpr double E_ZONE2_MIN = 0.3;
 static constexpr double E_ZONE2_MAX = 0.6;
 static constexpr double ADVANCED_FRACTION = 0.20;
-static constexpr double ADVANCED_MULTIPLIER = 1.5;
-static constexpr uint32_t PACKET_BITS = 2000;  // UNIFIED (paper's Table 5 states 4000 -- see ORIGINAL file)
-static constexpr double E_DA = 50e-9;  // FIXED: paper's Table 5 states 50 nJ/bit (was 5 nJ/bit)
-static constexpr double CPROB = 0.05;  // FIXED: paper's Table 5 states C_prob = 0.05 (was 0.10)
-
-// --------------------- Standard radio model (not re-specified in paper) -----
+static constexpr double E_ADV_MIN = 1.0;
+static constexpr double E_ADV_MAX = 1.5;
+static constexpr double E_UNIFIED = 0.5;         // used only when PAPER_DEPLOYMENT == false
+static constexpr uint32_t PACKET_BITS = 2000;    // UNIFIED (paper: 4000)
+static constexpr double E_DA = 5e-9;             // J/bit UNIFIED (paper Table 5: 50 nJ/bit)
+static constexpr double CPROB = 0.05;            // Table 5
+static constexpr double Z2_ROTATION_P = 0.10;    // IMPROVED: paper's desired CH percentage (10 %)
 static constexpr double E_ELEC = 50e-9;
 static constexpr double E_FS = 10e-12;
 static constexpr double E_MP = 0.0013e-12;
+// Eq. 7 sensing parameters (Table 5)
+static constexpr double HT0_MIN = 20.0;
+static constexpr double HT0_MAX = 35.0;
+static constexpr double ST0_PCT = 3.0;
+static constexpr double LAMBDA = 1.0;
+static constexpr double MU = 0.5;
+static constexpr double E0_SENSE = 1.0;
+
+// --------------------- Documented assumptions -------------------------------
+static constexpr double R_NEIGH = 30.0;          // m, neighbourhood for E_avg and node degree
+static constexpr uint32_t CONTROL_BITS = 200;
+static const double ADV_RANGE = AREA * std::sqrt(2.0);
+static const double D_MAX_BS = std::sqrt(2.0) * AREA / 2.0; // max possible distance to the central BS
+static constexpr double SOIL_MEAN = 27.5;        // C
+static constexpr double SOIL_AMP = 7.5;          // C  -> 20..35 C daily swing
+static constexpr double SOIL_PERIOD = 240.0;     // rounds per "day"
+static constexpr double SOIL_NOISE = 1.0;        // C (sensor noise, see header)
 static constexpr double DATA_RATE = 250000.0;
 static constexpr double LIGHT = 3.0e8;
 
-static constexpr uint32_t MAX_ROUNDS = 5000;  // FIXED: paper runs exactly 5000 rounds (was 3000)
+static constexpr uint32_t MAX_ROUNDS = 20000;    // run until the last node dies
 static constexpr uint32_t SEED = 12345;
 
-// --------------------- NEW: Adaptive Threshold-Based Sensing ---------------
-// Same mechanism and same retuned values as the corrected ORIGINAL file
-// (SOFT=2.0 confirmed to beat the paper's FND/HND/LND with PDR=93.68%;
-// SOFT=2.3 nudges PDR's margin higher based on the same trend).
-static constexpr double SOFT_THRESH = 1.0;        // RE-TUNED for packet=2000 bits (was 2.3, tuned for
-                                                   // the paper's 4000-bit packet -- that setting was
-                                                   // confirmed via NS-3 to suppress transmissions so
-                                                   // aggressively at half the packet cost that NO node
-                                                   // died within 5000 rounds at all)
-static constexpr double HARD_THRESH = 10.0;       // RE-TUNED alongside SOFT_THRESH, same ratio
-static constexpr uint32_t MAX_SILENT_ROUNDS = 30; // RE-TUNED (was 40)
-static constexpr double SENSED_WALK_STDDEV = 1.5;
-
-// ----------------------------- Geometry ------------------------------------
+// ----------------------------- Geometry / radio -----------------------------
 static double Dist(const SensorNode& a, const SensorNode& b) { return hypot(a.x - b.x, a.y - b.y); }
 static double DistBS(const SensorNode& a) { return hypot(a.x - BSX, a.y - BSY); }
 static double D0() { return sqrt(E_FS / E_MP); }
-
 static double TxEnergy(uint32_t bits, double d)
 {
     if (d < D0()) return bits * (E_ELEC + E_FS * d * d);
@@ -168,69 +149,120 @@ static double AggEnergy(uint32_t bits) { return bits * E_DA; }
 static double TxTimeSec(uint32_t bits) { return static_cast<double>(bits) / DATA_RATE; }
 static double DelayMs(uint32_t bits, double d) { return (TxTimeSec(bits) + d / LIGHT) * 1000.0; }
 
-// ------------------------ EECH-HEED CH selection ----------------------------
-static uint32_t RunEECHHEED(vector<SensorNode>& nodes, mt19937& rng)
+static bool Spend(SensorNode& n, double e)
+{
+    if (e > n.energy) { n.energy = 0.0; n.alive = false; n.finalCH = false; return false; }
+    n.energy -= e;
+    return true;
+}
+
+// ------------------------ EECH-HEED CH election (Eq. 4-6) -------------------
+static double ZoneProbability(const vector<SensorNode>& nodes, const SensorNode& n, double dMaxDeg)
+{
+    if (n.zone == 1) {
+        // Eq. 4: Cprob * E_res / E_avg(neighbourhood)
+        double sum = 0.0; uint32_t cnt = 0;
+        for (const auto& m : nodes)
+            if (m.alive && m.zone == 1 && Dist(n, m) <= R_NEIGH) { sum += m.energy; ++cnt; }
+        const double eAvg = cnt ? sum / cnt : n.energy;
+        return eAvg > 0.0 ? CPROB * n.energy / eAvg : 0.0;
+    }
+    // Eq. 5: (E_i / E_max,i) * (D_i / D_max), D = node degree
+    double deg = 0.0;
+    for (const auto& m : nodes)
+        if (m.alive && m.zone == 2 && m.id != n.id && Dist(n, m) <= R_NEIGH) deg += 1.0;
+    const double degTerm = dMaxDeg > 0.0 ? deg / dMaxDeg : 1.0;
+    return (n.energy / n.eInit) * degTerm;
+}
+
+static void RunEECHHEED(vector<SensorNode>& nodes, uint32_t round, mt19937& rng)
 {
     uniform_real_distribution<double> U(0.0, 1.0);
     for (auto& n : nodes) { n.finalCH = false; n.clusterHead = numeric_limits<uint32_t>::max(); }
 
-    double dMax = 0.0;
-    for (const auto& n : nodes) dMax = max(dMax, DistBS(n));
-
-    double eAvgZone1 = 0.0;
-    uint32_t aliveZone1 = 0;
-    for (const auto& n : nodes)
-        if (n.alive && n.zone == 1) { eAvgZone1 += n.energy; ++aliveZone1; }
-    eAvgZone1 = aliveZone1 ? eAvgZone1 / aliveZone1 : 1.0;
+    double dMaxDeg = 0.0;
+    for (const auto& n : nodes) {
+        if (!n.alive || n.zone != 2) continue;
+        double deg = 0.0;
+        for (const auto& m : nodes)
+            if (m.alive && m.zone == 2 && m.id != n.id && Dist(n, m) <= R_NEIGH) deg += 1.0;
+        dMaxDeg = max(dMaxDeg, deg);
+    }
 
     for (auto& n : nodes) {
         if (!n.alive) continue;
-        double prob;
-        if (n.zone == 1) {
-            prob = CPROB * (n.energy / eAvgZone1);          // Zone 1: HEED formula
-        } else {
-            const double d = DistBS(n);
-            prob = (n.energy / n.eMax) * (d / dMax);          // Zone 2: EECH formula
-        }
-        prob = min(1.0, max(0.0, prob));
-        if (U(rng) <= prob) n.finalCH = true;
+        const double pZone = min(1.0, ZoneProbability(nodes, n, dMaxDeg));
+        if (pZone <= 0.0) continue;
+        // IMPROVED: in Zone 2 the rotation (1/P period and G set) uses the
+        // desired CH percentage; Eq. 5 is kept as a weight on the threshold.
+        const double p = (n.zone == 2) ? Z2_ROTATION_P : pZone;
+        const uint32_t period = max<uint32_t>(1, static_cast<uint32_t>(llround(1.0 / p)));
+        const bool inG = (n.lastCHRound == 0) || (round - n.lastCHRound >= period);
+        if (!inG) continue;
+        const double denom = 1.0 - p * static_cast<double>(round % period);
+        double t = denom > 0.0 ? p / denom : 1.0;                  // Eq. 6, LEACH part
+        const double alpha = n.energy / n.eInit;                    // Eq. 6, alpha_i
+        const double beta = max(0.0, 1.0 - DistBS(n) / D_MAX_BS);   // Eq. 6, beta_i
+        t = min(1.0, t) * alpha * beta * ((n.zone == 2) ? pZone : 1.0);   // IMPROVED: Eq. 5 as weight
+        if (U(rng) < t) n.finalCH = true;
     }
 
-    // Ensure at least one CH per zone (avoid an orphaned zone)
+    // Safeguard (not in the paper): every zone with alive nodes keeps one CH
     for (uint32_t z = 1; z <= 2; ++z) {
-        bool hasCH = false;
-        for (const auto& n : nodes) if (n.alive && n.zone == z && n.finalCH) { hasCH = true; break; }
-        if (!hasCH) {
-            double bestE = -1.0; int best = -1;
-            for (const auto& n : nodes)
-                if (n.alive && n.zone == z && n.energy > bestE) { bestE = n.energy; best = static_cast<int>(n.id); }
-            if (best >= 0) nodes[best].finalCH = true;
+        bool hasCH = false, hasAlive = false;
+        for (const auto& n : nodes) {
+            if (!n.alive || n.zone != z) continue;
+            hasAlive = true;
+            if (n.finalCH) { hasCH = true; break; }
         }
+        if (!hasAlive || hasCH) continue;
+        double bestE = -1.0; int best = -1;
+        for (const auto& n : nodes)
+            if (n.alive && n.zone == z && n.energy > bestE) { bestE = n.energy; best = static_cast<int>(n.id); }
+        if (best >= 0) nodes[best].finalCH = true;
     }
 
-    uint32_t chCount = 0;
-    for (const auto& n : nodes) if (n.alive && n.finalCH) ++chCount;
+    for (auto& n : nodes) if (n.alive && n.finalCH) n.lastCHRound = round;
+}
 
-    // ---- Join: nearest CH WITHIN THE SAME ZONE ----
+static void JoinSameZone(vector<SensorNode>& nodes)
+{
     for (auto& n : nodes) {
         n.clusterHead = numeric_limits<uint32_t>::max();
         if (!n.alive) continue;
         if (n.finalCH) { n.clusterHead = n.id; continue; }
-
         double bestDistance = numeric_limits<double>::infinity();
         uint32_t bestCH = numeric_limits<uint32_t>::max();
         for (const auto& c : nodes) {
             if (!c.alive || !c.finalCH || c.zone != n.zone) continue;
             const double d = Dist(n, c);
             if (d < bestDistance - 1e-12 || (fabs(d - bestDistance) < 1e-12 && c.id < bestCH)) {
-                bestDistance = d;
-                bestCH = c.id;
+                bestDistance = d; bestCH = c.id;
             }
         }
-        if (bestCH != numeric_limits<uint32_t>::max()) n.clusterHead = bestCH;
+        n.clusterHead = bestCH;
     }
+}
 
-    return chCount;
+// ------------------------ Eq. 7 adaptive threshold sensing ------------------
+static double SoilReading(const SensorNode& n, uint32_t round, mt19937& rng)
+{
+    normal_distribution<double> noise(0.0, SOIL_NOISE);
+    return SOIL_MEAN + SOIL_AMP * sin(2.0 * M_PI * round / SOIL_PERIOD + n.phase) + noise(rng);
+}
+
+static bool DecideReport(SensorNode& n, uint32_t round, mt19937& rng)
+{
+    if (!ENABLE_SENSING) return true;
+    const double s = SoilReading(n, round, rng);
+    const double dsdt = (round > 1) ? s - n.sensedPrev : 0.0;
+    n.sensedPrev = s;
+    const double ht = n.ht0 + LAMBDA * dsdt;                                        // HT_t
+    const double stPct = ST0_PCT + MU * (1.0 - min(1.0, n.energy / E0_SENSE));      // ST_t (%)
+    const bool aboveHard = s > ht;
+    const bool bigChange = !n.reportedOnce || fabs(s - n.sensedLast) > stPct / 100.0 * fabs(n.sensedLast);
+    if (aboveHard && bigChange) { n.sensedLast = s; n.reportedOnce = true; return true; }
+    return false;
 }
 
 // ---------------------------- Round simulation -----------------------------
@@ -238,85 +270,122 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, mt19
 {
     RoundResult r;
     r.round = round;
-
     const double before = [&]() { double s = 0.0; for (const auto& n : nodes) s += n.energy; return s; }();
 
-    // ---- NEW: Adaptive Threshold-Based Sensing decision ----
-    normal_distribution<double> walk(0.0, SENSED_WALK_STDDEV);
-    vector<bool> willReport(N, true);
-    for (auto& n : nodes) {
-        if (!n.alive) continue;
-        if (n.finalCH) { willReport[n.id] = true; continue; }
-        const double sensedNow = n.sensedLast + walk(sensorRng);
-        const double delta = fabs(sensedNow - n.sensedLast);
-        if (delta >= SOFT_THRESH || delta >= HARD_THRESH || n.silentRounds >= MAX_SILENT_ROUNDS) {
-            willReport[n.id] = true;
-            n.sensedLast = sensedNow;
-            n.silentRounds = 0;
-        } else {
-            willReport[n.id] = false;
-            ++n.silentRounds;
-        }
-    }
-
-    for (const auto& n : nodes) if (n.alive && willReport[n.id]) ++r.generated;
-
-    vector<uint32_t> membersPerCH(N, 0);
-    vector<bool> memberDelivered(N, false);
-    vector<double> delayToCH(N, 0.0);
-
-    // ---- Member -> CH (same zone) ----
-    for (uint32_t i = 0; i < N; ++i) {
-        if (!nodes[i].alive || nodes[i].finalCH) continue;
-        if (!willReport[i]) continue;  // NEW: suppressed by adaptive threshold sensing
-        const uint32_t c = nodes[i].clusterHead;
-        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) { ++r.unclustered; continue; }
-        const double d = Dist(nodes[i], nodes[c]);
-        const double tx = TxEnergy(PACKET_BITS, d);
-        const double rx = RxEnergy(PACKET_BITS);
-        if (tx > nodes[i].energy || rx > nodes[c].energy) { ++r.lost; continue; }
-        nodes[i].energy -= tx;
-        nodes[c].energy -= rx;
-        ++r.dataTx; ++r.dataRx;
-        ++membersPerCH[c];
-        memberDelivered[i] = true;
-        delayToCH[i] = DelayMs(PACKET_BITS, d);
-    }
-
-    // ---- CH aggregation + relay to sink (Zone1 direct, Zone2 direct-or-relay) ----
-    double delaySum = 0.0;
-    uint32_t deliveredSources = 0;
-
-    // Precompute Zone-1 CH list for Zone-2 relay decisions
-    vector<uint32_t> zone1CHs;
-    for (const auto& n : nodes) if (n.alive && n.finalCH && n.zone == 1) zone1CHs.push_back(n.id);
-
+    // ---- Setup: CH advertisement (whole field) ----
     for (uint32_t c = 0; c < N; ++c) {
         if (!nodes[c].alive || !nodes[c].finalCH) continue;
-        const uint32_t members = membersPerCH[c];
-        const double agg = static_cast<double>(members) * AggEnergy(PACKET_BITS);
-        if (agg > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; ++r.lost; continue; }
-        nodes[c].energy -= agg;
-
-        double d;
-        if (nodes[c].zone == 1) {
-            d = DistBS(nodes[c]);
-        } else {
-            const double dDirect = DistBS(nodes[c]);
-            double dRelay = numeric_limits<double>::infinity();
-            for (uint32_t z1 : zone1CHs) dRelay = min(dRelay, Dist(nodes[c], nodes[z1]));
-            d = min(dDirect, dRelay);
+        if (!Spend(nodes[c], TxEnergy(CONTROL_BITS, ADV_RANGE))) continue;
+        ++r.controlTx;
+        for (uint32_t v = 0; v < N; ++v) {
+            if (v == c || !nodes[v].alive) continue;
+            if (Spend(nodes[v], RxEnergy(CONTROL_BITS))) ++r.controlRx;
         }
-
-        const double tx = TxEnergy(PACKET_BITS, d);
-        if (tx > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; ++r.lost; continue; }
-        nodes[c].energy -= tx;
-        ++r.dataTx; ++r.dataRx;
-        deliveredSources += members + 1;
-        delaySum += DelayMs(PACKET_BITS, d);
+    }
+    JoinSameZone(nodes);
+    // ---- Setup: join request ----
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive || nodes[i].finalCH) continue;
+        const uint32_t c = nodes[i].clusterHead;
+        if (c >= N || !nodes[c].alive) continue;
+        if (!Spend(nodes[i], TxEnergy(CONTROL_BITS, Dist(nodes[i], nodes[c])))) continue;
+        ++r.controlTx;
+        if (Spend(nodes[c], RxEnergy(CONTROL_BITS))) ++r.controlRx;
+    }
+    // ---- Setup: TDMA schedule to the farthest member ----
+    for (uint32_t c = 0; c < N; ++c) {
+        if (!nodes[c].alive || !nodes[c].finalCH) continue;
+        double farthest = -1.0;
         for (uint32_t i = 0; i < N; ++i)
-            if (memberDelivered[i] && nodes[i].clusterHead == c)
-                delaySum += delayToCH[i] + DelayMs(PACKET_BITS, d);
+            if (nodes[i].alive && !nodes[i].finalCH && nodes[i].clusterHead == c)
+                farthest = max(farthest, Dist(nodes[i], nodes[c]));
+        if (farthest < 0.0) continue;
+        if (!Spend(nodes[c], TxEnergy(CONTROL_BITS, farthest))) continue;
+        ++r.controlTx;
+        for (uint32_t i = 0; i < N; ++i)
+            if (nodes[i].alive && !nodes[i].finalCH && nodes[i].clusterHead == c && Spend(nodes[i], RxEnergy(CONTROL_BITS)))
+                ++r.controlRx;
+    }
+    for (auto& n : nodes) if (!n.alive) n.finalCH = false;
+    JoinSameZone(nodes);   // re-join if a CH died during setup
+
+    // ---- Sensing decision (Eq. 7) ----
+    vector<bool> reports(N, false);
+    for (auto& n : nodes) {
+        if (!n.alive) continue;
+        reports[n.id] = DecideReport(n, round, sensorRng);
+        if (reports[n.id]) ++r.generated;
+    }
+
+    // ---- Steady state: member -> CH (same zone), or direct to BS ----
+    vector<uint32_t> signals(N, 0);
+    vector<double> memberDelaySum(N, 0.0);
+    uint32_t deliveredSources = 0;
+    double delaySum = 0.0;
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive || !reports[i]) continue;
+        if (nodes[i].finalCH) { ++signals[i]; continue; }
+        const uint32_t c = nodes[i].clusterHead;
+        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) {
+            ++r.unclustered;
+            const double dBS = DistBS(nodes[i]);
+            if (!Spend(nodes[i], TxEnergy(PACKET_BITS, dBS))) continue;
+            ++r.dataTx; ++r.dataRx; ++deliveredSources;
+            delaySum += DelayMs(PACKET_BITS, dBS);
+            continue;
+        }
+        const double d = Dist(nodes[i], nodes[c]);
+        if (!Spend(nodes[i], TxEnergy(PACKET_BITS, d))) continue;
+        ++r.dataTx;
+        if (!Spend(nodes[c], RxEnergy(PACKET_BITS))) continue;
+        ++r.dataRx;
+        ++signals[c];
+        memberDelaySum[c] += DelayMs(PACKET_BITS, d);
+    }
+
+    // ---- CH routing tree: minimum-energy path to the BS (Dijkstra) ----
+    // Zone-1 CHs: direct to the BS. Zone-2 CHs: may relay through a
+    // secondary CH (Zone 2) and/or a Zone-1 CH. Each relay pays Rx + Tx.
+    vector<uint32_t> chs;
+    for (const auto& n : nodes) if (n.alive && n.finalCH) chs.push_back(n.id);
+    const uint32_t BS = N;
+    vector<double> cost(N + 1, numeric_limits<double>::infinity());
+    vector<uint32_t> nextHop(N, BS);
+    vector<bool> done(N, false);
+    for (uint32_t c : chs) cost[c] = TxEnergy(PACKET_BITS, DistBS(nodes[c]));
+    for (size_t it = 0; it < chs.size(); ++it) {
+        uint32_t u = BS; double best = numeric_limits<double>::infinity();
+        for (uint32_t c : chs) if (!done[c] && cost[c] < best) { best = cost[c]; u = c; }
+        if (u == BS) break;
+        done[u] = true;
+        for (uint32_t v : chs) {
+            if (done[v] || nodes[v].zone != 2) continue;   // only Zone-2 CHs use multi-hop
+            const double viaU = TxEnergy(PACKET_BITS, Dist(nodes[v], nodes[u])) + RxEnergy(PACKET_BITS) + cost[u];
+            if (viaU < cost[v] - 1e-15) { cost[v] = viaU; nextHop[v] = u; }
+        }
+    }
+
+    // ---- CH: fuse (members + own) and send along the path ----
+    for (uint32_t c : chs) {
+        if (!nodes[c].alive || !nodes[c].finalCH || signals[c] == 0) continue;
+        if (!Spend(nodes[c], signals[c] * AggEnergy(PACKET_BITS))) continue;
+        uint32_t cur = c;
+        double pathDelay = 0.0;
+        bool ok = true;
+        for (uint32_t hops = 0; hops <= N; ++hops) {
+            const uint32_t nh = nextHop[cur];
+            const double d = (nh == BS) ? DistBS(nodes[cur]) : Dist(nodes[cur], nodes[nh]);
+            if (!Spend(nodes[cur], TxEnergy(PACKET_BITS, d))) { ok = false; break; }
+            ++r.dataTx;
+            pathDelay += DelayMs(PACKET_BITS, d);
+            if (nh == BS) { ++r.dataRx; break; }
+            if (!nodes[nh].alive || !Spend(nodes[nh], RxEnergy(PACKET_BITS))) { ok = false; break; }
+            ++r.dataRx;
+            cur = nh;
+        }
+        if (!ok) continue;
+        deliveredSources += signals[c];
+        delaySum += memberDelaySum[c] + signals[c] * pathDelay;
     }
 
     r.delivered = min(deliveredSources, r.generated);
@@ -332,24 +401,17 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, mt19
         if (n.alive && !n.finalCH && n.clusterHead < N && nodes[n.clusterHead].alive && nodes[n.clusterHead].finalCH)
             ++assigned;
     }
-
     r.dead = N - r.alive;
     r.energyUsed = max(0.0, before - after);
     r.residualEnergy = after;
     r.avgClusterSize = r.chCount ? static_cast<double>(assigned + r.chCount) / r.chCount : 0.0;
-
-    if (r.alive == 0) {
-        r.chCount = 0; r.generated = 0; r.delivered = 0; r.lost = 0; r.unclustered = 0;
-        r.avgClusterSize = 0.0; r.avgDelayMs = 0.0; r.pdr = 0.0; r.throughputKbps = 0.0;
-    }
-
     r.pdr = r.generated ? static_cast<double>(r.delivered) / r.generated : 0.0;
     r.avgDelayMs = r.delivered ? delaySum / r.delivered : 0.0;
+    const double controlTime = static_cast<double>(r.controlTx) * TxTimeSec(CONTROL_BITS);
     const double dataTxTime = static_cast<double>(r.dataTx) * TxTimeSec(PACKET_BITS);
-    r.roundDurationSec = dataTxTime;
+    r.roundDurationSec = controlTime + dataTxTime;
     r.throughputKbps = r.roundDurationSec > 0.0
-        ? static_cast<double>(r.delivered * PACKET_BITS) / r.roundDurationSec / 1000.0 : 0.0;
-
+        ? static_cast<double>(r.delivered) * PACKET_BITS / r.roundDurationSec / 1000.0 : 0.0;
     return r;
 }
 
@@ -358,7 +420,6 @@ static void ApplyVisualState(AnimationInterface* anim, uint32_t nodeId, const Se
 {
     if (!n.alive) { anim->UpdateNodeColor(nodeId, 120, 120, 120); anim->UpdateNodeDescription(nodeId, ""); return; }
     if (n.finalCH) {
-        // Zone1 CHs = red, Zone2 CHs = dark orange (visually distinguish zones)
         if (n.zone == 1) anim->UpdateNodeColor(nodeId, 255, 80, 80);
         else anim->UpdateNodeColor(nodeId, 200, 100, 0);
         anim->UpdateNodeDescription(nodeId, "CH" + to_string(n.id) + "(Z" + to_string(n.zone) + ")");
@@ -385,68 +446,72 @@ int main(int argc, char* argv[])
     cmd.Parse(argc, argv);
 
     cout << "\n========================================\n";
-    cout << "  HYBRID PROTOCOL (Literature): EECH-HEED EDITED+IMPROVED (unified env + threshold sensing)\n";
-    cout << "========================================\n";
-    cout << "Zone1 (near BS): " << N_ZONE1 << " nodes, radius=" << ZONE1_RADIUS << "m, homogeneous E=" << E_ZONE1 << "J\n";
-    cout << "Zone2 (far): " << N_ZONE2 << " nodes, heterogeneous E=[" << E_ZONE2_MIN << "-" << E_ZONE2_MAX << "]J, "
-         << (ADVANCED_FRACTION*100) << "% advanced nodes at " << ADVANCED_MULTIPLIER << "x energy\n";
-    cout << "Cprob (Zone1 HEED) = " << CPROB << "\n";
+    cout << "  HYBRID PROTOCOL (Literature): EECH-HEED EDITED + IMPROVED (Kaur, Kour & Singh, 2025)\n";
     cout << "========================================\n";
 
     mt19937 topologyRng(SEED);
     mt19937 electionRng(SEED + 1);
     mt19937 sensorRng(SEED + 2);
-    uniform_real_distribution<double> sensedBaseline(0.0, 100.0);
     uniform_real_distribution<double> angleDist(0.0, 2.0 * M_PI);
-    uniform_real_distribution<double> radiusDist(0.0, ZONE1_RADIUS);
+    uniform_real_distribution<double> unit(0.0, 1.0);
     uniform_real_distribution<double> posDist(0.0, AREA);
     uniform_real_distribution<double> z2EnergyDist(E_ZONE2_MIN, E_ZONE2_MAX);
+    uniform_real_distribution<double> advEnergyDist(E_ADV_MIN, E_ADV_MAX);
+    uniform_real_distribution<double> ht0Dist(HT0_MIN, HT0_MAX);
+    uniform_real_distribution<double> phaseDist(0.0, 0.5);
 
     vector<SensorNode> nodes(N);
-
-    // Zone 1: nodes inside the radius-30m circle around the sink
-    for (uint32_t i = 0; i < N_ZONE1; ++i) {
-        double angle = angleDist(topologyRng);
-        double radius = radiusDist(topologyRng);
-        nodes[i].id = i;
-        nodes[i].x = BSX + radius * cos(angle);
-        nodes[i].y = BSY + radius * sin(angle);
-        nodes[i].energy = E_ZONE1;
-        nodes[i].eMax = E_ZONE1;
-        nodes[i].zone = 1;
-        nodes[i].alive = true;
-        nodes[i].sensedLast = sensedBaseline(topologyRng);
-    }
-
-    // Zone 2: nodes outside the Zone-1 circle, heterogeneous energy
-    vector<uint32_t> z2AdvancedIdx;
-    {
-        uint32_t nAdvanced = static_cast<uint32_t>(ADVANCED_FRACTION * N_ZONE2);
+    if (PAPER_DEPLOYMENT) {
+        // Zone 1: 30 nodes uniformly inside the 30 m circle around the BS
+        for (uint32_t i = 0; i < N_ZONE1; ++i) {
+            const double a = angleDist(topologyRng);
+            const double rad = ZONE1_RADIUS * sqrt(unit(topologyRng));
+            nodes[i].x = BSX + rad * cos(a);
+            nodes[i].y = BSY + rad * sin(a);
+            nodes[i].energy = E_ZONE1;
+            nodes[i].zone = 1;
+        }
+        // Zone 2: 70 nodes in the rest of the field, 20% advanced
         vector<uint32_t> pool(N_ZONE2);
-        for (uint32_t i = 0; i < N_ZONE2; ++i) pool[i] = i;
+        for (uint32_t k = 0; k < N_ZONE2; ++k) pool[k] = k;
         shuffle(pool.begin(), pool.end(), topologyRng);
-        for (uint32_t i = 0; i < nAdvanced; ++i) z2AdvancedIdx.push_back(pool[i]);
+        const uint32_t nAdv = static_cast<uint32_t>(llround(ADVANCED_FRACTION * N_ZONE2));
+        vector<bool> advanced(N_ZONE2, false);
+        for (uint32_t k = 0; k < nAdv; ++k) advanced[pool[k]] = true;
+        for (uint32_t k = 0; k < N_ZONE2; ++k) {
+            const uint32_t i = N_ZONE1 + k;
+            double px, py;
+            do { px = posDist(topologyRng); py = posDist(topologyRng); }
+            while (hypot(px - BSX, py - BSY) <= ZONE1_RADIUS);
+            nodes[i].x = px; nodes[i].y = py;
+            nodes[i].energy = advanced[k] ? advEnergyDist(topologyRng) : z2EnergyDist(topologyRng);
+            nodes[i].zone = 2;
+        }
+    } else {
+        // Unified deployment: 100 nodes uniform in the field, all E0 = 0.5 J;
+        // the zone is decided by the distance to the BS (<= 30 m -> Zone 1).
+        for (uint32_t i = 0; i < N; ++i) {
+            nodes[i].x = posDist(topologyRng);
+            nodes[i].y = posDist(topologyRng);
+            nodes[i].energy = E_UNIFIED;
+            nodes[i].zone = (DistBS(nodes[i]) <= ZONE1_RADIUS) ? 1 : 2;
+        }
     }
-    for (uint32_t k = 0; k < N_ZONE2; ++k) {
-        uint32_t i = N_ZONE1 + k;
-        double px, py;
-        do {
-            px = posDist(topologyRng);
-            py = posDist(topologyRng);
-        } while (hypot(px - BSX, py - BSY) <= ZONE1_RADIUS);
-
+    uint32_t z1 = 0; double eTotal = 0.0;
+    for (uint32_t i = 0; i < N; ++i) {
         nodes[i].id = i;
-        nodes[i].x = px;
-        nodes[i].y = py;
-        double e = z2EnergyDist(topologyRng);
-        if (find(z2AdvancedIdx.begin(), z2AdvancedIdx.end(), k) != z2AdvancedIdx.end())
-            e *= ADVANCED_MULTIPLIER;
-        nodes[i].energy = e;
-        nodes[i].eMax = e;
-        nodes[i].zone = 2;
+        nodes[i].eInit = nodes[i].energy;
         nodes[i].alive = true;
-        nodes[i].sensedLast = sensedBaseline(topologyRng);
+        nodes[i].ht0 = ht0Dist(topologyRng);
+        nodes[i].phase = phaseDist(topologyRng);
+        if (nodes[i].zone == 1) ++z1;
+        eTotal += nodes[i].energy;
     }
+    cout << "Zone1 nodes = " << z1 << ", Zone2 nodes = " << (N - z1)
+         << ", total initial energy = " << fixed << setprecision(3) << eTotal << " J\n";
+    cout << "Packet = " << PACKET_BITS << " bits, E_DA = " << E_DA * 1e9 << " nJ/bit, Cprob = " << CPROB
+         << ", sensing = " << (ENABLE_SENSING ? "ON (Eq. 7)" : "OFF (every node reports every round)") << "\n";
+    cout << "========================================\n";
 
     ofstream positions("node-positions.csv");
     positions << "Node,X,Y\n";
@@ -476,7 +541,7 @@ int main(int argc, char* argv[])
     if (!rounds || !energy || !lifetime) NS_FATAL_ERROR("Cannot create CSV output files.");
 
     rounds << "Round,Alive,Dead,CH_Count,Generated,Delivered,Lost,Unclustered,"
-              "Data_TX,Data_RX,Energy_Used_J,Residual_Energy_J,Avg_Cluster_Size,"
+              "Control_TX,Control_RX,Data_TX,Data_RX,Energy_Used_J,Residual_Energy_J,Avg_Cluster_Size,"
               "Avg_Delay_ms,PDR,Round_Duration_s,Throughput_kbps\n";
     energy << "Round,Node,Energy_J,Alive,Is_CH,ClusterHead\n";
     lifetime << "Node,Death_Round\n";
@@ -485,13 +550,15 @@ int main(int argc, char* argv[])
     bool fnd = false, hnd = false;
     vector<uint32_t> deathRound(N, 0);
     uint64_t totalGenerated = 0, totalDelivered = 0;
-    double totalUsed = 0.0;
+    double totalUsed = 0.0, chSum = 0.0;
+    uint32_t roundsRun = 0;
 
     cout << "\nSimulation starts...\n";
-
     for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
-        RunEECHHEED(nodes, electionRng);
+        RunEECHHEED(nodes, round, electionRng);
         RoundResult r = SimulateRound(nodes, round, sensorRng);
+        ++roundsRun;
+        chSum += r.chCount;
 
         const vector<SensorNode> visualSnapshot = nodes;
         const double visualTime = (round == 1) ? 0.1 : static_cast<double>(round);
@@ -506,6 +573,7 @@ int main(int argc, char* argv[])
         rounds << fixed << setprecision(10)
                << r.round << ',' << r.alive << ',' << r.dead << ',' << r.chCount << ','
                << r.generated << ',' << r.delivered << ',' << r.lost << ',' << r.unclustered << ','
+               << r.controlTx << ',' << r.controlRx << ','
                << r.dataTx << ',' << r.dataRx << ',' << r.energyUsed << ',' << r.residualEnergy << ','
                << r.avgClusterSize << ',' << r.avgDelayMs << ',' << r.pdr << ','
                << r.roundDurationSec << ',' << r.throughputKbps << '\n';
@@ -521,29 +589,23 @@ int main(int argc, char* argv[])
         if (!hnd && r.alive <= N / 2) { HND = round; hnd = true; }
 
         cout << fixed << setprecision(4)
-             << "Round " << setw(4) << round << " | Alive=" << setw(3) << r.alive
+             << "Round " << setw(5) << round << " | Alive=" << setw(3) << r.alive
              << " | CH=" << setw(3) << r.chCount << " | PDR=" << setw(7) << r.pdr
              << " | Residual=" << setw(9) << r.residualEnergy << " J\n";
 
         if (r.alive == 0) { LND = round; break; }
     }
-
-    if (LND == 0) {
-        for (const auto& n : nodes) if (n.alive) { LND = 0; break; }
-        if (LND == 0) for (uint32_t d : deathRound) LND = max(LND, d);
-    }
+    // LND is only reported when the last node really died.
 
     for (uint32_t i = 0; i < N; ++i)
         lifetime << i << ',' << (deathRound[i] ? to_string(deathRound[i]) : "Not_Dead") << '\n';
-
     rounds.close(); energy.close(); lifetime.close();
 
-    Simulator::Stop(Seconds(static_cast<double>(MAX_ROUNDS) + 2.0));
+    Simulator::Stop(Seconds(static_cast<double>(roundsRun) + 2.0));
     Simulator::Run();
     Simulator::Destroy();
 
     const double overallPdr = totalGenerated ? static_cast<double>(totalDelivered) / totalGenerated : 0.0;
-
     cout << "\n========================================\n";
     cout << "             FINAL RESULTS\n";
     cout << "========================================\n";
@@ -552,10 +614,10 @@ int main(int argc, char* argv[])
     cout << "LND = " << (LND ? to_string(LND) : "Not reached") << " rounds\n";
     cout << fixed << setprecision(6);
     cout << "Total Energy Used = " << totalUsed << " J\n";
+    cout << "Packets generated = " << totalGenerated << ", delivered = " << totalDelivered << "\n";
     cout << "Overall PDR = " << overallPdr << "\n";
-    cout << "\nCSV outputs: hybrid-EECHHEED-results.csv, hybrid-EECHHEED-node-energy.csv,\n";
-    cout << "             hybrid-EECHHEED-node-lifetime.csv, hybrid-EECHHEED-clustering.xml\n";
+    cout << setprecision(2) << "Average CHs per round = " << (roundsRun ? chSum / roundsRun : 0.0) << "\n";
+    cout << "\nCSV outputs: hybrid-EECHHEED-EDITED-IMPROVED-results.csv, -node-energy.csv, -node-lifetime.csv\n";
     cout << "========================================\n";
-
     return 0;
 }
