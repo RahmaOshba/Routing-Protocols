@@ -114,26 +114,26 @@
  "paperExact": [
   [
    "LEACH",
-   882,
-   970,
-   1321,
-   0.9802,
-   "50×50 m, far BS, single-term radio"
+   1035,
+   1152,
+   1327,
+   0.9862,
+   "50×50 m, far BS, single-term radio, setup cost not charged (as in paper)"
   ],
   [
    "HEED",
-   1106,
-   1626,
-   1996,
-   0.9997,
-   "Table 2 config, far BS, E0 = 2 J, 800-bit packet"
+   734,
+   1384,
+   2259,
+   0.998,
+   "N = 500, sink (50,175), E0 = 2 J, 125-byte packet, 5 frames/round"
   ],
   [
    "PEGASIS",
-   1614,
-   2036,
-   2167,
-   0.9775,
+   1616,
+   2017,
+   2186,
+   0.9886,
    "50×50 m, far BS, single-term radio"
   ],
   [
@@ -166,30 +166,30 @@
    "Baseline",
    "LEACH",
    "Edited",
-   1409,
-   1626,
-   1962,
-   0.9837,
+   1383,
+   1586,
+   1842,
+   0.994,
    "Randomised CH rotation"
   ],
   [
    "Baseline",
    "HEED",
    "Edited",
-   323,
-   570,
-   1362,
-   0.9969,
+   634,
+   1216,
+   1883,
+   0.9968,
    "Iterative energy + cost CH negotiation"
   ],
   [
    "Baseline",
    "HEED (fairness)",
    "Edited + variant",
-   338,
-   549,
-   1502,
-   0.9967,
+   743,
+   1154,
+   1960,
+   0.9974,
    "+ rotation-fairness penalty"
   ],
   [
@@ -197,9 +197,9 @@
    "PEGASIS",
    "Edited",
    1324,
-   2353,
-   2887,
-   0.9867,
+   2352,
+   3504,
+   0.9942,
    "Greedy chain, rotating leader"
   ],
   [

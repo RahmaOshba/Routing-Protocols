@@ -5,7 +5,7 @@ module.exports=[
 detail:[
 'الجدول: v3 (FND 1730 وPDR 97.72%)، وv5b (LND 3203* بس ده منفوخ بسبب النودز الساكتة)، وv7 (FND 1551 وPDR 98.43%)، وv7.1 (FND 1491 وPDR 98.49%)، وv8-Chain (FND 2621 وHND 2711 وLND 2756 وPDR 99.27%).',
 '+69%: أول نود بتموت متأخرة 69% عن v7 (من 1551 لـ 2621)، يعني 1070 round زيادة.',
-'99.27%: أعلى PDR بين البروتوكولات اللي عمرها طويل.',
+'99.27%: أعلى PDR بين كل البروتوكولات اللي أول نود فيها بتعيش بعد round 2000.',
 '+33%: وصّلنا رسايل أكتر بـ 33% من v5b بنفس الطاقة الكلية (50 J = 100 نود × 0.5 J): من 201,505 لـ 268,610 رسالة. ودي أقوى حجة إن الـ LND بتاع v5b مش حقيقي.',
 'ملاحظة: والـ BS في النص v8-Chain = v8 بالظبط، لأن مفيش ولا relay حصل.'],
 say:'With the base station at the centre, v8-Chain delays the first node death by 69 percent compared with v7, reaches 99.27 percent PDR, and delivers 33 percent more packets than v5b with the same total energy.',
@@ -59,16 +59,16 @@ say:'Across eight random topologies the ranking never changes, so the gain is no
 detail:[
 'الرسم فيه LEACH وHEED وPEGASIS وSH-LEACH+ وH-LEACH+ (+ يعني النسخة المحسّنة) وv3 وv7 وv7.1 وv8-Chain.',
 'v8-Chain عنده أحسن FND في الكل (2621)، وH-LEACH+ تاني (2347).',
-'PEGASIS عنده LND أطول (2887) بسبب السلسلة الواحدة والقفزات القصيرة، بس أول نود فيه بتموت قبلنا بحوالي 1300 round (1324).'],
+'PEGASIS عنده LND أطول (3504) بسبب السلسلة الواحدة والقفزات القصيرة، بس أول نود فيه بتموت قبلنا بحوالي 1300 round (1324).'],
 say:'v8-Chain has the latest first node death of all protocols. PEGASIS keeps a longer last-node lifetime, but its first node dies about 1300 rounds earlier.',
 qa:[['PEGASIS عنده LND أحسن، ليه مش الأحسن؟','لأن FND بتاعه 1324 بس، يعني أجزاء من الأرض بتبطّل تتراقب بدري جدًا. وكمان فيه تأخير كبير وsingle point of failure. إحنا بنعتبر FND والـ PDR أهم للتغطية والاعتمادية.']]},
 
 {n:58,about:'المقارنة الشاملة: الاعتمادية (PDR).',
 detail:[
-'HEED (99.69%) وSH-LEACH+ (99.79%) بيوصّلوا أكتر شوية من v8-Chain (99.27%)، بس أول نود فيهم بتموت قبلنا بـ 1,200 لـ 2,300 round.',
-'بين البروتوكولات اللي عمرها طويل، v8-Chain عنده أعلى PDR.',
+'LEACH (99.40%) وPEGASIS (99.42%) وHEED (99.68%) وSH-LEACH+ (99.79%) بيوصّلوا أكتر شوية من v8-Chain (99.27%)، بس أول نود فيهم بتموت قبلنا بـ 1,200 لـ 2,000 round.',
+'بين البروتوكولات اللي أول نود فيها بتعيش بعد round 2000، v8-Chain عنده أعلى PDR. ومهم تقوليها بأمانة: إحنا مش الأعلى في الـ PDR بشكل مطلق، بس الفرق أقل من نص نقطة.',
 'مهم تقوليها بأمانة: إحنا مش الأعلى في الـ PDR بشكل مطلق.'],
-say:'HEED and improved SH-LEACH deliver slightly more, but their first node dies 1,200 to 2,300 rounds earlier. Among long-lived protocols v8-Chain has the highest PDR.',qa:[]},
+say:'LEACH, PEGASIS, HEED and improved SH-LEACH deliver up to half a point more, but their first node dies 1,200 to 2,000 rounds earlier. Among protocols whose first node lives past round 2000, v8-Chain has the highest PDR.',qa:[]},
 
 {n:59,about:'أهم الاستنتاجات (5 نقاط).',
 detail:[

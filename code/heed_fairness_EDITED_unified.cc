@@ -1,38 +1,25 @@
 // ============================================================================
-// HEED -- ORIGINAL (paper-faithful reproduction)
+// MODIFIED HEED (fairness) -- EDITED (unified environment)
+//
+// heed_EDITED_unified.cc + ONE addition that is NOT in published HEED: a light
+// rotation-fairness penalty on the cost, so nodes that served as CH many
+// times gradually give way:  cost = [1/(degree+1)] x [1 + 0.1 x timesServed].
+// Reported in the thesis as "HEED (fairness)" / "HEED*".
 // ns-3.41 / C++
 //
-// Matches Younis & Fahmy (2004), specifically Table 2 of their "Clustering
-// Applications" section (the gen-LEACH comparison, closest to a concrete,
-// numeric parameter set in the paper):
-//   - Sink at (50,175) -- FAR from the network, not centered.
-//   - Initial energy = 2 J/battery (paper's value, not 0.5J).
-//   - Data packet = 800 bits (100 bytes, paper's value, not 2000 bits).
-//   - Control/broadcast packet = 200 bits (25 bytes) -- already matched.
-//   - Cprob=0.05, pmin=0.0005 (paper's stated defaults).
-//   - Threshold distance d0 hardcoded to 75m (paper's stated value).
-//   - Radio constants Eelec/Efs/Emp already matched the shared model exactly
-//     (this is a genuine match, not an adjustment).
-//   - Cost = 1/(degree+1) (favors high-degree nodes): this is explicitly
-//     one of the paper's own two supported configurations (Table 1,
-//     "Dense clusters" goal, "Same power" column -> "1/node degree").
-//   PAPER-FIDELITY FIXES (this revision):
-//   - Number of nodes: the paper's application experiments use 300-700
-//     nodes (Fig. 8a-c) and 500 nodes (Fig. 8d); N = 500 here.
-//   - Data packet = 100-byte payload + 25-byte header = 1000 bits (Table 2).
-//   - One round (T_NO) = 5 TDM frames: clustering runs once per round, then
-//     every node sends data 5 times (Table 2, "Round (T_NO) 5 TDM frames").
-//   - HEED election follows the paper's pseudocode (Fig. 2) exactly: no
-//     extra random pre-election, per-node termination one step after
-//     CH_prob reaches 1, final/tentative announcements, and Phase III
-//     ("uncovered" nodes announce themselves final CH).
-//   - Control-message energy follows Lemma 4: each node broadcasts its cost
-//     once (Phase I); ONLY nodes that announce themselves (tentative/final
-//     CH) transmit in Phase II; a regular node stays silent until it sends
-//     one join message to its CH.
-//   - Data fusion: members' signals + the CH's own (5 nJ/bit/signal).
-// For the version made directly comparable with LEACH/SH-LEACH/EECH-HEED
-// under one shared environment, see heed_EDITED_unified.cc.
+// SAME ALGORITHM as heed_ORIGINAL.cc (the paper's pseudocode, Fig. 2:
+// CH_prob = max(Cprob*E/Emax, pmin), iterative doubling, per-node
+// termination, tentative/final announcements, Phase III; cost =
+// 1/(degree+1); Lemma-4 control overhead: one cost broadcast per node,
+// announcements only by (tentative/final) CHs, one join message per member)
+// -- only the ENVIRONMENT is standardized: N = 100, 100x100 m field, BS at
+// the centre (50,50), E0 = 0.5 J, packet = 2000 bits, one data packet per
+// node per round (as for every protocol), d0 = sqrt(Efs/Emp).
+// Cprob = 0.20 / pmin = 0.05: Cprob does not change the final CH set (the
+// probability doubles to 1 anyway), it only sets how many iterations are
+// spent; 0.20 gives HEED FEWER iterations (less overhead) -- the setting
+// most favourable to HEED.
+// For the paper-faithful reproduction, see heed_ORIGINAL.cc.
 // ============================================================================
 #include "ns3/core-module.h"
 #include "ns3/mobility-module.h"
@@ -112,6 +99,7 @@ struct SensorNode {
     uint32_t degree = 0;
     double cost = 0.0;
     double chProb = 0.0;
+    uint32_t chTimesServed = 0;   // fairness counter
 };
 
 struct RoundResult {
@@ -139,23 +127,24 @@ struct RoundResult {
 
 // ----------------------------- Network -------------------------------------
 #ifndef HEED_N
-#define HEED_N 500
+#define HEED_N 100
 #endif
 static constexpr uint32_t N = HEED_N;   // ORIGINAL: paper's Fig. 8 uses 300-700 nodes (500 in Fig. 8d)
 static constexpr double AREA = 100.0;
 static constexpr double BSX = 50.0;
-static constexpr double BSY = 175.0;  // ORIGINAL: paper's own Table 2, "Sink at (50,175)"
-static constexpr double E0 = 2.0;       // J/node -- ORIGINAL: paper's Table 2, "Initial energy: 2 J/battery"
+static constexpr double BSY = 50.0;  // ORIGINAL: paper's own Table 2, "Sink at (50,175)"
+static constexpr double E0 = 0.5;       // J/node -- ORIGINAL: paper's Table 2, "Initial energy: 2 J/battery"
 static constexpr double RANGE = 25.0;   // m
 
 // ------------------------------- HEED --------------------------------------
 // FIX 2: restored to the original published-style values.
-static constexpr double CPROB = 0.05;   // ORIGINAL: paper's own example (Cprob=5%, Table 2 & Sec.4)
-static constexpr double PMIN = 0.0005;  // ORIGINAL: paper's Section 4 default (pmin=0.0005)
+static constexpr double CPROB = 0.20;   // ORIGINAL: paper's own example (Cprob=5%, Table 2 & Sec.4)
+static constexpr double PMIN = 0.05;
+static constexpr double ROTATION_LAMBDA = 0.1;   // fairness penalty weight  // ORIGINAL: paper's Section 4 default (pmin=0.0005)
 
 // --------------------------- Radio / traffic -------------------------------
-static constexpr uint32_t PACKET_BITS = 800 + 200; // ORIGINAL: Table 2, 100-byte data + 25-byte header
-static constexpr uint32_t FRAMES_PER_ROUND = 5;   // ORIGINAL: Table 2, "Round (T_NO): 5 TDM frames"
+static constexpr uint32_t PACKET_BITS = 2000;   // UNIFIED // ORIGINAL: Table 2, 100-byte data + 25-byte header
+static constexpr uint32_t FRAMES_PER_ROUND = 1; // UNIFIED: one data packet per node per round   // ORIGINAL: Table 2, "Round (T_NO): 5 TDM frames"
 static constexpr uint32_t CONTROL_BITS = 200;   // matches paper's Table 2, "Broadcast packet size: 25 bytes"
 static constexpr double E_ELEC = 50e-9;       // J/bit
 static constexpr double E_FS = 10e-12;         // J/bit/m^2
@@ -180,7 +169,7 @@ static double DistBS(const SensorNode& a)
 
 static double D0()
 {
-    return 75.0;  // ORIGINAL: paper's Table 2 states "Threshold distance (d0): 75 m" directly
+    return sqrt(E_FS / E_MP);  // UNIFIED: computed from Efs/Emp
                   // (differs slightly from sqrt(Efs/Emp) ~= 87.7m with these Efs/Emp values)
 }
 
@@ -252,7 +241,8 @@ static void UpdateCost(vector<SensorNode>& nodes,
         // FIX 1: invert so higher degree (well-connected hub) => lower
         // cost => wins the local BestCH competition, instead of the
         // opposite (which favored isolated/low-degree nodes).
-        nodes[i].cost = 1.0 / (static_cast<double>(nodes[i].degree) + 1.0);
+        nodes[i].cost = (1.0 / (static_cast<double>(nodes[i].degree) + 1.0)) *
+                        (1.0 + ROTATION_LAMBDA * static_cast<double>(nodes[i].chTimesServed));
     }
 }
 
@@ -689,7 +679,7 @@ int main(int argc, char* argv[])
     cout << "Packet = " << PACKET_BITS << " bits\n";
     cout << "Radio d0 = " << D0() << " m\n";
     cout << "Metrics = analytical baseline (not PHY/MAC packet-level)\n";
-    cout << "Visualization = heed-ORIGINAL-clustering.xml (NetAnim)\n";
+    cout << "Visualization = heed-clustering.xml (NetAnim)\n";
     cout << "========================================\n";
 
     mt19937 rng(SEED);
@@ -724,7 +714,7 @@ int main(int argc, char* argv[])
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(visualNodes);
 
-    AnimationInterface anim("heed-ORIGINAL-clustering.xml");
+    AnimationInterface anim("heed-fairness-clustering.xml");
     anim.SetMobilityPollInterval(Seconds(1.0));
     anim.UpdateNodeDescription(N, "SINK");
     anim.UpdateNodeColor(N, 255, 215, 0);
@@ -732,9 +722,9 @@ int main(int argc, char* argv[])
     for (const auto& n : nodes)
         ApplyVisualState(&anim, n.id, n, nodes);
 
-    ofstream rounds("heed-ORIGINAL-results.csv");
-    ofstream energy("heed-ORIGINAL-node-energy.csv");
-    ofstream lifetime("heed-ORIGINAL-node-lifetime.csv");
+    ofstream rounds("heed-fairness-results.csv");
+    ofstream energy("heed-fairness-node-energy.csv");
+    ofstream lifetime("heed-fairness-node-lifetime.csv");
 
     if (!rounds || !energy || !lifetime)
         NS_FATAL_ERROR("Cannot create CSV output files.");
@@ -766,6 +756,7 @@ int main(int argc, char* argv[])
         UpdateCost(nodes, nb);
 
         uint32_t heedIterations = RunHEED(nodes, nb, rng);
+        for (auto& n : nodes) if (n.alive && n.finalCH) ++n.chTimesServed;
         RoundResult r = SimulateRound(nodes, round, heedIterations);
 
         const vector<SensorNode> visualSnapshot = nodes;
@@ -873,10 +864,10 @@ int main(int argc, char* argv[])
     cout << "Delivered Packets      = " << totalDelivered << "\n";
     cout << "Overall PDR            = " << overallPdr << "\n";
     cout << "\nCSV outputs:\n";
-    cout << "  heed-ORIGINAL-results.csv\n";
-    cout << "  heed-ORIGINAL-node-energy.csv\n";
-    cout << "  heed-ORIGINAL-node-lifetime.csv\n";
-    cout << "  heed-ORIGINAL-clustering.xml\n";
+    cout << "  heed-results.csv\n";
+    cout << "  heed-node-energy.csv\n";
+    cout << "  heed-node-lifetime.csv\n";
+    cout << "  heed-clustering.xml\n";
     cout << "========================================\n";
 
     return 0;

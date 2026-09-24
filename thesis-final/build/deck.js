@@ -144,15 +144,15 @@ section('04','Reproducing Existing Protocols','Published → paper-exact → uni
 {const s=content('Published vs. Our Reproduction','Step 1: paper-exact','Paper numbers cannot be compared with each other directly — every paper used different settings.');
  const rows=D.paperExact.map(p=>{const pb=D.published.find(x=>x[0]===p[0]);return [p[0],pb[3]?(p[0]==='H-LEACH'?'≈'+pb[3]:pb[3]):'graph only',p[1],p[2],p[3],pct(p[4])];});
  table(s,['Protocol','Published LND','Our FND','Our HND','Our LND','Our PDR'],rows,{pos:{x:0.9,y:1.6,w:7.6,colW:[1.7,1.5,1.1,1.1,1.1,1.1]},boldFirst:true});
- card(s,8.85,1.6,3.65,4.8,'Findings','• PEGASIS matched its paper within 2.3%.\n• LEACH matches the paper\'s own Fig. 3.\n• H-LEACH needed a fallback just to run (its gate deadlocks).\n• EECH-HEED is lower than published because its adaptive sensing was not yet implemented.',{size:14.5});}
+ card(s,8.85,1.6,3.65,4.8,'Findings','• PEGASIS: LND within 0.3% of the paper (FND/HND within 3.1%).\n• LEACH: LND within 1.1% of the paper.\n• HEED: 500 nodes as in the paper, which gives graphs only.\n• H-LEACH needed a fallback just to run (its gate deadlocks).\n• EECH-HEED is lower than published because its adaptive sensing was not yet implemented.',{size:14.5});}
 {const s=content('Unified Environment','Step 2: same field, radio and BS','Now every protocol runs in the same environment, so differences come from the algorithms.');
  const u=D.unified.filter(r=>r[2]==='Edited'||r[2]==='Edited + variant');
  table(s,['Protocol','FND','HND','LND','PDR'],u.map(r=>[r[1],r[3],r[4],r[5],pct(r[6])]),{pos:{x:0.9,y:1.55,w:5.4,colW:[1.9,0.85,0.85,0.85,0.95]},boldFirst:true});
  lifeChart(s,u.map(r=>r[1].replace(' (fairness)','*')),u.map(r=>r[3]),u.map(r=>r[4]),u.map(r=>r[5]),{x:6.5,y:1.45,w:6.1,h:5.1});}
 {const s=content('Why the Numbers Change','Paper-exact vs. unified LND');
- s.addChart(pres.charts.BAR,[{name:'Paper-exact',labels:['LEACH','HEED','PEGASIS','H-LEACH','SH-LEACH'],values:[1321,1996,2167,1210,884]},{name:'Unified',labels:['LEACH','HEED','PEGASIS','H-LEACH','SH-LEACH'],values:[1962,1362,2887,2305,1604]}],
+ s.addChart(pres.charts.BAR,[{name:'Paper-exact',labels:['LEACH','HEED','PEGASIS','H-LEACH','SH-LEACH'],values:[1327,2259,2186,1210,884]},{name:'Unified',labels:['LEACH','HEED','PEGASIS','H-LEACH','SH-LEACH'],values:[1842,1883,3504,2305,1604]}],
    Object.assign({},{barDir:'col',barGrouping:'clustered',chartColors:['9E9E9E',C.RED],showValue:true,dataLabelFontSize:9,dataLabelPosition:'outEnd',catAxisLabelFontFace:FONT,valAxisLabelFontFace:FONT,legendPos:'t',showLegend:true,legendFontFace:FONT,valGridLine:{color:'E3E0D6',size:0.75},catGridLine:{style:'none'},plotArea:{fill:{color:C.CREAM}},chartArea:{fill:{color:C.CREAM}}},{x:0.8,y:1.45,w:7.2,h:5.1}));
- card(s,8.3,1.6,4.2,4.8,'Main causes','• Field size (50×50 → 100×100 m)\n• BS position (far → center)\n• Radio model (single-term → two-slope)\n• Packet size and initial energy (HEED: 2 J → 0.5 J)\n\nThe algorithm is identical in both bars — only the environment changed.',{size:14.5});}
+ card(s,8.3,1.6,4.2,4.8,'Main causes','• Field size (50×50 → 100×100 m)\n• BS position (far → center)\n• Radio model (single-term → two-slope)\n• HEED: 500 → 100 nodes, 2 J → 0.5 J, 5 frames → 1 packet per round\n• Setup overhead charged for every protocol\n\nThe algorithm is identical in both bars — only the environment changed.',{size:14.5});}
 {const s=content('Improving the Literature Hybrids','Targeted fixes');
  table(s,['Protocol','Stage','FND','HND','LND','PDR'],[['SH-LEACH','Edited',1440,1584,1604,'99.17%'],['SH-LEACH','Improved',1247,1600,1649,'99.79%'],['H-LEACH','Edited',2177,2255,2305,'97.33%'],['H-LEACH','Improved',2347,2449,2499,'97.33%']],{pos:{x:0.9,y:1.6,w:6.6,colW:[1.5,1.3,0.95,0.95,0.95,0.95]},hl:i=>i%2===1,boldFirst:true});
  card(s,7.8,1.6,4.7,2.25,'SH-LEACH fix','True iterative HEED doubling + Cprob 0.10 → 0.03: HND/LND/PDR up, FND −13% (fewer, larger clusters).',{size:14});
@@ -239,7 +239,7 @@ section('07','Results','Center vs. far BS · ablation · robustness · compariso
  table(s,['Protocol','FND','HND','LND','PDR'],[['v3',1730,2081,2703,'97.72%'],['v5b',1730,2091,'3203*','97.31%'],['v7 (Center)',1551,1976,2066,'98.43%'],['v7.1 Multihop',1491,1991,2086,'98.49%'],['v8-Chain',2621,2711,2756,'99.27%']],{pos:{x:0.9,y:1.6,w:6.2,colW:[2.0,1.05,1.05,1.05,1.05]},hl:i=>i===4,boldFirst:true});
  s.addText('* inflated by silent nodes',{x:0.9,y:4.62,w:6,h:0.3,fontSize:10,italic:true,color:C.GREY,fontFace:FONT,margin:0,isTextBox:true});
  stat(s,7.6,1.6,4.9,'+69%','later first node death than v7 (1551 → 2621)',{size:44});
- stat(s,7.6,3.3,4.9,'99.27%','PDR — highest among long-lived protocols',{size:44});
+ stat(s,7.6,3.3,4.9,'99.27%','PDR — best of all protocols with FND > 2000',{size:44});
  stat(s,0.9,5.05,6.2,'+33%','more packets delivered than v5b with the same 50 J (201,505 → 268,610)',{size:40});}
 {const s=content('Results','Far BS (50, −100)','Direct-only v8 loses at a far BS; the energy-aware relay closes the gap to the v7 chain and keeps v8\'s FND and PDR advantage.');
  table(s,['Protocol','FND','HND','LND','PDR'],[['v6 (chain)',1266,1910,2031,'97.08%'],['v7 (chain + repair)',1266,1891,1976,'98.14%'],['v8 (direct)',1471,1646,1716,'98.66%'],['v8-Chain',1716,1886,1956,'99.07%']],{pos:{x:0.9,y:1.6,w:6.2,colW:[2.0,1.05,1.05,1.05,1.05]},hl:i=>i===3,boldFirst:true});
@@ -266,13 +266,13 @@ section('07','Results','Center vs. far BS · ablation · robustness · compariso
  table(s,['Protocol','BS','Mean FND','Mean HND','Mean LND','Mean PDR'],[['v5b','Center',1688,2119,2374,'97.56%'],['v8-Chain','Center',2618,2720,2765,'99.25%'],['v5b','Far',1152,1674,2001,'97.72%'],['v8-Chain','Far',1743,1932,1995,'99.05%']],{pos:{x:0.9,y:1.6,w:7.6,colW:[1.6,1.1,1.2,1.2,1.2,1.3]},hl:i=>i%2===1,boldFirst:true,rowH:0.65});
  card(s,8.8,1.6,3.7,4.8,'Consistent','The ranking holds in every topology.\n\nAt the far BS, v8-Chain matched or beat v7\'s LND (1976) in 6 of 8 topologies.',{size:15});}
 {const s=content('Overall Comparison','Best of each family (center BS)');
- const f=[['LEACH',1409,1626,1962],['HEED',323,570,1362],['PEGASIS',1324,2353,2887],['SH-LEACH+',1247,1600,1649],['H-LEACH+',2347,2449,2499],['v3',1730,2081,2703],['v7',1551,1976,2066],['v7.1',1491,1991,2086],['v8-Chain',2621,2711,2756]];
+ const f=[['LEACH',1383,1586,1842],['HEED',634,1216,1883],['PEGASIS',1324,2352,3504],['SH-LEACH+',1247,1600,1649],['H-LEACH+',2347,2449,2499],['v3',1730,2081,2703],['v7',1551,1976,2066],['v7.1',1491,1991,2086],['v8-Chain',2621,2711,2756]];
  lifeChart(s,f.map(x=>x[0]),f.map(x=>x[1]),f.map(x=>x[2]),f.map(x=>x[3]),{x:0.7,y:1.35,w:8.1,h:5.3});
- card(s,9.0,1.6,3.5,4.8,'Reading','v8-Chain: latest first death of all.\n\nPEGASIS keeps a longer LND (single chain, short hops) but its first node dies ~1300 rounds earlier.\n\n+ = improved version.',{size:14});}
+ card(s,9.0,1.6,3.5,4.8,'Reading','v8-Chain: latest first death of all.\n\nPEGASIS keeps a longer LND (3504 — single chain, short hops) but its first node dies ~1300 rounds earlier.\n\n+ = improved version.',{size:14});}
 {const s=content('Overall Comparison','Reliability (PDR)');
- const f=[['LEACH',98.37],['HEED',99.69],['PEGASIS',98.67],['SH-LEACH+',99.79],['H-LEACH+',97.33],['v3',97.72],['v7',98.43],['v7.1',98.49],['v8-Chain',99.27]];
+ const f=[['LEACH',99.40],['HEED',99.68],['PEGASIS',99.42],['SH-LEACH+',99.79],['H-LEACH+',97.33],['v3',97.72],['v7',98.43],['v7.1',98.49],['v8-Chain',99.27]];
  pdrChart(s,f.map(x=>x[0]),f.map(x=>x[1]),{x:0.7,y:1.35,w:8.1,h:5.3},{min:96});
- card(s,9.0,1.6,3.5,4.8,'Reading','HEED and SH-LEACH+ deliver slightly more — but their first node dies 1,200–2,300 rounds earlier.\n\nAmong long-lived protocols, v8-Chain has the highest PDR.',{size:14});}
+ card(s,9.0,1.6,3.5,4.8,'Reading','LEACH, PEGASIS, HEED and SH-LEACH+ deliver 0.1–0.5 pp more — but their first node dies 1,200–2,000 rounds earlier.\n\nAmong protocols whose first node lives past round 2000, v8-Chain has the highest PDR.',{size:14});}
 
 // ===== Findings / conclusion
 {const s=content('Key Findings',null,'');

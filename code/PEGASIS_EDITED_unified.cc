@@ -2,16 +2,13 @@
 // PEGASIS -- EDITED (unified environment for fair cross-protocol comparison)
 // ns-3.41 / C++
 //
-// Same chain-based algorithm as the paper (greedy nearest-neighbor chain,
-// round-robin leader rotation, bidirectional token-passing/fusion toward
-// the leader), but the ENVIRONMENT is standardized to match
-// LEACH/HEED/SH-LEACH/EECH-HEED exactly: BS at field center (50,50),
-// two-slope Efs/Emp/d0 radio model, N=100, 100x100m field, packet=2000
-// bits. This is the version to use for direct, apples-to-apples
-// comparison against the other protocols.
-// For a paper-faithful reproduction instead, see PEGASIS_ORIGINAL.cc.
+// SAME ALGORITHM as PEGASIS_ORIGINAL.cc (greedy chain from the node farthest
+// from the BS, leader = node (i mod N), bidirectional fusion toward the
+// leader, chain rebuilt when a node dies, per-node delivery counting) --
+// only the ENVIRONMENT is standardized: 100x100 m field, BS at the centre
+// (50,50), two-slope Efs/Emp/d0 radio, packet = 2000 bits.
+// For the paper-faithful reproduction, see PEGASIS_ORIGINAL.cc.
 // ============================================================================
-
 
 #include "ns3/core-module.h"
 #include "ns3/command-line.h"
@@ -60,29 +57,30 @@ struct RoundResult {
 
 // ----------------------------- Network -------------------------------------
 static constexpr uint32_t N = 100;
-static constexpr double AREA = 100.0;  // UNIFIED: matches LEACH/HEED/etc. (was 50x50m)
-static constexpr double BSX = 50.0;    // UNIFIED: field center (was far at (25,150))
-static constexpr double BSY = 50.0;
+static constexpr double AREA = 100.0;   // ORIGINAL: paper's 50x50m field (Table 1)
+static constexpr double BSX = 50.0;    // ORIGINAL: paper's stated BS position for this field
+static constexpr double BSY = 50.0;   // ("at least 100m from the nearest node")
 static constexpr double E0 = 0.5;      // J/node
 
 // --------------------------- Radio / traffic -------------------------------
 static constexpr uint32_t PACKET_BITS = 2000;
-static constexpr double E_ELEC = 50e-9;       // J/bit
-static constexpr double E_FS = 10e-12;        // J/bit/m^2 (UNIFIED: two-slope model, was single term)
-static constexpr double E_MP = 0.0013e-12;    // J/bit/m^4 (UNIFIED addition)
-static constexpr double E_DA = 5e-9;          // J/bit (fusion cost)
+static constexpr double E_ELEC = 50e-9;   // J/bit
+static constexpr double E_FS = 10e-12;        // J/bit/m^2 (UNIFIED two-slope)
+static constexpr double E_MP = 0.0013e-12;    // J/bit/m^4
+static double D0() { return std::sqrt(E_FS / E_MP); }
+//  // J/bit/m^2 (ORIGINAL: single term, same as LEACH paper)
+static constexpr double E_DA = 5e-9;      // J/bit (paper's fusion cost)
 static constexpr double DATA_RATE = 250000.0;
 static constexpr double LIGHT = 3.0e8;
 
-static constexpr uint32_t MAX_ROUNDS = 3000;
+static constexpr uint32_t MAX_ROUNDS = 20000; // run until the last node dies
 static constexpr uint32_t SEED = 12345;
 
 // ----------------------------- Geometry ------------------------------------
 static double Dist(const ChainNode& a, const ChainNode& b) { return hypot(a.x - b.x, a.y - b.y); }
 static double DistBS(const ChainNode& a) { return hypot(a.x - BSX, a.y - BSY); }
 
-// UNIFIED: two-slope radio model matching LEACH/HEED/EECH-HEED
-static double D0() { return sqrt(E_FS / E_MP); }
+// ORIGINAL: single amplifier term (paper's Eq. 1, no d0 threshold)
 static double TxEnergy(uint32_t bits, double d)
 {
     if (d <= 0.0) return bits * E_ELEC;
@@ -165,47 +163,48 @@ static RoundResult SimulateRound(vector<ChainNode>& nodes, vector<uint32_t>& cha
         r.chainLength = static_cast<uint32_t>(chain.size());
         r.lost = r.generated - r.delivered;
     } else {
-        const uint32_t L = leaderCounter % static_cast<uint32_t>(chain.size());
+        // PAPER: leader in round i is node number (i mod N); skip dead IDs.
+        uint32_t leaderId = (round - 1) % N;
+        while (!nodes[leaderId].alive)
+            leaderId = (leaderId + 1) % N;
+        uint32_t L = 0;
+        for (uint32_t k = 0; k < chain.size(); ++k)
+            if (chain[k] == leaderId) { L = k; break; }
         ++leaderCounter;
         r.leader = chain[L];
         r.chainLength = static_cast<uint32_t>(chain.size());
 
         double delaySum = 0.0;
-        uint32_t deliveredCount = 0;
         bool anyLost = false;
 
-        // Left segment: 0 .. L  (data flows rightward toward the leader)
-        for (uint32_t j = 0; j < L; ++j) {
-            uint32_t a = chain[j], b = chain[j + 1];
-            if (!nodes[a].alive || !nodes[b].alive) { anyLost = true; continue; }
-            const double d = Dist(nodes[a], nodes[b]);
-            const double tx = TxEnergy(PACKET_BITS, d);
-            const double rxAgg = RxEnergy(PACKET_BITS) + AggEnergy(PACKET_BITS);
-            if (tx > nodes[a].energy) { nodes[a].energy = 0.0; nodes[a].alive = false; anyLost = true; continue; }
-            nodes[a].energy -= tx;
-            if (rxAgg > nodes[b].energy) { nodes[b].energy = 0.0; nodes[b].alive = false; anyLost = true; continue; }
-            nodes[b].energy -= rxAgg;
-            ++r.dataTx; ++r.dataRx;
-            delaySum += DelayMs(PACKET_BITS, d);
-        }
+        // One chain segment: data flows from chain[from] towards the leader.
+        // "carried" = number of source readings fused into the message.
+        auto runSegment = [&](int from, int step) -> uint32_t {
+            uint32_t carried = 0;
+            for (int j = from; j != static_cast<int>(L); j += step) {
+                const uint32_t a = chain[j], b = chain[j + step];
+                if (nodes[a].alive) ++carried;               // a's own reading
+                if (!nodes[a].alive || !nodes[b].alive) { anyLost = true; carried = 0; continue; }
+                const double d = Dist(nodes[a], nodes[b]);
+                const double tx = TxEnergy(PACKET_BITS, d);
+                const double rxAgg = RxEnergy(PACKET_BITS) + AggEnergy(PACKET_BITS);
+                if (tx > nodes[a].energy) { nodes[a].energy = 0.0; nodes[a].alive = false; anyLost = true; carried = 0; continue; }
+                nodes[a].energy -= tx;
+                if (rxAgg > nodes[b].energy) { nodes[b].energy = 0.0; nodes[b].alive = false; anyLost = true; carried = 0; continue; }
+                nodes[b].energy -= rxAgg;
+                ++r.dataTx; ++r.dataRx;
+                delaySum += DelayMs(PACKET_BITS, d);
+            }
+            return carried;   // readings that reached the leader from this side
+        };
+        uint32_t atLeader = 0;
+        if (L > 0) atLeader += runSegment(0, +1);
+        if (L + 1 < chain.size()) atLeader += runSegment(static_cast<int>(chain.size()) - 1, -1);
 
-        // Right segment: end .. L  (data flows leftward toward the leader)
-        for (uint32_t j = static_cast<uint32_t>(chain.size()) - 1; j > L; --j) {
-            uint32_t a = chain[j], b = chain[j - 1];
-            if (!nodes[a].alive || !nodes[b].alive) { anyLost = true; continue; }
-            const double d = Dist(nodes[a], nodes[b]);
-            const double tx = TxEnergy(PACKET_BITS, d);
-            const double rxAgg = RxEnergy(PACKET_BITS) + AggEnergy(PACKET_BITS);
-            if (tx > nodes[a].energy) { nodes[a].energy = 0.0; nodes[a].alive = false; anyLost = true; continue; }
-            nodes[a].energy -= tx;
-            if (rxAgg > nodes[b].energy) { nodes[b].energy = 0.0; nodes[b].alive = false; anyLost = true; continue; }
-            nodes[b].energy -= rxAgg;
-            ++r.dataTx; ++r.dataRx;
-            delaySum += DelayMs(PACKET_BITS, d);
-        }
-
-        // Leader -> BS
+        // Leader -> BS (one fused message)
+        uint32_t deliveredCount = 0;
         if (nodes[r.leader].alive) {
+            ++atLeader;                                   // leader's own reading
             const double dBS = DistBS(nodes[r.leader]);
             const double tx = TxEnergy(PACKET_BITS, dBS);
             if (tx > nodes[r.leader].energy) { nodes[r.leader].energy = 0.0; nodes[r.leader].alive = false; anyLost = true; }
@@ -213,15 +212,14 @@ static RoundResult SimulateRound(vector<ChainNode>& nodes, vector<uint32_t>& cha
                 nodes[r.leader].energy -= tx;
                 ++r.dataTx; ++r.dataRx;
                 delaySum += DelayMs(PACKET_BITS, dBS);
-                deliveredCount = r.generated; // whole chain's data fused into this one message
+                deliveredCount = atLeader;
             }
         } else {
             anyLost = true;
         }
-
-        r.delivered = anyLost ? 0 : deliveredCount; // simple all-or-nothing per fused message
+        r.delivered = min(deliveredCount, r.generated);
         r.lost = r.generated - r.delivered;
-        r.avgDelayMs = r.delivered ? delaySum / 1.0 : 0.0;
+        r.avgDelayMs = r.delivered ? delaySum : 0.0;
         r.chainRebuilt = anyLost;
     }
 
@@ -368,10 +366,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (LND == 0) {
-        for (const auto& n : nodes) if (n.alive) { LND = 0; break; }
-        if (LND == 0) for (uint32_t d : deathRound) LND = max(LND, d);
-    }
+    // LND is only reported when the last node really died (otherwise "Not reached").
 
     for (uint32_t i = 0; i < N; ++i)
         lifetime << i << ',' << (deathRound[i] ? to_string(deathRound[i]) : "Not_Dead") << '\n';

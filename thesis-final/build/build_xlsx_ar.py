@@ -212,7 +212,7 @@ kp=[('FND بتاع v8-Chain مقارنة بأحسن هجين من الأبحاث
     ('FND بتاع v8-Chain لما الـ BS بعيد مقارنة بـ v7 بعيد',f"={C2}!F9/{C2}!F7-1",DPCT)]
 for k,(a,f,fm) in enumerate(kp):
     r=lastd+3+k; ws.cell(r,1,a).font=F(size=10); ws.cell(r,1).alignment=R(); c=ws.cell(r,3,f); c.number_format=fm; c.font=F(bold=True,size=12,color=RED)
-note(ws,lastd+8,'ملاحظة مهمة: HEED وSH-LEACH المحسّن عندهم PDR أعلى شوية من v8-Chain، بس أول نود فيهم بيموت بدري جدًا. وPEGASIS عنده LND أعلى، بس أول نود فيه بيموت قبلنا بحوالي 1300 round.')
+note(ws,lastd+8,'ملاحظة مهمة: LEACH وPEGASIS وHEED وSH-LEACH المحسّن عندهم PDR أعلى شوية من v8-Chain (99.40–99.79%)، بس أول نود فيهم بتموت قبلنا بـ 1,200 لـ 2,000 round. وPEGASIS عنده LND أعلى (3504)، بس أول نود فيه بتموت قبلنا بحوالي 1300 round.')
 ch=BarChart(); ch.type='col'; ch.grouping='clustered'; ch.title='عمر الشبكة (rounds)'; ch.height=9; ch.width=22
 ch.add_data(Reference(ws,min_col=3,max_col=5,min_row=4,max_row=lastd),titles_from_data=True)
 ch.set_categories(Reference(ws,min_col=1,min_row=5,max_row=lastd))
