@@ -1,0 +1,39 @@
+{
+ "rounds": 6,
+ "readingsGenerated": 72,
+ "readingsDelivered": 72,
+ "pdr": 100.0,
+ "packetsToSink": 18,
+ "chPerRound": [
+  [
+   0,
+   4,
+   8
+  ],
+  [
+   2,
+   7,
+   10
+  ],
+  [
+   1,
+   5,
+   9
+  ],
+  [
+   3,
+   6,
+   11
+  ],
+  [
+   2,
+   7,
+   10
+  ],
+  [
+   1,
+   4,
+   9
+  ]
+ ]
+}

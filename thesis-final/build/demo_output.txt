@@ -1,0 +1,72 @@
+=== Clustered WSN demo: 12 sensors, 3 clusters, 1 sink, 6 rounds of 10 s ===
+
+=== Round 1 (t = 0 s)  CHs: cluster0->S0 cluster1->S4 cluster2->S8 ===
+7.00s  CH0 fuses 4 readings -> SINK
+7.00s  SINK <- CH0 : fused packet with 4 readings
+7.50s  CH4 fuses 4 readings -> SINK
+7.50s  SINK <- CH4 : fused packet with 4 readings
+8.00s  CH8 fuses 4 readings -> SINK
+8.00s  SINK <- CH8 : fused packet with 4 readings
+
+=== Round 2 (t = 10.00 s)  CHs: cluster0->S2 cluster1->S7 cluster2->S10 ===
+17.00s  CH2 fuses 4 readings -> SINK
+17.00s  SINK <- CH2 : fused packet with 4 readings
+17.50s  CH7 fuses 4 readings -> SINK
+17.50s  SINK <- CH7 : fused packet with 4 readings
+18.00s  CH10 fuses 4 readings -> SINK
+18.00s  SINK <- CH10 : fused packet with 4 readings
+
+=== Round 3 (t = 20.00 s)  CHs: cluster0->S1 cluster1->S5 cluster2->S9 ===
+27.00s  CH1 fuses 4 readings -> SINK
+27.00s  SINK <- CH1 : fused packet with 4 readings
+27.50s  CH5 fuses 4 readings -> SINK
+27.50s  SINK <- CH5 : fused packet with 4 readings
+28.00s  CH9 fuses 4 readings -> SINK
+28.00s  SINK <- CH9 : fused packet with 4 readings
+
+=== Round 4 (t = 30.00 s)  CHs: cluster0->S3 cluster1->S6 cluster2->S11 ===
+37.00s  CH3 fuses 4 readings -> SINK
+37.00s  SINK <- CH3 : fused packet with 4 readings
+37.50s  CH6 fuses 4 readings -> SINK
+37.50s  SINK <- CH6 : fused packet with 4 readings
+38.00s  CH11 fuses 4 readings -> SINK
+38.00s  SINK <- CH11 : fused packet with 4 readings
+
+=== Round 5 (t = 40.00 s)  CHs: cluster0->S2 cluster1->S7 cluster2->S10 ===
+47.00s  CH2 fuses 4 readings -> SINK
+47.00s  SINK <- CH2 : fused packet with 4 readings
+47.50s  CH7 fuses 4 readings -> SINK
+47.50s  SINK <- CH7 : fused packet with 4 readings
+48.00s  CH10 fuses 4 readings -> SINK
+48.00s  SINK <- CH10 : fused packet with 4 readings
+
+=== Round 6 (t = 50.00 s)  CHs: cluster0->S1 cluster1->S4 cluster2->S9 ===
+57.00s  CH1 fuses 4 readings -> SINK
+57.00s  SINK <- CH1 : fused packet with 4 readings
+57.50s  CH4 fuses 4 readings -> SINK
+57.50s  SINK <- CH4 : fused packet with 4 readings
+58.00s  CH9 fuses 4 readings -> SINK
+58.00s  SINK <- CH9 : fused packet with 4 readings
+
+========================================
+            DEMO RESULTS
+========================================
+Rounds                  = 6
+Readings generated      = 72
+Readings at the sink    = 72
+PDR (readings)          = 100.00 %
+Packets to the sink     = 18  (instead of 72 without clustering)
+Sensor  0 (cluster 0): sent 6, received 3, energy left 16.175 J
+Sensor  1 (cluster 0): sent 6, received 6, energy left 16.185 J
+Sensor  2 (cluster 0): sent 6, received 6, energy left 16.185 J
+Sensor  3 (cluster 0): sent 6, received 3, energy left 16.175 J
+Sensor  4 (cluster 1): sent 6, received 6, energy left 16.195 J
+Sensor  5 (cluster 1): sent 6, received 3, energy left 16.185 J
+Sensor  6 (cluster 1): sent 6, received 3, energy left 16.185 J
+Sensor  7 (cluster 1): sent 6, received 6, energy left 16.195 J
+Sensor  8 (cluster 2): sent 6, received 3, energy left 16.175 J
+Sensor  9 (cluster 2): sent 6, received 6, energy left 16.185 J
+Sensor 10 (cluster 2): sent 6, received 6, energy left 16.185 J
+Sensor 11 (cluster 2): sent 6, received 3, energy left 16.175 J
+NetAnim file: demo-clustered-wsn.xml
+========================================

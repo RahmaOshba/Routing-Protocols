@@ -1,0 +1,221 @@
+// State-of-the-Art report (reference document for the supervisors)
+// Run: NODE_PATH=<node_modules> node build_sota.js
+const path = require('path');
+const C = require('./common.js');
+const { P, H1, H2, H3, B, N, eq, img, table, callout, spacer, pageBreak, doc, titlePage, save, TextRun } = require('./docx_lib.js');
+
+const g = C.get, pct = C.pct;
+const v8c = g('v8_chain_center'), v8 = g('v8_center'), v8f = g('v8_farBS'), v8cf = g('v8_chain_farBS');
+const best = g('shleach_IMPROVED'), leach = g('leach_EDITED'), heed = g('heed_EDITED'), peg = g('pegasis_EDITED');
+const rC = C.robust('v8_chain_center'), rCF = C.robust('v8_chain_farBS'), r5 = C.robust('v5b_center');
+const b = t => ({ text: t, bold: true });
+const ref = n => `[${n}]`;
+
+const body = [
+  ...titlePage('State-of-the-Art Report', 'Energy-efficient clustering in wireless sensor networks: reproduction, comparison and the proposed v8-Chain protocol',
+    ['Eng. Rahma Khaled Oshba', 'Master\'s thesis: Energy-Efficient Secure Clustering in Wireless Sensor Networks Using Hybrid Cryptography',
+      'Supervisors: Dr. Hesham ElZouka · Dr. Amani Saad · Dr. Khaled Saada', 'Reference document for the supervisors — all numbers come from the repository results/ folder'],
+    ['Executive summary', '1. Introduction', '2. Background', '3. State of the art', '3.1 Classic protocols', '3.2 LEACH + HEED hybrids', '3.3 Recent work (2024 – 2026)',
+      '3.4 Fault tolerance, CH rotation and unequal clustering', '3.5 Comparison of the reviewed works', '3.6 Research gap', '4. Methodology', '5. Reproduction results',
+      '6. Proposed protocol: v8-Chain', '7. Results', '8. Limitations', '9. Conclusion and future work', 'References', 'Appendix — Repository map']),
+
+  H1('Executive summary'),
+  P('This report reviews the state of the art in energy-efficient clustering for wireless sensor networks (WSNs), reproduces six published protocols in ns-3.41, compares them in one unified environment, and presents the proposed protocol, v8-Chain.'),
+  B([b('Reproduction. '), `LEACH ${ref(1)}, HEED ${ref(3)}, PEGASIS ${ref(4)}, SH-LEACH ${ref(5)}, H-LEACH ${ref(6)} and EECH-HEED ${ref(7)} were implemented from their papers. In each paper's own settings the code reproduces the published numbers (PEGASIS LND within 0.3 %, LEACH LND within 1.2 %).`]),
+  B([b('Flaws in the literature. '), 'SH-LEACH\'s probability grows without bound (≈ 29 CHs per round), H-LEACH\'s energy gate deadlocks with equal starting energy, and EECH-HEED\'s zone-2 rotation collapses because Eq. 5 gives P ≈ 1. Each was fixed and re-evaluated.']),
+  B([b('Proposed protocol. '), `v8-Chain combines single-pass CH election, 5-round cluster reuse, CH protection (backup, proactive handover, re-join), an energy gate, direct-to-BS delivery and energy-aware CH-to-CH relaying.`]),
+  B([b('Result. '), `In the unified environment v8-Chain reaches FND ${v8c.F}, HND ${v8c.H}, LND ${v8c.L} rounds and PDR ${pct(v8c.P)}: the first node dies ${C.gain(v8c.F, best.F).toFixed(0)} % later than with the best reproduced protocol (SH-LEACH Improved, FND ${best.F}) and ${C.gain(v8c.F, leach.F).toFixed(0)} % later than with LEACH. Across 8 random topologies its FND stays between ${rC.Fmin} and ${rC.Fmax}.`]),
+
+  H1('1. Introduction'),
+  P('A WSN is made of many small, battery-powered nodes that sense their surroundings and report to a base station (BS). Batteries are rarely replaced, so the network\'s useful life is limited by energy, and most of that energy is spent on the radio. Clustering organises the nodes into groups: members send a short hop to a cluster head (CH), the CH fuses the readings and sends one packet to the BS. The CH role is expensive, so how CHs are chosen, rotated and protected decides when the first nodes die and parts of the field stop being monitored.'),
+  H2('1.1 Problem statement'),
+  B('Published protocols are evaluated in different fields, radio models, BS positions and packet sizes, so their numbers cannot be compared directly.'),
+  B('Some published hybrids do not work as written (deadlock, runaway CH count).'),
+  B('None of the reviewed protocols reuses clusters, protects the CH before and after it fails, and relays between CHs only when it saves energy — all at once and without heavy computation.'),
+  H2('1.2 Objectives and contributions'),
+  N('A fair, reproducible comparison: six published protocols in their own settings (validation) and in one unified ns-3 environment.'),
+  N('A diagnosis of the published LEACH + HEED hybrids, with a documented fix for each.'),
+  N('An original clustering protocol developed one mechanism at a time (v1 → v8-Chain), with an ablation study, two BS positions and 8 random topologies.'),
+  N('An open repository (code/, results/, papers/) in which every number of this report can be regenerated.'),
+
+  H1('2. Background'),
+  H2('2.1 First-order radio model'),
+  P(`All protocols use the first-order radio model ${ref(1)}${ref(2)}. Sending k bits over distance d costs:`),
+  eq('E_tx(k, d) = k·E_elec + k·ε_fs·d²   if d < d0 ,     E_tx(k, d) = k·E_elec + k·ε_mp·d⁴   if d ≥ d0'),
+  eq('E_rx(k) = k·E_elec ,     E_DA = k·E_da per fused signal ,     d0 = √(ε_fs / ε_mp) ≈ 87.7 m'),
+  P('Long links are therefore expensive, which is why short member → CH hops and data fusion at the CH save energy.'),
+  H2('2.2 Clustering round'),
+  P('A round has a setup phase (CH election, CH advertisement, join requests, TDMA schedule) and a data phase (members send in their slots, the CH fuses members + its own reading and sends one packet to the BS).'),
+  H2('2.3 Metrics'),
+  B([b('FND / HND / LND: '), 'round in which the first node, half of the nodes and the last node die. FND measures how long the whole field is covered; LND how long anything is left.']),
+  B([b('PDR: '), 'readings delivered to the BS ÷ readings generated.']),
+
+  H1('3. State of the art'),
+  P('Table 1 compares the reviewed works; the companion document "Literature Review" gives each paper in full.'),
+  H2('3.1 Classic protocols'),
+  H3('LEACH (2000) [1] and LEACH-C (2002) [2]'),
+  P('LEACH rotates the CH role randomly. A node n that has not been CH in the current epoch (set G) becomes CH if a random number is below'),
+  eq('T(n) = P / (1 − P·(r mod 1/P))   if n ∈ G ,   otherwise 0'),
+  P('Nodes join the CH with the strongest advertisement, the CH builds a TDMA schedule, fuses the data and sends it to the BS. LEACH is simple and fully distributed but ignores residual energy, so a weak node can be elected. LEACH-C [2] moves the election to the BS, which needs every node\'s position and energy.'),
+  H3('HEED (2004) [3]'),
+  P('HEED elects CHs by residual energy and breaks ties by a communication cost (e.g. node degree). Each node starts with'),
+  eq('CH_prob = max( C_prob · E_res / E_max ,  p_min )'),
+  P('and doubles it every iteration until it reaches 1, announcing itself tentative or final CH on the way. The election is well distributed and energy-aware, but the negotiation messages are paid in every clustering round.'),
+  H3('PEGASIS (2002) [4]'),
+  P('PEGASIS builds one greedy chain through all nodes; data is fused along the chain and one leader, rotating by node index, sends it to the BS. Hops are short, but the chain introduces large delay and a single point of failure.'),
+  H2('3.2 LEACH + HEED hybrids'),
+  H3('SH-LEACH (2015) [5]'),
+  eq('CH_prob = C_prob · (E_res/E_max) · (C_prob · r) / (1 + CH_cho mod (1/C_prob))'),
+  P('The HEED energy term is placed inside LEACH\'s draw and scaled by the round number r and the number of CHs chosen so far. Because r is never reset, the probability grows without bound; the paper itself notes that the number of CHs is not guaranteed.'),
+  H3('H-LEACH (2016) [6]'),
+  eq('e0(i) = P · E_res,i / E_max ,    t(n) = e0 / (1 − e0 · (r mod round(1/e0))) ,    CH if rand < t(n) and E_i > E_avg'),
+  P('The energy gate removes weak candidates, but with equal starting energy no node is strictly above the average, so no CH is ever elected. The paper\'s LND of ≈ 4312 rounds also comes from subtracting a constant energy per round instead of a radio model.'),
+  H2('3.3 Recent work (2024 – 2026)'),
+  B([b(`EECH-HEED ${ref(7)}: `), 'two concentric zones — HEED near the BS (P = C_prob·E/E_avg), EECH far away (P = (E/E_max)(D/D_max) with D = node degree), a dynamic threshold T·α·β with α = E/E0 and β = 1 − d/d_max, multi-hop primary/secondary CHs and adaptive hard/soft sensing thresholds. Published: FND 1250, HND 1650, LND 2200, PDR 95 %.']),
+  B([b(`RL-ILEACH ${ref(8)}: `), 'a reinforcement-learning agent chooses CHs inside ILEACH using residual energy, node density and distance; the authors report lifetime gains of 784 % over LEACH and 130 % over ILEACH.']),
+  B([b(`DL-HEED ${ref(9)}: `), 'a graph neural network, trained on residual energy, degree, position and signal strength, predicts good CHs for heterogeneous networks; up to 60 % longer lifetime than HEED is reported.']),
+  B([b(`TLC-LEACH ${ref(10)}: `), 'two-level clustering with a distance threshold to fix LEACH\'s boundary problem in randomly deployed networks.']),
+  H2('3.4 Fault tolerance, CH rotation and unequal clustering'),
+  P(`FTEC ${ref(11)} adds fault tolerance to clustering, the review by Pachlor et al. ${ref(12)} classifies CH-rotation approaches, and EEUC ${ref(13)} and the work of Chauhan and Soni ${ref(14)} use unequal cluster sizes and multi-hop relays to protect nodes near the BS. These works motivate the backup, handover and relay mechanisms of the proposed protocol.`),
+  H2('3.5 Comparison of the reviewed works'),
+  table(['Work', 'CH election', 'Energy-aware', 'Reuse / fault tolerance', 'Inter-CH routing', 'Main limitation'], [
+    ['LEACH [1]', 'random threshold T(n)', 'no', 'no / no', 'direct', 'weak CHs possible'],
+    ['HEED [3]', 'iterative, E_res + cost', 'yes', 'no / no', 'multi-hop (optional)', 'negotiation overhead'],
+    ['PEGASIS [4]', 'rotating leader', 'no', 'chain / no', 'chain', 'delay, single point of failure'],
+    ['SH-LEACH [5]', 'LEACH × energy × r', 'yes', 'no / no', 'direct', 'CH count grows without bound'],
+    ['H-LEACH [6]', 'LEACH + gate E > E_avg', 'yes', 'no / no', 'direct', 'deadlock with equal energy'],
+    ['EECH-HEED [7]', 'zones, T·α·β', 'yes', 'no / no', 'multi-hop zone 2', 'rotation collapse; sensing assumptions'],
+    ['RL-ILEACH [8]', 'Q-learning', 'yes', 'no / no', 'direct', 'training overhead'],
+    ['DL-HEED [9]', 'graph neural network', 'yes', 'no / no', 'HEED', 'central training, heavy for nodes'],
+    ['TLC-LEACH [10]', 'two-level LEACH', 'partly', 'no / no', 'direct', 'tied to field layout'],
+    ['v8-Chain (proposed)', 'single-pass score + gate', 'yes', 'yes / yes', 'energy-aware relay', 'see Section 8'],
+  ], [1500, 1650, 950, 1500, 1450, 2588], { size: 16, hl: i => i === 9 }),
+  P('Table 1 — Comparison of the reviewed works.', { alignment: 'center' }),
+  H2('3.6 Research gap'),
+  callout('Gap addressed by this thesis', [
+    'No reviewed protocol combines cheap single-pass election, cluster reuse, protection of the CH before and after it fails, and relaying between CHs only when it saves energy — in a lightweight, distributed design.',
+    'The published protocols are also never compared under identical conditions; this thesis does so for all of them.']),
+
+  H1('4. Methodology'),
+  H2('4.1 Tools'),
+  P(`All protocols are ns-3.41 ${ref(15)} C++ programs using an analytical first-order energy model; a packet-level IEEE 802.15.4 (lr-wpan) demo with NetAnim animation validates the clustering behaviour at the MAC/PHY level. Charts are produced with Python from the CSV outputs.`),
+  ...img('demo_layout.png', 6.3, 'Figure 1 — Packet-level demo (ns-3.41, lr-wpan): 12 sensors, 3 clusters, rotating CHs; 72 readings delivered in 18 fused packets (PDR 100 %).'),
+  H2('4.2 Four-step approach'),
+  table(['Step', 'Folder', 'Purpose'], [
+    ['1', 'code/1_ORIGINAL', 'Each paper in its own field, radio, BS and packet size — validates our implementation.'],
+    ['2', 'code/2_EDITED', 'The same algorithms in one unified environment — fair comparison.'],
+    ['3', 'code/3_IMPROVED', 'The literature hybrids after fixing their main flaw.'],
+    ['4', 'code/4_PROPOSED', 'The proposed protocol, v1 → v8-Chain, one mechanism per version.'],
+  ], [800, 2200, 6638]),
+  H2('4.3 Unified environment'),
+  table(['Parameter', 'Value'], C.ENV, [3200, 6438]),
+  spacer(),
+  P('Every protocol follows the same rules: the CH advertisement reaches every node that may join it; join requests and the TDMA schedule are charged at every setup; a CH fuses members + its own signal; a node without a CH sends directly to the BS; and every run continues until the last node really dies (no round limit is reported as LND).'),
+
+  H1('5. Reproduction results'),
+  H2('5.1 Validation in the papers\' own settings'),
+  table(['Protocol', 'Published', 'Our FND', 'Our HND', 'Our LND', 'Our PDR', 'Setting'], [
+    ['LEACH', 'LND 1312', g('leach_ORIGINAL').F, g('leach_ORIGINAL').H, g('leach_ORIGINAL').L, pct(g('leach_ORIGINAL').P), '50×50 m, far BS, single-term radio'],
+    ['HEED', 'graphs only', g('heed_ORIGINAL').F, g('heed_ORIGINAL').H, g('heed_ORIGINAL').L, pct(g('heed_ORIGINAL').P), '500 nodes, sink (50,175), 2 J'],
+    ['PEGASIS', '1578 / 2082 / 2192', g('pegasis_ORIGINAL').F, g('pegasis_ORIGINAL').H, g('pegasis_ORIGINAL').L, pct(g('pegasis_ORIGINAL').P), '50×50 m, BS (25,150)'],
+    ['SH-LEACH', 'graphs only', g('shleach_ORIGINAL').F, g('shleach_ORIGINAL').H, g('shleach_ORIGINAL').L, pct(g('shleach_ORIGINAL').P), 'Eq. 3 as written'],
+    ['H-LEACH', 'LND ≈ 4312', g('hleach_ORIGINAL').F, g('hleach_ORIGINAL').H, g('hleach_ORIGINAL').L, pct(g('hleach_ORIGINAL').P), 'fallback needed (deadlock)'],
+    ['EECH-HEED', '1250 / 1650 / 2200', g('eechheed_ORIGINAL').F, g('eechheed_ORIGINAL').H, g('eechheed_ORIGINAL').L, pct(g('eechheed_ORIGINAL').P), '30/70 zones, 56 J, sensing on'],
+  ], [1150, 1500, 850, 850, 850, 950, 3488], { center: j => j >= 2 && j <= 5, size: 16 }),
+  ...img('f9_validation.png', 5.6, 'Figure 2 — Published values vs. our reproduction.'),
+  H2('5.2 Classic protocols in the unified environment'),
+  table(['Protocol', 'FND', 'HND', 'LND', 'PDR'], ['leach_EDITED', 'heed_EDITED', 'heed_fairness_EDITED', 'pegasis_EDITED'].map((r, i) =>
+    [['LEACH', 'HEED', 'HEED + fairness penalty', 'PEGASIS'][i], g(r).F, g(r).H, g(r).L, pct(g(r).P)]), [3638, 1500, 1500, 1500, 1500], { center: j => j > 0 }),
+  spacer(),
+  P(`HEED loses its first node earliest (FND ${heed.F}) because its negotiation is paid every round; PEGASIS keeps the last node alive longest (LND ${peg.L}) thanks to short chain hops but loses its first node at round ${peg.F}.`),
+  H2('5.3 Literature hybrids: original, unified and improved'),
+  table(['Protocol', 'Stage', 'FND', 'HND', 'LND', 'PDR', 'What changed'], [
+    ...['shleach', 'hleach', 'eechheed'].flatMap((k, i) => ['ORIGINAL', 'EDITED', 'IMPROVED'].map(st => {
+      const r = g(`${k}_${st}`); const name = ['SH-LEACH', 'H-LEACH', 'EECH-HEED'][i];
+      const why = { ORIGINAL: 'paper settings', EDITED: 'unified environment', IMPROVED: ['r → r mod 1/C_prob', '≥ average + LEACH G-set', 'zone-2 rotation at 10 %'][i] }[st];
+      return [name, st.charAt(0) + st.slice(1).toLowerCase(), r.F, r.H, r.L, pct(r.P), why];
+    }))], [1200, 1050, 800, 800, 800, 950, 4038], { center: j => j >= 2 && j <= 5, size: 16, hl: i => i % 3 === 2 }),
+  ...img('f8_hybrids.png', 6.3, 'Figure 3 — First node death of the three hybrids before and after the fix.'),
+
+  H1('6. Proposed protocol: v8-Chain'),
+  H2('6.1 Architecture'),
+  ...img('f12_architecture.png', 6.5, 'Figure 4 — Architecture of v8-Chain: setup phase, data phase and fault tolerance.'),
+  H2('6.2 Setup phase (once every 5 rounds)'),
+  B([b('Epoch check (I1): '), 'if every alive node has already been CH in this epoch, a new epoch starts, so there is never a round without CHs.']),
+  B([b('Energy gate (I5): '), 'only nodes with residual energy ≥ the network average may volunteer.']),
+  B([b('Single-pass score: '), 'each eligible node becomes CH with probability']),
+  eq('P_i = T(r) · (E_i / E0) · (1 + deg_i / deg_max)'),
+  B([b('Advertise and join: '), 'members join the nearest CH (join request + TDMA schedule).']),
+  B([b('Backup CH: '), 'the strongest member of every cluster is remembered as its backup — no extra message.']),
+  H2('6.3 Data phase (every round, clusters reused)'),
+  B([b('Proactive handover (I2): '), 'a CH that cannot afford this round\'s workload hands the role to its strongest member before it dies.']),
+  B([b('Direct-to-BS (I4): '), 'a node that is no farther from the BS than from its CH sends straight to the BS.']),
+  B([b('Fusion: '), 'the CH fuses members + its own reading into one packet.']),
+  B([b('Energy-aware relay: '), 'a CH forwards through a CH closer to the BS only if Tx(c→j) + Rx_j + E_DA < Tx(c→BS).']),
+  H2('6.4 Fault tolerance'),
+  P('When a CH runs out of energy, its backup is promoted if it has at least 5 % of the live average energy, and the cluster (and relay path) is repaired in the same round; otherwise its members re-join the nearest surviving CH (I3).'),
+  H2('6.5 Evolution v1 → v8-Chain'),
+  table(['Version', 'Change', 'FND', 'HND', 'LND', 'PDR'], C.EVOLUTION.map(([n, r, d]) => [n, d, g(r).F, g(r).H, g(r).L, pct(g(r).P)]),
+    [1100, 4138, 1000, 1000, 1000, 1400], { center: j => j >= 2, size: 17, hl: i => i === 11 }),
+  ...img('f4_evolution.png', 6.3, 'Figure 5 — First node death of every version.'),
+  P(`The largest steps are v1 → v3 (no negotiation plus cluster reuse) and v5b → v8 (+${C.gain(v8.F, g('v5b_energy_aware_repair').F).toFixed(0)} %, mostly I4 and I5). The ordered chains of v6 and v7 cost energy when the BS is in the centre, which is why v8-Chain relays only when it saves energy.`),
+
+  H1('7. Results'),
+  H2('7.1 Network lifetime'),
+  ...img('f1_lifetime_families.png', 6.4, 'Figure 6 — FND, HND and LND of the best version of every family.'),
+  ...img('f3_alive_curves.png', 6.4, 'Figure 7 — Alive nodes per round.'),
+  P(`v8-Chain keeps all 100 nodes alive until round ${v8c.F}, then the nodes die within ${v8c.L - v8c.F} rounds: the load is shared evenly. PEGASIS keeps a few nodes alive much longer (LND ${peg.L}), but its first node dies ${v8c.F - peg.F} rounds earlier.`),
+  H2('7.2 Reliability'),
+  ...img('f2_pdr_families.png', 6.0, 'Figure 8 — Packet delivery ratio.'),
+  P(`All protocols deliver more than 99 % of the readings. v8-Chain reaches ${pct(v8c.P)}; HEED (${pct(heed.P)}) is 0.04 percentage points higher but loses its first node ${v8c.F - heed.F} rounds earlier.`),
+  H2('7.3 Ablation'),
+  table(['Run', 'Removed mechanism', 'FND', 'HND', 'LND', 'PDR'], [['v8 (full)', '—', v8.F, v8.H, v8.L, pct(v8.P)]].concat(
+    [1, 2, 3, 4, 5].map(i => { const r = g(`v8_without_I${i}`); return [`v8 − I${i}`, ['epoch-exhaustion fix', 'proactive handover', 'orphan re-join', 'direct-to-BS', 'energy gate'][i - 1], r.F, r.H, r.L, pct(r.P)]; })),
+  [1300, 3138, 1300, 1300, 1300, 1300], { center: j => j >= 2 }),
+  spacer(),
+  P(`Direct-to-BS (I4) and the energy gate (I5) carry the lifetime gain (FND ${g('v8_without_I4').F} and ${g('v8_without_I5').F} without them); I1, I2 and I3 are safety nets that prevent zero-CH rounds and lost members.`),
+  H2('7.4 Base-station position and relaying'),
+  ...img('f6_routing.png', 6.3, 'Figure 9 — Routing mode of v8-Chain with the BS in the centre and far away.'),
+  P(`With the BS far away the energy-aware relay raises FND from ${v8f.F} (direct) to ${v8cf.F} (+${C.gain(v8cf.F, v8f.F).toFixed(0)} %); with the BS in the centre it relays nothing and costs nothing.`),
+  ...img('f11_topology_farBS.png', 3.6, 'Figure 10 — v8-Chain with a far BS: CHs relay through a CH nearer the BS.'),
+  H2('7.5 Robustness'),
+  ...img('f7_robustness.png', 6.0, 'Figure 11 — FND over 8 random topologies.'),
+  table(['Protocol', 'Mean FND', 'Mean HND', 'Mean LND', 'Mean PDR', 'FND range'], [
+    ['v5b', r5.F.toFixed(0), r5.H.toFixed(0), r5.L.toFixed(0), pct(r5.P), `${r5.Fmin}–${r5.Fmax}`],
+    ['v8-Chain (centre)', rC.F.toFixed(0), rC.H.toFixed(0), rC.L.toFixed(0), pct(rC.P), `${rC.Fmin}–${rC.Fmax}`],
+    ['v8-Chain (far BS)', rCF.F.toFixed(0), rCF.H.toFixed(0), rCF.L.toFixed(0), pct(rCF.P), `${rCF.Fmin}–${rCF.Fmax}`],
+  ], [2438, 1400, 1400, 1400, 1400, 1600], { center: j => j >= 1 }),
+  H2('7.6 Overall comparison'),
+  table(['Protocol', 'Family', 'FND', 'HND', 'LND', 'PDR', 'v8-Chain FND gain'], C.FAMILY.map(([n, r, f]) =>
+    [n, f, g(r).F, g(r).H, g(r).L, pct(g(r).P), r === 'v8_chain_center' ? '—' : '+' + C.gain(v8c.F, g(r).F).toFixed(0) + ' %']),
+  [1300, 2538, 900, 900, 900, 1100, 2000], { center: j => j >= 2, hl: i => i === 6, size: 17 }),
+
+  H1('8. Limitations'),
+  B([b('Analytical energy model. '), 'The long runs use the first-order radio model rather than a packet-level MAC/PHY: collisions, retransmissions, interference and fading are not modelled. The lr-wpan demo is small (12 sensors, 6 rounds).']),
+  B([b('Scenario scope. '), '100 static nodes with equal initial energy in one 100 × 100 m field; no mobility, heterogeneous hardware or other node counts and field sizes.']),
+  B([b('LND. '), `v8-Chain optimises the first death; PEGASIS keeps its last node alive longer (${peg.L} vs ${v8c.L}).`]),
+  B([b('Assumptions filling gaps in the papers. '), 'SH-LEACH\'s packet size and BS position, H-LEACH\'s radio model, EECH-HEED\'s neighbourhood radius and sensor signal, and the forced-CH safeguards had to be assumed; each is documented in the code headers.']),
+  B([b('Security. '), 'The hybrid-cryptography layer of the thesis title is designed but not yet simulated; its energy cost is not included in these results.']),
+  B([b('No hardware test-bed. '), 'All results are simulations.']),
+
+  H1('9. Conclusion and future work'),
+  P(`Six published clustering protocols were reproduced, validated against their papers and compared in one fair environment; flaws in three hybrids were found and fixed. The proposed v8-Chain delays the first node death to round ${v8c.F} (+${C.gain(v8c.F, best.F).toFixed(0)} % over the best reproduced protocol) with a PDR of ${pct(v8c.P)}, and the result holds over 8 topologies and with a far BS.`),
+  B('Add and measure the hybrid-cryptography layer (symmetric keys inside clusters, lightweight public-key between CHs and the BS).'),
+  B('Validate v8-Chain at packet level over lr-wpan with collisions and ACKs.'),
+  B('Sweep field size, node count, BS position and heterogeneous energy; compare the greedy relay with a minimum-energy tree.'),
+
+  H1('References'),
+  ...C.REFS.map((r, i) => P(`[${i + 1}]  ${r}`, { spacing: { after: 100 } })),
+
+  H1('Appendix — Repository map'),
+  table(['Folder', 'Content'], [
+    ['code/0_FIRST_EXPERIMENTS', 'lr-wpan demo (demo_clustered_wsn.cc) and the first ns-3 tests'],
+    ['code/1_ORIGINAL', 'each protocol in its paper\'s settings'], ['code/2_EDITED', 'unified environment'],
+    ['code/3_IMPROVED', 'fixed literature hybrids'], ['code/4_PROPOSED', 'v1 → v8-Chain (+ side experiments)'],
+    ['results/', 'summary.txt, per-round CSV and node lifetimes of every run; summary_all.csv'],
+    ['papers/', 'citations, DOIs and licences'], ['thesis-final/', 'this report, the literature review, the deck, the comparison workbook and their build scripts'],
+  ], [3000, 6638]),
+];
+
+save(doc('State-of-the-Art Report — v8-Chain', body, { headerText: 'State-of-the-Art Report · Energy-efficient clustering in WSNs' }),
+  path.join(__dirname, '..', 'SOTA_Report_v8-Chain.docx'));

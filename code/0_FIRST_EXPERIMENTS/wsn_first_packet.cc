@@ -62,7 +62,7 @@ static AnimationInterface* g_anim = nullptr;
 static uint32_t g_energyCounterId = 0;
 static uint32_t g_sentCounterId = 0;
 static uint32_t g_recvCounterId = 0;
-static EnergySourceContainer g_energySources;
+static EnergySourceContainer* g_energySources = nullptr; // points to main()'s container (a global one crashes at exit)
 
 static std::string
 NodeName(uint32_t nodeId)
@@ -122,9 +122,9 @@ UpdateAnimCounters()
         return;
     }
 
-    for (uint32_t i = 0; i < g_energySources.GetN(); ++i)
+    for (uint32_t i = 0; i < g_energySources->GetN(); ++i)
     {
-        double remaining = g_energySources.Get(i)->GetRemainingEnergy();
+        double remaining = g_energySources->Get(i)->GetRemainingEnergy();
         g_anim->UpdateNodeCounter(g_energyCounterId, i, remaining);
 
         if (i == SINK_NODE_ID)
@@ -481,7 +481,7 @@ main(int argc, char* argv[])
     anim.SetMobilityPollInterval(Seconds(10.0));
 
     g_anim = &anim;
-    g_energySources = energySources;
+    g_energySources = &energySources;
 
     // Starting colors and labels
     for (uint32_t i = 0; i < nodes.GetN(); ++i)

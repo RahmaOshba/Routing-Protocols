@@ -10,7 +10,7 @@ EECH-HEED, and the proposed protocol (v1 → v8-Chain).
 | `results/` | The output of every code, in the same folders (see `results/README.md`) |
 | `papers/` | The research papers, split into `1_ORIGINAL`, `2_HYBRID`, `3_RECENT` (see `papers/README.md`) |
 | `figures/` | Screenshots and diagrams |
-| `thesis-final/` | Report, slides and comparison workbook (not yet updated with the latest `results/`) |
+| `thesis-final/` | Defense deck, State-of-the-Art report, Literature Review and Results Comparison workbook — all built from `results/` (see `thesis-final/build/README.md`) |
 | `thesis-v8/` | Older thesis files (history) |
 
 Headline result (unified environment, BS at the centre): **v8-Chain FND 2501 /
