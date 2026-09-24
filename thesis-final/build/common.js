@@ -54,6 +54,8 @@ const REFS = [
   'C. Li, M. Ye, G. Chen, J. Wu, "An Energy-Efficient Unequal Clustering Mechanism for Wireless Sensor Networks," Proc. IEEE MASS, 2005.',
   'V. Chauhan, S. Soni, "Energy Aware Unequal Clustering Algorithm with Multi-hop Routing via Low Degree Relay Nodes for Wireless Sensor Networks," J. Ambient Intelligence and Humanized Computing, vol. 12, pp. 2469–2482, 2021.',
   'ns-3 Network Simulator, release 3.41, https://www.nsnam.org, 2024.',
+  'A. S. Wander, N. Gura, H. Eberle, V. Gupta, S. C. Shantz, "Energy Analysis of Public-Key Cryptography for Wireless Sensor Networks," Proc. IEEE PerCom, 2005.',
+  'IEEE Std 802.15.4-2020, "IEEE Standard for Low-Rate Wireless Networks," 2020.',
 ];
 
 const ENV = [

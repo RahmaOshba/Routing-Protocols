@@ -34,7 +34,8 @@ async function loadIcons() {
   const names = ['FaBatteryQuarter', 'FaProjectDiagram', 'FaBroadcastTower', 'FaSearch', 'FaFlask', 'FaCogs', 'FaCheckCircle',
     'FaChartBar', 'FaShieldAlt', 'FaExclamationTriangle', 'FaSyncAlt', 'FaRoute', 'FaBolt', 'FaLayerGroup', 'FaUserShield',
     'FaSitemap', 'FaBook', 'FaLightbulb', 'FaCodeBranch', 'FaLock', 'FaBalanceScale', 'FaRandom', 'FaMicrochip', 'FaClock',
-    'FaHandshake', 'FaDatabase', 'FaWrench', 'FaBullseye', 'FaStream', 'FaMapMarkedAlt', 'FaFlagCheckered', 'FaRobot', 'FaThLarge', 'FaLeaf'];
+    'FaHandshake', 'FaDatabase', 'FaWrench', 'FaBullseye', 'FaStream', 'FaMapMarkedAlt', 'FaFlagCheckered', 'FaRobot', 'FaThLarge', 'FaLeaf',
+    'FaSeedling', 'FaHeartbeat', 'FaIndustry', 'FaCity', 'FaTree', 'FaKey', 'FaThermometerHalf', 'FaWifi', 'FaUsers', 'FaTools', 'FaArrowRight', 'FaTrophy', 'FaBug'];
   for (const n of names) ICONS[n] = await icon(n);
 }
 
@@ -114,11 +115,28 @@ function singleBar(s, labels, values, colors, x, y, w, h, opts = {}) {
   }, opts));
 }
 
+// ---------- extra helpers ----------
+function tbl(s, rows, x, y, w, colW, o = {}) {
+  const last = rows.length - 1;
+  s.addTable(rows.map((r, i) => r.map((c, j) => ({ text: String(c), options: {
+    bold: i === 0 || (o.hlLast && i === last) || (o.boldFirst && j === 0), align: o.center && j >= (o.centerFrom || 1) ? 'center' : 'left',
+    color: i === 0 ? 'FFFFFF' : INK,
+    fill: { color: i === 0 ? NAVY : (o.hlLast && i === last) ? 'DCE9FA' : (o.hl && o.hl(i)) ? 'DCE9FA' : (i % 2 ? 'FFFFFF' : TINT) } } }))),
+  { x, y, w, colW, fontSize: o.size || 13, fontFace: BODY, border: { type: 'solid', color: LINE, pt: 0.5 }, rowH: o.rowH || 0.42, valign: 'middle' });
+}
+function note(s, t) { s.addNotes(t); }
+function band(s, text, y = 6.45, color = NAVY) {
+  s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y, w: 12.1, h: 0.62, rectRadius: 0.08, fill: { color: TINT }, line: { color: TINT } });
+  s.addText(text, { x: 0.85, y, w: 11.7, h: 0.62, fontSize: 15, color, fontFace: BODY, bold: true, valign: 'middle', margin: 0, isTextBox: true });
+}
+function lesson(s, text, y = 6.45) { band(s, 'Lesson:  ' + text, y, NAVY); }
+const F = r => C.get(r).F;
+
 // ======================================================================
 async function build() {
   await loadIcons();
   const v8c = C.get('v8_chain_center'), v8cf = C.get('v8_chain_farBS'), v8f = C.get('v8_farBS');
-  const best = C.get('shleach_IMPROVED'), leach = C.get('leach_EDITED'), peg = C.get('pegasis_EDITED');
+  const best = C.get('shleach_IMPROVED'), leach = C.get('leach_EDITED'), heed = C.get('heed_EDITED'), peg = C.get('pegasis_EDITED');
 
   // 1 ── Title
   {
@@ -126,377 +144,476 @@ async function build() {
     circleIcon(s, 'FaBroadcastTower', 0.8, 0.8, 0.9, BLUE);
     s.addText('Energy-Efficient Secure Clustering in Wireless Sensor Networks Using Hybrid Cryptography',
       { x: 0.8, y: 1.9, w: 11.5, h: 2.2, fontSize: 38, bold: true, color: 'FFFFFF', fontFace: HEAD, margin: 0, valign: 'top', isTextBox: true });
-    s.addText('A reproducible comparison of LEACH, HEED, PEGASIS and their hybrids — and a new clustering protocol, v8-Chain',
-      { x: 0.8, y: 4.25, w: 11.5, h: 0.8, fontSize: 19, color: 'C9D4E8', fontFace: BODY, italic: true, margin: 0, isTextBox: true });
+    s.addText('From LEACH, HEED and PEGASIS to a new clustering protocol: v8-Chain',
+      { x: 0.8, y: 4.25, w: 11.5, h: 0.8, fontSize: 20, color: 'C9D4E8', fontFace: BODY, italic: true, margin: 0, isTextBox: true });
     s.addText([{ text: 'Eng. Rahma Khaled Oshba', options: { bold: true, breakLine: true } },
       { text: 'Supervised by Dr. Hesham ElZouka · Dr. Amani Saad · Dr. Khaled Saada', options: { breakLine: true } },
-      { text: "Master's thesis defense" }],
+      { text: "Master's thesis" }],
     { x: 0.8, y: 5.45, w: 11.5, h: 1.3, fontSize: 16, color: 'FFFFFF', fontFace: BODY, margin: 0, paraSpaceAfter: 4, isTextBox: true });
-    s.addNotes('Title. This thesis compares the classic clustering protocols and their hybrids in one fair environment and proposes v8-Chain.');
   }
-
   // 2 ── Agenda
   {
     const s = base(); title(s, 'Agenda');
-    const items = [['01', 'Background', 'WSNs, energy and clustering', 'FaBatteryQuarter'], ['02', 'Related work', 'Classic, hybrid and recent protocols', 'FaBook'],
-      ['03', 'Reproduction', 'Validate, unify, fix', 'FaFlask'], ['04', 'Proposed protocol', 'v8-Chain architecture', 'FaSitemap'],
-      ['05', 'Results', 'Lifetime, PDR, ablation, robustness', 'FaChartBar'], ['06', 'Discussion', 'Limitations and future work', 'FaLightbulb']];
+    const items = [['01', 'Background', 'WSNs and clustering', 'FaWifi'], ['02', 'Energy & first experiments', 'energy model, ns-3, demo', 'FaBolt'],
+      ['03', 'Classic protocols', 'LEACH · HEED · PEGASIS', 'FaBook'], ['04', 'Hybrid protocols', 'SH-LEACH · H-LEACH · EECH-HEED', 'FaLayerGroup'],
+      ['05', 'Recent work', 'and literature review', 'FaSearch'], ['06', 'Proposed protocol', 'v1 → v8-Chain', 'FaCogs'],
+      ['07', 'Adding security', 'expected cost', 'FaLock'], ['08', 'Conclusion', 'limitations · summary', 'FaFlagCheckered']];
     items.forEach(([n, h, b, ic], i) => {
-      const x = 0.6 + (i % 3) * 4.1, y = 1.7 + Math.floor(i / 3) * 2.6;
-      card(s, x, y, 3.8, 2.2, { head: h, body: b, icon: ic, color: [BLUE, ORANGE, AQUA][i % 3], size: 14 });
-      s.addText(n, { x: x + 2.9, y: y + 1.55, w: 0.7, h: 0.5, fontSize: 22, bold: true, color: LINE, fontFace: HEAD, align: 'right', margin: 0, isTextBox: true });
+      const x = 0.6 + (i % 4) * 3.07, y = 1.55 + Math.floor(i / 4) * 2.7;
+      card(s, x, y, 2.85, 2.4, { head: h, body: b, icon: ic, color: [BLUE, ORANGE, AQUA, NAVY][i % 4], size: 14, headSize: 15 });
+      s.addText(n, { x: x + 2.0, y: y + 1.85, w: 0.7, h: 0.45, fontSize: 20, bold: true, color: LINE, fontFace: HEAD, align: 'right', margin: 0, isTextBox: true });
     });
   }
 
-  // ===== 01 Background
-  section('01', 'Background', 'Why energy decides the life of a sensor network');
-  // 3 ── Why energy
+  // ================= 01 BACKGROUND =================
+  section('01', 'Background', 'What a wireless sensor network is — and why energy is its main problem');
   {
-    const s = base(); title(s, 'A sensor network lives as long as its batteries', 'Nodes cannot be recharged in the field — every transmitted bit costs energy');
-    img(s, 'f11_topology_center.png', 7.2, 1.55, 5.6, 5.5);
-    stat(s, 0.6, 1.9, 3.2, '100', 'sensors in a 100 × 100 m field', BLUE);
-    stat(s, 3.9, 1.9, 3.2, '0.5 J', 'battery per sensor', ORANGE);
-    bullets(s, ['Sending one bit costs E_elec + ε·dⁿ: long links are expensive (d² → d⁴ beyond d0 ≈ 88 m).',
-      'Clustering: members send a short hop to a cluster head (CH); the CH fuses the data and sends one packet to the base station (BS).',
-      'The hard part: choosing and rotating CHs so that no node dies early.'], 0.6, 3.7, 6.3, 3.2, 16);
-    s.addNotes('Energy is the bottleneck. Clustering shortens most links, but the CH role is expensive and must rotate.');
+    const s = base(); title(s, 'What is a Wireless Sensor Network (WSN)?', 'Many small battery-powered sensors that measure and report by radio');
+    img(s, 'b1_wsn.png', 0.5, 1.55, 8.0, 3.6);
+    bullets(s, ['Sensors are spread over a field (soil, forest, building, body …).', 'Each sensor measures (temperature, humidity, motion …) and sends its reading by radio.',
+      'The readings reach a sink / base station (BS), then the user over the Internet.'], 8.7, 1.7, 4.1, 3.6, 15);
+    const app = [['Agriculture', 'FaSeedling'], ['Environment', 'FaTree'], ['Health', 'FaHeartbeat'], ['Industry', 'FaIndustry'], ['Smart city', 'FaCity'], ['Security', 'FaShieldAlt']];
+    app.forEach(([t, ic], i) => { const x = 0.7 + i * 2.05; circleIcon(s, ic, x, 5.45, 0.65, [BLUE, AQUA, RED, ORANGE, NAVY, GREY][i]);
+      s.addText(t, { x: x + 0.72, y: 5.45, w: 1.3, h: 0.65, fontSize: 13, color: INK, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true }); });
+    s.addText('Applications', { x: 0.7, y: 5.05, w: 3, h: 0.35, fontSize: 13, bold: true, color: MUTED, fontFace: BODY, margin: 0, isTextBox: true });
+    note(s, 'A WSN is a set of small battery-powered sensors that measure something and send it by radio to a base station.');
   }
-  // 4 ── How clustering works (diagram)
   {
-    const s = base(); title(s, 'How a clustered round works', 'Setup (elect + join) → data (members → CH → BS)');
-    const mem = [[0.9, 2.1], [1.4, 3.4], [0.8, 4.6], [2.3, 5.2], [2.6, 1.8]];
-    mem.forEach(([x, y]) => { s.addShape(pres.shapes.OVAL, { x, y, w: 0.45, h: 0.45, fill: { color: BLUE }, line: { color: 'FFFFFF', width: 1.5 } });
-      s.addShape(pres.shapes.LINE, { x: x + 0.22, y: y + 0.22, w: 3.25 - x - 0.22, h: 3.65 - y - 0.22, line: { color: BLUE, width: 1.2, endArrowType: 'triangle' } }); });
-    s.addShape(pres.shapes.OVAL, { x: 3.0, y: 3.4, w: 0.8, h: 0.8, fill: { color: RED }, line: { color: 'FFFFFF', width: 2 } });
-    s.addText('CH', { x: 3.0, y: 3.4, w: 0.8, h: 0.8, fontSize: 14, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0, isTextBox: true });
-    s.addShape(pres.shapes.LINE, { x: 3.8, y: 3.8, w: 2.2, h: 0, line: { color: INK, width: 2, dashType: 'dash', endArrowType: 'triangle' } });
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 6.05, y: 3.3, w: 1.3, h: 1.0, rectRadius: 0.1, fill: { color: GOLD }, line: { color: '8A6D00', width: 1.5 } });
-    s.addText('BS', { x: 6.05, y: 3.3, w: 1.3, h: 1.0, fontSize: 18, bold: true, color: INK, align: 'center', valign: 'middle', margin: 0, isTextBox: true });
-    s.addText('short hops', { x: 0.6, y: 6.0, w: 2.6, h: 0.4, fontSize: 13, color: BLUE, fontFace: BODY, margin: 0, isTextBox: true });
-    s.addText('one fused packet', { x: 4.0, y: 3.95, w: 2.0, h: 0.4, fontSize: 13, color: INK, fontFace: BODY, margin: 0, isTextBox: true });
-    card(s, 7.9, 1.7, 4.8, 2.4, { head: 'First-order radio model', icon: 'FaBolt', color: ORANGE, size: 14,
-      body: 'E_tx(k,d) = k·E_elec + k·ε_fs·d²   (d < d0)\nE_tx(k,d) = k·E_elec + k·ε_mp·d⁴   (d ≥ d0)\nE_rx(k) = k·E_elec ,   E_DA = k·5 nJ per signal' });
-    card(s, 7.9, 4.35, 4.8, 2.5, { head: 'What every round costs', icon: 'FaClock', color: BLUE, size: 14,
-      body: 'Setup: CH advertisement, join request, TDMA schedule.\nData: member → CH, CH fuses (members + 1), CH → BS.' });
+    const s = base(); title(s, 'Inside a sensor node', 'Small, cheap and limited — the battery decides how long it lives');
+    img(s, 'b2_node.png', 0.6, 1.5, 7.6, 2.8);
+    const c = [['Limited battery', 'Usually cannot be replaced or recharged in the field.', 'FaBatteryQuarter', RED],
+      ['Short radio range', 'Tens of metres; far nodes cannot reach the BS cheaply.', 'FaWifi', BLUE],
+      ['Small CPU and memory', 'Heavy algorithms (and heavy cryptography) are costly.', 'FaMicrochip', ORANGE]];
+    c.forEach(([h, b, ic, col], i) => card(s, 0.6 + i * 4.1, 4.55, 3.85, 1.85, { head: h, body: b, icon: ic, color: col, size: 13, headSize: 15 }));
+    band(s, 'Radio communication uses most of the energy — even listening costs energy.', 6.55);
   }
-  // 5 ── Problem & objectives
   {
-    const s = base(); title(s, 'Problem and objectives');
-    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: 1.5, w: 12.1, h: 1.3, rectRadius: 0.1, fill: { color: TINT }, line: { color: TINT } });
-    s.addText([{ text: 'Problem. ', options: { bold: true, color: NAVY } }, { text: 'Published protocols are evaluated in different fields, radios and BS positions, some hybrids do not work as written, and none protects the CH role or reuses clusters — so the first node dies early.' }],
-      { x: 0.9, y: 1.6, w: 11.5, h: 1.1, fontSize: 16, color: INK, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
-    const o = [['Reproduce fairly', 'Rebuild LEACH, HEED, PEGASIS, SH-LEACH, H-LEACH and EECH-HEED in one ns-3 environment.', 'FaBalanceScale', BLUE],
-      ['Diagnose', 'Find why each protocol wins or loses, including flaws in the published algorithms.', 'FaSearch', ORANGE],
-      ['Design', 'Evolve an original hybrid protocol one mechanism at a time (v1 → v8-Chain).', 'FaCogs', AQUA],
-      ['Validate', 'FND / HND / LND / PDR, ablation, two BS positions, 8 random topologies.', 'FaCheckCircle', NAVY]];
-    o.forEach(([h, b, ic, col], i) => card(s, 0.6 + i * 3.08, 3.15, 2.85, 3.7, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 15 }));
+    const s = base(); title(s, 'The main problem: energy', 'Network lifetime = how long the sensors keep working');
+    bullets(s, ['Sending one bit costs more the farther it goes: cost grows with d² and, beyond ≈ 88 m, with d⁴.',
+      'If every sensor sends directly to a far BS, the far sensors die very early.',
+      'When sensors die, parts of the field are no longer monitored.'], 0.6, 1.6, 6.6, 3.0, 16);
+    const m = [['FND', 'First Node Dies — round of the first death (stability period). Main metric.', BLUE], ['HND', 'Half Nodes Die — average lifetime.', ORANGE],
+      ['LND', 'Last Node Dies — total lifetime.', AQUA], ['PDR', 'Packet Delivery Ratio — delivered ÷ generated readings.', NAVY]];
+    m.forEach(([h, b, col], i) => { const y = 1.6 + i * 1.25;
+      s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 7.6, y, w: 5.1, h: 1.1, rectRadius: 0.08, fill: { color: 'FFFFFF' }, line: { color: LINE } });
+      s.addText(h, { x: 7.75, y, w: 1.1, h: 1.1, fontSize: 22, bold: true, color: col, fontFace: HEAD, valign: 'middle', margin: 0, isTextBox: true });
+      s.addText(b, { x: 8.9, y, w: 3.7, h: 1.1, fontSize: 13, color: INK, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true }); });
+    card(s, 0.6, 4.1, 6.6, 1.65, { head: 'Solution studied in this thesis: clustering', icon: 'FaProjectDiagram', color: BLUE, size: 14, body: 'Group the sensors so that most transmissions are short.' });
   }
-  // 6 ── Methodology
   {
-    const s = base(); title(s, 'Methodology — four steps, one environment', 'Each step has its own folder in the repository: code/ and results/');
-    const st = [['1', 'ORIGINAL', 'Each paper in its own settings — validates our code', BLUE], ['2', 'EDITED', 'Same algorithms in one unified environment', ORANGE],
-      ['3', 'IMPROVED', 'Fix the main flaw of each literature hybrid', AQUA], ['4', 'PROPOSED', 'v1 → v8-Chain, one mechanism per version', NAVY]];
-    st.forEach(([n, h, b, col], i) => {
-      const x = 0.6 + i * 3.1;
-      s.addShape(pres.shapes.OVAL, { x: x + 1.05, y: 1.8, w: 0.9, h: 0.9, fill: { color: col }, line: { color: col } });
-      s.addText(n, { x: x + 1.05, y: 1.8, w: 0.9, h: 0.9, fontSize: 26, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', fontFace: HEAD, margin: 0, isTextBox: true });
-      if (i < 3) s.addShape(pres.shapes.LINE, { x: x + 2.1, y: 2.25, w: 2.0, h: 0, line: { color: LINE, width: 2, endArrowType: 'triangle' } });
-      s.addText(h, { x, y: 2.9, w: 3.0, h: 0.5, fontSize: 18, bold: true, color: col, align: 'center', fontFace: BODY, margin: 0, isTextBox: true });
-      s.addText(b, { x: x + 0.1, y: 3.4, w: 2.8, h: 1.0, fontSize: 14, color: MUTED, align: 'center', fontFace: BODY, margin: 0, valign: 'top', isTextBox: true });
-    });
-    card(s, 0.6, 4.75, 12.1, 2.1, { head: 'Metrics', icon: 'FaChartBar', color: BLUE, size: 15,
-      body: 'FND / HND / LND — round in which the first, half and last node die (every run continues until the last node really dies).   PDR — readings delivered to the BS ÷ readings generated.   Ablation, far-BS scenario and 8 random topologies test robustness.' });
+    const s = base(); title(s, 'What is clustering?', 'Members send a short hop to a cluster head (CH); the CH sends one packet to the BS');
+    img(s, 'b3_clustering.png', 0.6, 1.5, 12.1, 4.8);
+    band(s, 'Cluster head (CH) = the leader of a group.  Member = a normal sensor.  Fusion = the CH merges all readings into one packet.', 6.4);
   }
-  // 7 ── Tools
   {
-    const s = base(); title(s, 'Tools and experimental setup');
-    imgAbs(s, path.join(SHOTS, 'vm_ubuntu.png'), 0.6, 1.5, 4.0, 2.4);
-    imgAbs(s, path.join(SHOTS, 'first_terminal.png'), 0.6, 4.2, 4.0, 2.7);
-    s.addText('Ubuntu VM (VMware) · ns-3.41 · NetAnim · Python for charts', { x: 0.6, y: 3.9, w: 4.0, h: 0.3, fontSize: 11, color: MUTED, fontFace: BODY, margin: 0, isTextBox: true });
-    const rows = [['Parameter', 'Value']].concat(C.ENV.slice(0, 11));
-    s.addTable(rows.map((r, i) => r.map(c => ({ text: c, options: { bold: i === 0, color: i === 0 ? 'FFFFFF' : INK, fill: { color: i === 0 ? NAVY : (i % 2 ? 'FFFFFF' : TINT) } } }))),
-      { x: 5.0, y: 1.5, w: 7.7, colW: [2.8, 4.9], fontSize: 12.5, fontFace: BODY, border: { type: 'solid', color: LINE, pt: 0.5 }, rowH: 0.42 });
+    const s = base(); title(s, 'One clustering round', 'Setup → steady state → the CH role rotates in the next round');
+    img(s, 'b4_round.png', 0.6, 1.5, 12.1, 2.7);
+    const c = [['Setup', 'Choose CHs, CHs advertise, members join the nearest CH, CH sends a TDMA schedule.', ORANGE],
+      ['Steady state', 'Each member sends in its own time slot (TDMA) — no collisions.', BLUE],
+      ['Fusion + BS', 'The CH fuses members + its own reading and sends one packet to the BS.', AQUA]];
+    c.forEach(([h, b, col], i) => card(s, 0.6 + i * 4.1, 4.4, 3.85, 1.95, { head: h, body: b, color: col, size: 13, headSize: 16 }));
+    band(s, 'Round = one full cycle.  Epoch = the rounds needed so that every node serves as CH once.', 6.5);
   }
-  // 8 ── Demo
   {
-    const s = base(); title(s, 'First experiment — a packet-level demo', 'IEEE 802.15.4 (lr-wpan) packets, CSMA/CA, ACKs and an energy model — run in ns-3.41 and shown in NetAnim');
-    img(s, 'demo_layout.png', 0.6, 1.6, 12.1, 3.9);
+    const s = base(); title(s, 'The open problems of clustering', 'What every protocol in this thesis tries to solve');
+    const p = [['Who becomes CH?', 'A weak or badly placed CH dies early.', 'FaUsers', BLUE], ['Fair rotation', 'The CH works harder, so the role must rotate.', 'FaSyncAlt', BLUE],
+      ['Setup overhead', 'Electing CHs every round costs messages and energy.', 'FaClock', ORANGE], ['CH failure', 'If the CH dies, its members lose their data.', 'FaExclamationTriangle', ORANGE],
+      ['Far base station', 'CH → BS links become very expensive (d⁴).', 'FaRoute', AQUA], ['Security', 'Radio messages can be read or forged — protection costs energy.', 'FaLock', RED]];
+    p.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 3) * 4.1, 1.5 + Math.floor(i / 3) * 2.65, 3.85, 2.4, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 16 }));
+  }
+
+  // ================= 02 ENERGY & FIRST EXPERIMENTS =================
+  section('02', 'Energy model & first experiments', 'How energy is calculated, the tools, and the first ns-3 runs');
+  {
+    const s = base(); title(s, 'How the energy is calculated', 'First-order radio model (Heinzelman et al.) — used by every paper we compare with');
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: 1.55, w: 5.4, h: 2.3, rectRadius: 0.08, fill: { color: 'F4F4F0' }, line: { color: LINE } });
+    s.addText([{ text: 'E_tx(k,d) = k·E_elec + k·ε_fs·d²   (d < d0)', options: { breakLine: true } },
+      { text: 'E_tx(k,d) = k·E_elec + k·ε_mp·d⁴   (d ≥ d0)', options: { breakLine: true } },
+      { text: 'E_rx(k)   = k·E_elec', options: { breakLine: true } }, { text: 'd0 = √(ε_fs / ε_mp) ≈ 87.7 m' }],
+    { x: 0.75, y: 1.65, w: 5.2, h: 2.1, fontSize: 12.5, fontFace: 'Consolas', color: INK, bold: true, valign: 'middle', margin: 0, paraSpaceAfter: 6, isTextBox: true });
+    tbl(s, [['Symbol', 'Meaning', 'Value'], ['k', 'bits in the packet', '2000 data / 200 control'], ['E_elec', 'radio electronics', '50 nJ/bit'],
+      ['ε_fs', 'amplifier, short range', '10 pJ/bit/m²'], ['ε_mp', 'amplifier, long range', '0.0013 pJ/bit/m⁴'], ['E_DA', 'fusion at the CH', '5 nJ/bit/signal']],
+    0.6, 4.05, 5.4, [1.1, 2.3, 2.0], { size: 12, rowH: 0.36 });
+    img(s, 'e1_energy_distance.png', 6.3, 1.5, 6.5, 4.9);
+    band(s, 'Short links: the electronics dominate — receiving is not free.  Long links (> d0): the cost explodes.', 6.5);
+  }
+  {
+    const s = base(); title(s, 'Worked example — why the CH is the one that dies', '100 nodes, 0.5 J each (50 J in total), one 2000-bit reading per node per round');
+    tbl(s, [['Role in one round', 'What it pays', 'Energy'], ['Member (15 m from its CH)', 'send one packet', '≈ 0.10 mJ'],
+      ['CH with 20 members', 'receive 20 + fuse 21 + send to BS', '≈ 2.6 mJ'], ['Receiving one control message', '200 bits × 50 nJ', '10 µJ']],
+    0.6, 1.6, 7.4, [2.8, 3.0, 1.6], { size: 14, rowH: 0.55 });
+    stat(s, 8.5, 1.55, 4.2, '≈ 26×', 'a CH spends about 26 times more than a member in the same round', RED);
+    stat(s, 8.5, 3.5, 4.2, '5000', 'rounds a node could live as a member only (0.5 J ÷ 0.1 mJ)', BLUE);
+    band(s, 'Every protocol competes on one question: how to rotate the CH role fairly and make it cheaper.', 5.2);
+    note(s, 'This is why rotation and CH protection matter. FND measures exactly this.');
+  }
+  {
+    const s = base(); title(s, 'Tools', 'Ubuntu (VMware) · ns-3.41 (C++) · NetAnim · Wireshark · Python');
+    imgAbs(s, path.join(SHOTS, 'vm_settings.png'), 0.6, 1.5, 6.0, 4.7);
+    imgAbs(s, path.join(SHOTS, 'vm_ubuntu.png'), 6.8, 1.5, 5.9, 4.7);
+    band(s, 'ns-3.41 built from source inside an Ubuntu virtual machine; results processed in Python.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'First experiments — real IEEE 802.15.4 packets', 'WSN-Day3: 3 sensors → sink with ACKs · wsn_first_packet: + energy model + NetAnim');
+    imgAbs(s, path.join(SHOTS, 'first_terminal.png'), 0.6, 1.5, 4.9, 4.8);
+    imgAbs(s, path.join(SHOTS, 'first_netanim.png'), 5.7, 1.5, 7.0, 4.8);
+    band(s, 'Learned: how packets, ACKs and the energy model work — and that the radio spends energy even when it only listens.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'Demo — clustering with real packets', '12 sensors · 3 clusters · 1 sink · CH rotates every round · TDMA · fusion');
+    img(s, 'demo_layout.png', 0.6, 1.5, 12.1, 3.9);
     const d = JSON.parse(fs.readFileSync(path.join(FIG, 'demo_results.json'), 'utf8'));
     const st = [[String(d.readingsGenerated), 'readings generated in 6 rounds', BLUE], [d.pdr.toFixed(0) + '%', 'reached the sink', AQUA],
       [String(d.packetsToSink), 'packets to the sink after fusion', ORANGE], [(100 * (1 - d.packetsToSink / d.readingsGenerated)).toFixed(0) + '%', 'fewer long transmissions', NAVY]];
-    st.forEach(([b, l, c], k) => stat(s, 0.6 + k * 3.1, 5.55, 2.9, b, l, c));
-    s.addNotes('12 sensors in 3 clusters and a sink. Each round the strongest node that has not yet served becomes CH; members send in TDMA slots; the CH fuses and sends one packet. File: code/0_FIRST_EXPERIMENTS/demo_clustered_wsn.cc, NetAnim file demo-clustered-wsn.xml.');
+    st.forEach(([b, l, c], k) => stat(s, 0.6 + k * 3.1, 5.5, 2.9, b, l, c));
+  }
+  {
+    const s = base(); title(s, 'Demo in NetAnim', 'End of round 6 — red = CH (CH1, CH4, CH9) · colours = clusters · gold = sink with 72 readings');
+    imgAbs(s, path.join(C.ROOT, 'figures', 'ns3_screens', 'demo_netanim.png'), 0.6, 1.5, 12.1, 4.85);
+    band(s, 'Every node shows its remaining energy (16.3 J of 20 J); the CH role moved to a new node every round.', 6.5);
+  }
+  {
+    const s = base(); title(s, 'Demo packets in Wireshark', 'Capture of the sink: 72 data frames + 72 ACKs (IEEE 802.15.4)');
+    img(s, 'k1_packets.png', 0.6, 1.45, 12.1, 4.9);
+    band(s, 'Each member frame (51 bytes = 40-byte reading + header + FCS) is answered by a 5-byte ACK.', 6.5);
   }
 
-  // ===== 02 Related work
-  section('02', 'Related work', 'Classic protocols, their hybrids and recent work (2000 – 2026)');
-  // 9 ── Timeline
+  // ================= 03 CLASSIC =================
+  section('03', 'Classic protocols', 'LEACH · HEED · PEGASIS — paper → our ORIGINAL code → our EDITED code');
   {
-    const s = base(); title(s, 'Twenty-five years of clustering protocols');
-    const ev = [['2000', 'LEACH', 'random CH rotation [1]'], ['2002', 'PEGASIS', 'one chain [4]'], ['2004', 'HEED', 'energy + cost election [3]'],
-      ['2015', 'SH-LEACH', 'energy-scaled LEACH [5]'], ['2016', 'H-LEACH', 'energy gate [6]'], ['2024', 'TLC-LEACH', 'two-level grid [10]'],
-      ['2025', 'EECH-HEED / DL-HEED', 'zones · deep learning [7][9]'], ['2026', 'RL-ILEACH', 'reinforcement learning [8]']];
-    s.addShape(pres.shapes.LINE, { x: 0.8, y: 3.9, w: 11.8, h: 0, line: { color: LINE, width: 3 } });
-    ev.forEach(([y, n, d], i) => {
-      const x = 0.75 + i * 1.57, up = i % 2 === 0;
-      const col = i < 3 ? BLUE : i < 5 ? ORANGE : AQUA;
-      s.addShape(pres.shapes.OVAL, { x: x + 0.47, y: 3.72, w: 0.36, h: 0.36, fill: { color: col }, line: { color: 'FFFFFF', width: 2 } });
-      s.addText(y, { x, y: up ? 3.1 : 4.25, w: 1.3, h: 0.45, fontSize: 18, bold: true, color: col, align: 'center', fontFace: HEAD, margin: 0, isTextBox: true });
-      s.addText([{ text: n, options: { bold: true, color: INK, breakLine: true } }, { text: d, options: { color: MUTED } }],
-        { x: x - 0.15, y: up ? 1.75 : 4.8, w: 1.6, h: 1.3, fontSize: 13, align: 'center', valign: up ? 'bottom' : 'top', fontFace: BODY, margin: 0, isTextBox: true });
-    });
-    [['Classic', BLUE], ['LEACH + HEED hybrids', ORANGE], ['Recent', AQUA]].forEach(([t, c], i) => {
-      s.addShape(pres.shapes.OVAL, { x: 0.8 + i * 3.2, y: 6.6, w: 0.22, h: 0.22, fill: { color: c }, line: { color: c } });
-      s.addText(t, { x: 1.1 + i * 3.2, y: 6.5, w: 2.8, h: 0.4, fontSize: 13, color: MUTED, fontFace: BODY, margin: 0, isTextBox: true });
-    });
-  }
-  // 10 ── Classic
-  {
-    const s = base(); title(s, 'The three classic protocols', 'Our reproduction in each paper\'s own settings matches the published numbers');
-    const c = [['LEACH (2000) [1]', 'FaRandom', BLUE, 'Random CH rotation:\nT(n) = P / (1 − P·(r mod 1/P)), n ∈ G', 'Energy-blind: a weak node can be elected.', 'Paper LND 1312 · ours 1327'],
-      ['HEED (2004) [3]', 'FaHandshake', ORANGE, 'CH_prob = C_prob · E_res / E_max, doubled each iteration; ties by communication cost.', 'Negotiation messages every round cost energy.', 'Paper: graphs only · ours 500 nodes'],
-      ['PEGASIS (2002) [4]', 'FaStream', AQUA, 'One greedy chain; nodes take turns as leader and only the leader talks to the BS.', 'Long chain → large delay; single point of failure.', 'Paper LND 2192 · ours 2186']];
-    c.forEach(([h, ic, col, idea, flaw, res], i) => {
+    const s = base(); title(s, 'The three classic papers');
+    const c = [['LEACH (2000) [1]', 'FaRandom', BLUE, 'Random CH rotation.\nT(n) = P / (1 − P·(r mod 1/P)) if n ∈ G', 'Energy-blind; CHs may be badly placed.'],
+      ['HEED (2004) [3]', 'FaHandshake', ORANGE, 'CH_prob = C_prob·E_res/E_max, doubled every iteration; members join the lowest-cost CH.', 'Negotiation messages every round.'],
+      ['PEGASIS (2002) [4]', 'FaStream', AQUA, 'One greedy chain; data fused along the chain; one leader (i mod N) talks to the BS.', 'Long delay, long chain links, single leader.']];
+    c.forEach(([h, ic, col, idea, flaw], i) => {
       const x = 0.6 + i * 4.1;
-      card(s, x, 1.75, 3.85, 5.1, { head: h, icon: ic, color: col, headSize: 16, size: 14, body: '' });
-      s.addText([{ text: 'Idea', options: { bold: true, color: col, breakLine: true } }, { text: idea, options: { breakLine: true } },
-        { text: ' ', options: { breakLine: true } }, { text: 'Weakness', options: { bold: true, color: RED, breakLine: true } }, { text: flaw, options: { breakLine: true } },
-        { text: ' ', options: { breakLine: true } }, { text: 'Validation', options: { bold: true, color: NAVY, breakLine: true } }, { text: res }],
-      { x: x + 0.25, y: 2.75, w: 3.35, h: 3.9, fontSize: 14, color: INK, fontFace: BODY, valign: 'top', margin: 0, isTextBox: true });
+      card(s, x, 1.5, 3.85, 5.35, { head: h, icon: ic, color: col, headSize: 16, size: 14, body: '' });
+      s.addText([{ text: 'Idea', options: { bold: true, color: col, breakLine: true } }, { text: idea, options: { breakLine: true } }, { text: ' ', options: { breakLine: true } },
+        { text: 'Weakness', options: { bold: true, color: RED, breakLine: true } }, { text: flaw }],
+      { x: x + 0.25, y: 2.5, w: 3.35, h: 4.2, fontSize: 16, color: INK, fontFace: BODY, valign: 'top', margin: 0, isTextBox: true });
     });
   }
-  // 11 ── Hybrids + flaws
   {
-    const s = base(); title(s, 'Literature hybrids — and the flaws we found', 'Implementing each paper exactly as written revealed a problem in every one');
-    const c = [['SH-LEACH (2015) [5]', 'P = C·(E/E_max)·(C·r)/(1 + CH_cho mod 1/C)', 'r is never reset → the probability keeps growing → ~29 CHs every round.'],
-      ['H-LEACH (2016) [6]', 'LEACH threshold with P·E/E_max; CH only if E > E_avg', 'With equal starting energy nobody is above the average → no CH is ever elected (deadlock).'],
-      ['EECH-HEED (2025) [7]', 'HEED zone near the BS + EECH zone (energy × degree) + adaptive sensing', 'Eq. 5 gives P ≈ 1 in zone 2 → the 1/P rotation stops working; lifetime gain comes partly from sending less.']];
-    c.forEach(([h, idea, flaw], i) => {
-      const y = 1.95 + i * 1.65;
-      s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y, w: 12.1, h: 1.45, rectRadius: 0.1, fill: { color: 'FFFFFF' }, line: { color: LINE, width: 1 } });
-      s.addText(h, { x: 0.85, y: y + 0.15, w: 3.4, h: 1.2, fontSize: 17, bold: true, color: NAVY, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
-      s.addText(idea, { x: 4.3, y: y + 0.15, w: 3.9, h: 1.2, fontSize: 14, color: INK, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
-      circleIcon(s, 'FaExclamationTriangle', 8.35, y + 0.42, 0.62, RED);
-      s.addText(flaw, { x: 9.1, y: y + 0.15, w: 3.45, h: 1.2, fontSize: 14, color: INK, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
-    });
-    s.addText('Idea', { x: 4.3, y: 1.6, w: 2, h: 0.3, fontSize: 12, bold: true, color: MUTED, margin: 0, isTextBox: true });
-    s.addText('Flaw found', { x: 9.1, y: 1.6, w: 2, h: 0.3, fontSize: 12, bold: true, color: RED, margin: 0, isTextBox: true });
+    const s = base(); title(s, 'ORIGINAL — each paper in its own settings', 'Goal: prove that our code reproduces the paper');
+    tbl(s, [['', 'LEACH', 'HEED', 'PEGASIS'], ['Nodes', '100', '500', '100'], ['Field', '50 × 50 m', '100 × 100 m', '50 × 50 m'],
+      ['Base station', '(25, −100) far', '(50, 175) far', '(25, 150) far'], ['Energy / node', '0.5 J', '2 J', '0.5 J'], ['Packet', '2000 bits', '1000 bits × 5 frames', '2000 bits'],
+      ['Radio', 'one amplifier (100 pJ)', 'two-slope, d0 = 75 m', 'one amplifier (100 pJ)']],
+    0.6, 1.6, 12.1, [2.4, 3.2, 3.3, 3.2], { size: 14, rowH: 0.52, center: true, boldFirst: true });
+    band(s, 'Nothing is changed in the algorithms; only the paper\'s own parameters are used.', 5.6);
   }
-  // 12 ── Recent + gap
   {
-    const s = base(); title(s, 'Recent work and the research gap');
-    const rows = [['Work', 'Idea', 'Limitation'],
-      ['EECH-HEED 2025 [7]', 'Two zones, HEED + EECH, adaptive sensing', 'Fixed zones; no CH failure recovery'],
-      ['RL-ILEACH 2026 [8]', 'Q-learning chooses CHs in ILEACH', 'Training overhead; early first-node death'],
-      ['DL-HEED 2025 [9]', 'Deep network predicts good CHs', 'Central training, heavy for sensors'],
-      ['TLC-LEACH 2024 [10]', 'Two-level grid clustering', 'Grid tied to the field layout'],
-      ['FTEC 2019 [11]', 'Fault-tolerant clustering', 'No energy-aware relay between CHs']];
-    s.addTable(rows.map((r, i) => r.map(c => ({ text: c, options: { bold: i === 0, color: i === 0 ? 'FFFFFF' : INK, fill: { color: i === 0 ? NAVY : (i % 2 ? 'FFFFFF' : TINT) } } }))),
-      { x: 0.6, y: 1.4, w: 7.6, colW: [2.2, 2.9, 2.5], fontSize: 13, fontFace: BODY, border: { type: 'solid', color: LINE, pt: 0.5 }, rowH: 0.62 });
-    card(s, 8.6, 1.4, 4.1, 5.45, { head: 'The gap', icon: 'FaBullseye', color: ORANGE, size: 15,
-      body: 'No protocol combines, in one lightweight distributed design:\n\n• cheap single-pass CH election\n• cluster reuse to cut setup overhead\n• protection of the CH before and after it fails\n• routing between CHs only when it saves energy\n\n— and none is compared with the others in the same environment.' });
-  }
-
-  // ===== 03 Reproduction
-  section('03', 'Reproduction', 'Validate the code, then compare everything in one environment');
-  // 13 ── Unified env
-  {
-    const s = base(); title(s, 'One unified environment for every protocol', 'Differences in the results now come only from the algorithms');
-    const rows = [['Parameter', 'Value']].concat(C.ENV);
-    s.addTable(rows.map((r, i) => r.map(c => ({ text: c, options: { bold: i === 0, color: i === 0 ? 'FFFFFF' : INK, fill: { color: i === 0 ? NAVY : (i % 2 ? 'FFFFFF' : TINT) } } }))),
-      { x: 0.6, y: 1.6, w: 6.9, colW: [2.6, 4.3], fontSize: 12, fontFace: BODY, border: { type: 'solid', color: LINE, pt: 0.5 }, rowH: 0.34 });
-    card(s, 7.9, 1.6, 4.8, 5.25, { head: 'Same rules for everyone', icon: 'FaBalanceScale', color: BLUE, size: 14,
-      body: '• CH advertisement reaches every node that may join it\n• join request + TDMA schedule charged at every setup\n• CH fuses members + its own signal\n• a node with no CH sends straight to the BS\n• every run continues until the last node dies — no "fake" LND at a round limit' });
-  }
-  // 14 ── Validation
-  {
-    const s = base(); title(s, 'Step 1 — the code reproduces the papers', 'Each protocol run in its own paper\'s field, radio, BS and packet size');
-    const labels = ['LEACH LND', 'PEGASIS FND', 'PEGASIS HND', 'PEGASIS LND', 'EECH-HEED FND'];
-    const pub = [1312, 1578, 2082, 2192, 1250];
-    const ours = [C.get('leach_ORIGINAL').L, C.get('pegasis_ORIGINAL').F, C.get('pegasis_ORIGINAL').H, C.get('pegasis_ORIGINAL').L, C.get('eechheed_ORIGINAL').F];
-    s.addChart(pres.charts.BAR, [{ name: 'Published', labels, values: pub }, { name: 'Our reproduction', labels, values: ours }], Object.assign(chartBase(), {
-      x: 0.6, y: 1.6, w: 8.2, h: 5.3, barDir: 'col', barGrouping: 'clustered', chartColors: [GREY, BLUE], showLegend: true, legendPos: 't',
+    const s = base(); title(s, 'ORIGINAL results vs the papers', 'Our code matches the published numbers');
+    const labels = ['LEACH FND', 'LEACH LND', 'PEGASIS FND', 'PEGASIS HND', 'PEGASIS LND'];
+    const pub = [932, 1312, 1578, 2082, 2192];
+    const lo = C.get('leach_ORIGINAL'), po = C.get('pegasis_ORIGINAL');
+    const ours = [lo.F, lo.L, po.F, po.H, po.L];
+    s.addChart(pres.charts.BAR, [{ name: 'Published', labels, values: pub }, { name: 'Our ORIGINAL code', labels, values: ours }], Object.assign(chartBase(), {
+      x: 0.6, y: 1.5, w: 8.2, h: 5.4, barDir: 'col', barGrouping: 'clustered', chartColors: [GREY, BLUE], showLegend: true, legendPos: 't',
       showValue: true, dataLabelPosition: 'outEnd', valAxisTitle: 'Rounds', showValAxisTitle: true, valAxisTitleColor: MUTED }));
-    const err = (a, b) => (Math.abs(a - b) / b * 100).toFixed(1) + '%';
-    card(s, 9.1, 1.6, 3.6, 5.3, { head: 'Differences', icon: 'FaCheckCircle', color: AQUA, size: 14,
-      body: `LEACH LND: ${err(ours[0], pub[0])}\nPEGASIS FND: ${err(ours[1], pub[1])}\nPEGASIS HND: ${err(ours[2], pub[2])}\nPEGASIS LND: ${err(ours[3], pub[3])}\nEECH-HEED FND: ${err(ours[4], pub[4])}\n\nHEED and SH-LEACH publish graphs only. H-LEACH's 4312 comes from a constant per-round energy, not a radio model.` });
+    const err = (a, b) => (a >= b ? '+' : '−') + (Math.abs(a - b) / b * 100).toFixed(1) + '%';
+    card(s, 9.1, 1.5, 3.6, 5.4, { head: 'Difference', icon: 'FaCheckCircle', color: AQUA, size: 14,
+      body: `LEACH LND ${err(lo.L, 1312)}\nPEGASIS FND ${err(po.F, 1578)}\nPEGASIS HND ${err(po.H, 2082)}\nPEGASIS LND ${err(po.L, 2192)}\n\nLEACH FND ${err(lo.F, 932)} (random layout).\n\nHEED: the paper gives graphs only; ours (500 nodes) ${C.get('heed_ORIGINAL').F} / ${C.get('heed_ORIGINAL').H} / ${C.get('heed_ORIGINAL').L}.` });
   }
-  // 15 ── Baselines unified
   {
-    const s = base(); title(s, 'Step 2 — classic protocols in the unified environment');
-    lifeChart(s, ['LEACH', 'HEED', 'HEED + fairness', 'PEGASIS'], ['leach_EDITED', 'heed_EDITED', 'heed_fairness_EDITED', 'pegasis_EDITED'], 0.6, 1.3, 8.2, 5.6);
-    const h = C.get('heed_EDITED');
-    card(s, 9.1, 1.4, 3.6, 2.6, { head: 'HEED dies first', icon: 'FaHandshake', color: ORANGE, size: 13, body: `FND ${h.F}: the iterative negotiation is paid every round.` });
-    card(s, 9.1, 4.2, 3.6, 2.7, { head: 'PEGASIS lasts longest', icon: 'FaStream', color: AQUA, size: 13, body: `LND ${peg.L} (short chain hops), but its first node dies at ${peg.F}.` });
+    const s = base(); title(s, 'EDITED — one unified environment for all protocols', 'Same algorithms; only the environment changes, so the comparison is fair');
+    tbl(s, [['Parameter', 'Value']].concat(C.ENV.slice(0, 10)), 0.6, 1.5, 6.9, [2.6, 4.3], { size: 12.5, rowH: 0.42 });
+    card(s, 7.8, 1.5, 4.9, 4.85, { head: 'Same rules for everyone', icon: 'FaBalanceScale', color: BLUE, size: 14,
+      body: '• Same node positions (same seed)\n• CH advertisement heard by every node\n• join + TDMA messages are charged\n• CH fuses members + its own reading\n• a node without a CH sends directly\n• every run lasts until the last node dies' });
+    band(s, 'Why these values? They are the standard settings of the LEACH literature and the standard radio model.', 6.5);
   }
-  // 16 ── Hybrid fixes
   {
-    const s = base(); title(s, 'Step 3 — fixing the literature hybrids', 'First node death: paper settings → unified → after our fix');
-    const lab = ['SH-LEACH', 'H-LEACH', 'EECH-HEED'];
-    const d = ['ORIGINAL', 'EDITED', 'IMPROVED'].map((st, i) => ({ name: ['Original', 'Edited', 'Improved'][i], labels: lab, values: ['shleach', 'hleach', 'eechheed'].map(k => C.get(`${k}_${st}`).F) }));
-    s.addChart(pres.charts.BAR, d, Object.assign(chartBase(), { x: 0.6, y: 1.6, w: 6.6, h: 5.3, barDir: 'col', barGrouping: 'clustered', chartColors: ['C9C8C2', GREY, BLUE],
-      showLegend: true, legendPos: 't', showValue: true, dataLabelPosition: 'outEnd', valAxisTitle: 'FND (rounds)', showValAxisTitle: true, valAxisTitleColor: MUTED }));
-    const fx = [['SH-LEACH', 'r → (r mod 1/C): the probability cycles like LEACH', `FND ${C.get('shleach_EDITED').F} → ${best.F}`],
-      ['H-LEACH', '"≥ average" (no deadlock) + LEACH G-set', `FND ${C.get('hleach_EDITED').F} → ${C.get('hleach_IMPROVED').F}`],
-      ['EECH-HEED', 'Zone-2 rotation at the paper\'s 10 % CH target', `FND ${C.get('eechheed_EDITED').F} → ${C.get('eechheed_IMPROVED').F}`]];
-    fx.forEach(([h, b, r], i) => card(s, 7.5, 1.6 + i * 1.8, 5.2, 1.6, { head: `${h}: ${r}`, body: b, icon: 'FaWrench', color: BLUE, size: 13, headSize: 14 }));
+    const s = base(); title(s, 'EDITED results — classic protocols', 'Unified environment, BS at the centre');
+    lifeChart(s, ['LEACH', 'HEED', 'HEED + fairness', 'PEGASIS'], ['leach_EDITED', 'heed_EDITED', 'heed_fairness_EDITED', 'pegasis_EDITED'], 0.6, 1.4, 8.2, 5.5);
+    card(s, 9.1, 1.4, 3.6, 1.75, { head: `LEACH: FND ${leach.F}`, body: 'best first death — the baseline', icon: 'FaTrophy', color: BLUE, size: 13, headSize: 14 });
+    card(s, 9.1, 3.3, 3.6, 1.75, { head: `HEED: FND ${heed.F}`, body: 'negotiation paid every round; each message heard by ~20 neighbours', icon: 'FaHandshake', color: ORANGE, size: 12, headSize: 14 });
+    card(s, 9.1, 5.2, 3.6, 1.75, { head: `PEGASIS: FND ${peg.F}`, body: `one 91.5 m chain link killed node 73 early; LND ${peg.L}`, icon: 'FaStream', color: AQUA, size: 12, headSize: 14 });
+  }
+  {
+    const s = base(); title(s, 'Paper vs ORIGINAL vs EDITED', 'Why the numbers move between the two environments');
+    img(s, 'p1_baselines.png', 0.6, 1.45, 12.1, 3.9);
+    const c = [['LEACH ↑', 'cheaper amplifier (10 vs 100 pJ) and a central BS'], ['HEED ↓', '1 data packet per election instead of 5; fewer nodes, less energy'], ['PEGASIS FND ↓', 'larger field → one very long greedy link']];
+    c.forEach(([h, b], i) => card(s, 0.6 + i * 4.1, 5.45, 3.85, 1.45, { head: h, body: b, color: [BLUE, ORANGE, AQUA][i], size: 13, headSize: 15 }));
   }
 
-  // ===== 04 Proposed
-  section('04', 'Proposed protocol — v8-Chain', 'A LEACH + HEED hybrid that protects its cluster heads');
-  // 17 ── Architecture
+  // ================= 04 HYBRIDS =================
+  section('04', 'Hybrid protocols', 'LEACH + HEED hybrids — paper → ORIGINAL → EDITED → IMPROVED');
+  {
+    const s = base(); title(s, 'The three hybrid papers', 'Each adds energy (HEED idea) to LEACH-style rotation');
+    const c = [['SH-LEACH (2015) [5]', 'P = C·(E/E_max)·(C·r) / (1 + CH_cho mod 1/C)', 'Energy + round number + CH counter.'],
+      ['H-LEACH (2016) [6]', 't(n) = e0 / (1 − e0·(r mod round(1/e0))),  e0 = P·E/E_max;  CH only if E > E_avg', 'LEACH threshold with a personal, energy-based probability + an energy gate.'],
+      ['EECH-HEED (2025) [7]', 'Zone 1 (near BS): HEED.  Zone 2: P = (E/E_max)(D/D_max).  T = LEACH × α × β', 'Two zones, multi-hop between CHs, adaptive sensing.']];
+    c.forEach(([h, eqn, idea], i) => {
+      const y = 1.5 + i * 1.8;
+      s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y, w: 12.1, h: 1.65, rectRadius: 0.1, fill: { color: 'FFFFFF' }, line: { color: LINE, width: 1 } });
+      s.addText(h, { x: 0.85, y, w: 3.0, h: 1.65, fontSize: 18, bold: true, color: NAVY, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
+      s.addText(eqn, { x: 3.9, y, w: 5.3, h: 1.65, fontSize: 14, color: INK, fontFace: 'Consolas', valign: 'middle', margin: 0, isTextBox: true });
+      s.addText(idea, { x: 9.4, y, w: 3.2, h: 1.65, fontSize: 14, color: MUTED, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
+    });
+  }
+  {
+    const s = base(); title(s, 'ORIGINAL — the hybrids in their own settings');
+    tbl(s, [['', 'SH-LEACH', 'H-LEACH', 'EECH-HEED'], ['Deployment', '100 nodes, 100 × 100 m', '100 nodes, 100 × 100 m', '30 near BS + 70 far; 14 advanced nodes'],
+      ['Energy', '0.5 J', '0.5 J', '0.3 – 1.5 J (≈ 56 J total)'], ['Packet', '2000 bits (not stated)', '4000 bits', '4000 bits, E_DA 50 nJ'],
+      ['Radio', 'one amplifier 100 pJ', 'two-slope', 'two-slope'], ['Other', 'C_prob = 0.1', 'no setup messages', 'adaptive sensing ON'],
+      ['Our result FND / HND / LND', `${C.get('shleach_ORIGINAL').F} / ${C.get('shleach_ORIGINAL').H} / ${C.get('shleach_ORIGINAL').L}`, `${C.get('hleach_ORIGINAL').F} / ${C.get('hleach_ORIGINAL').H} / ${C.get('hleach_ORIGINAL').L}`, `${C.get('eechheed_ORIGINAL').F} / ${C.get('eechheed_ORIGINAL').H} / ${C.get('eechheed_ORIGINAL').L}`],
+      ['Paper', 'graphs only', 'LND ≈ 4312 (not reachable*)', '1250 / 1650 / 2200']],
+    0.6, 1.5, 12.1, [2.7, 3.0, 3.1, 3.3], { size: 13, rowH: 0.5, center: true, boldFirst: true, hl: i => i === 6 });
+    band(s, '* With 4000-bit packets the 50 J are used up before round 2500 — the paper must have used an unstated energy value.', 6.3);
+  }
+  {
+    const s = base(); title(s, 'EDITED — what went wrong', 'In the unified environment each hybrid shows a design flaw');
+    const c = [['SH-LEACH', `FND ${F('shleach_EDITED')}`, 'r is never reset → the probability keeps growing → up to 100 CHs per round: every node sends alone to the BS.'],
+      ['H-LEACH', `FND ${F('hleach_EDITED')}`, '"E > average" with equal energy → no CH in round 1 (deadlock); no G-set → bursts of up to 59 CHs.'],
+      ['EECH-HEED', `FND ${F('eechheed_EDITED')}`, 'Zone 2: P ≈ 1 → rotation period 1/P ≈ 1 round → the same border nodes are CH every other round (221 times).']];
+    c.forEach(([h, r, flaw], i) => {
+      const y = 1.5 + i * 1.6;
+      s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y, w: 12.1, h: 1.45, rectRadius: 0.1, fill: { color: 'FFFFFF' }, line: { color: LINE } });
+      circleIcon(s, 'FaBug', 0.85, y + 0.4, 0.65, RED);
+      s.addText(`${h}\n${r}`, { x: 1.75, y, w: 2.3, h: 1.45, fontSize: 17, bold: true, color: NAVY, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
+      s.addText(flaw, { x: 4.1, y, w: 8.4, h: 1.45, fontSize: 16, color: INK, fontFace: BODY, valign: 'middle', margin: 0, isTextBox: true });
+    });
+    band(s, 'All three add energy to LEACH but break its rotation.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'The flaw in numbers — cluster heads per round', 'Grey = paper algorithm (EDITED) · blue = after our fix (IMPROVED)');
+    img(s, 'h1_hybrid_ch.png', 0.6, 1.5, 12.1, 4.7);
+    band(s, 'SH-LEACH reaches 100 CHs (every node alone); H-LEACH and EECH-HEED elect too many CHs, too often.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'IMPROVED — our fixes', 'One or two lines of code per protocol; nothing else changed');
+    const fx = [['SH-LEACH', 'r → ((r − 1) mod 1/C) + 1 : the counter restarts every 10 rounds', 'shleach'],
+      ['H-LEACH', '"E > E_avg" → "E ≥ E_avg"  +  LEACH G-set restored', 'hleach'],
+      ['EECH-HEED', 'Zone 2 uses the paper\'s 10 % for the period and the G-set; Eq. 5 becomes a weight', 'eechheed']];
+    fx.forEach(([h, b, k], i) => { const y = 1.6 + i * 1.6;
+      card(s, 0.6, y, 6.6, 1.45, { head: `${h}:  FND ${F(k + '_EDITED')} → ${F(k + '_IMPROVED')}`, body: b, icon: 'FaWrench', color: BLUE, size: 13, headSize: 15 }); });
+    const lab = ['SH-LEACH', 'H-LEACH', 'EECH-HEED'];
+    const d = ['ORIGINAL', 'EDITED', 'IMPROVED'].map((st, i) => ({ name: ['Original', 'Edited', 'Improved'][i], labels: lab, values: ['shleach', 'hleach', 'eechheed'].map(k => F(`${k}_${st}`)) }));
+    s.addChart(pres.charts.BAR, d, Object.assign(chartBase(), { x: 7.4, y: 1.4, w: 5.4, h: 4.9, barDir: 'col', barGrouping: 'clustered', chartColors: ['C9C8C2', GREY, BLUE],
+      showLegend: true, legendPos: 't', showValue: true, dataLabelPosition: 'outEnd', dataLabelFontSize: 9, valAxisTitle: 'FND (rounds)', showValAxisTitle: true, valAxisTitleColor: MUTED }));
+    lesson(s, 'energy alone is not enough — the rotation (epoch / G-set) must be kept.');
+  }
+  {
+    const s = base(); title(s, 'Hybrids — ORIGINAL vs EDITED vs IMPROVED', 'FND / HND / LND of every version');
+    img(s, 'h2_hybrids_all.png', 0.6, 1.45, 12.1, 4.3);
+    tbl(s, [['', 'SH-LEACH', 'H-LEACH', 'EECH-HEED'], ['ORIGINAL → EDITED', 'radio model only', 'packet size + setup messages', 'deployment + sensing OFF + packet + E_DA'],
+      ['EDITED → IMPROVED', 'counter restarts', '≥ average + G-set', 'fixed rotation in zone 2']], 0.6, 5.85, 12.1, [2.6, 2.6, 3.0, 3.9], { size: 12, rowH: 0.38, center: true, boldFirst: true });
+  }
+
+  // ================= 05 RECENT + LIT REVIEW =================
+  section('05', 'Recent work & literature review', 'Where the research is going (2024 – 2026)');
+  {
+    const s = base(); title(s, 'Recent papers (studied, not re-implemented)', 'They need training data or unpublished models — used to compare ideas');
+    tbl(s, [['Paper', 'Idea', 'Reported result', 'Limitation'],
+      ['RL-ILEACH 2026 [8]', 'Q-learning chooses CHs (energy, density, distance)', '+784 % lifetime vs LEACH', 'FND earlier than ILEACH (524 vs 936); learning cost not measured'],
+      ['DL-HEED 2025 [9]', 'Graph neural network inside HEED', 'up to +60 % vs HEED', 'needs training data; heavy on sensors'],
+      ['TLC 2024 [10]', 'two-level LEACH with a distance threshold', 'longer lifetime than LEACH variants', 'no CH-failure protection'],
+      ['EECH-HEED 2025 [7]', 'two zones + multi-hop + adaptive sensing', 'FND 1250, PDR 95 %', 'rotation breaks in zone 2 (fixed by us)']],
+    0.6, 1.5, 12.1, [2.4, 3.6, 2.6, 3.5], { size: 13, rowH: 0.8, boldFirst: true });
+    band(s, 'Learning-based election adapts well, but does not always delay the first node death.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'Literature review — summary');
+    tbl(s, [['Paper', 'Year', 'CH election', 'Main limitation', 'Used in our protocol'],
+      ['LEACH [1]', '2000', 'random T(n), epoch', 'energy-blind', 'rotation T(r) + G-set'], ['LEACH-C [2]', '2002', 'central (BS)', 'global knowledge', 'radio model'],
+      ['HEED [3]', '2004', 'iterative energy + cost', 'overhead every round', 'energy × degree (single pass)'], ['PEGASIS [4]', '2002', 'chain leader', 'delay, long links', 'relay idea (only if cheaper)'],
+      ['SH-LEACH [5]', '2015', 'LEACH × energy × r', 'CH count grows', 'lesson: keep rotation'], ['H-LEACH [6]', '2016', 'LEACH + E > E_avg', 'deadlock, no G-set', 'energy gate (I5)'],
+      ['EECH-HEED [7]', '2025', 'zones, T·α·β', 'rotation collapse', 'relay between CHs'], ['RL-ILEACH [8] / DL-HEED [9]', '2025–26', 'learning', 'training cost', 'energy + degree features'],
+      ['FTEC [11] · Pachlor [12]', '2019 · 2022', 'fault tolerance · rotation review', '—', 'backup CH · handover (I2)'], ['EEUC [13] · Chauhan [14]', '2005 · 2021', 'unequal clusters, relays', '—', 'hot-spot lesson, relay rule']],
+    0.6, 1.4, 12.1, [2.9, 1.3, 2.6, 2.4, 2.9], { size: 11.5, rowH: 0.47 });
+  }
+  {
+    const s = base(); title(s, 'Research gap');
+    card(s, 0.6, 1.5, 6.1, 4.8, { head: 'No existing protocol combines', icon: 'FaBullseye', color: ORANGE, size: 16,
+      body: '• a cheap single-pass CH election (energy + connectivity)\n• cluster reuse to cut setup overhead\n• protection of the CH before and after it fails\n• relaying between CHs only when it saves energy\n\n…and they are never compared in the same environment.' });
+    card(s, 6.9, 1.5, 5.8, 4.8, { head: 'Our answer', icon: 'FaLightbulb', color: BLUE, size: 16,
+      body: '1. Reproduce all protocols fairly (ORIGINAL → EDITED).\n2. Fix the flaws of the hybrids (IMPROVED).\n3. Build a new protocol step by step (v1 → v8-Chain).\n4. Estimate the cost of adding security.' });
+  }
+
+  // ================= 06 PROPOSED =================
+  section('06', 'Proposed protocol', 'v1 → v8-Chain — one change per version');
+  {
+    const s = base(); title(s, 'How the protocol was built', 'Each version changes one thing, so its effect can be measured alone');
+    const v = [['v1', 'HEED election', F('v1_heed_election_leach_join')], ['v2', 'fairness', F('v2_fairness_penalty')], ['v3', 'single pass + reuse', F('v3_single_pass_reuse_int5')],
+      ['v4', 'reuse 15', F('v4_reuse_int15')], ['v5', 'backup CH', F('v5b_energy_aware_repair')], ['v6/v7', 'CH chain', F('v6_chain_center')], ['v8', 'I1 – I5', F('v8_center')], ['v8-Chain', 'smart relay', F('v8_chain_center')]];
+    s.addShape(pres.shapes.LINE, { x: 0.8, y: 3.35, w: 11.8, h: 0, line: { color: LINE, width: 3 } });
+    v.forEach(([n, d, f], i) => { const x = 0.6 + i * 1.53, col = i === 7 ? BLUE : i === 2 || i === 6 ? AQUA : GREY;
+      s.addShape(pres.shapes.OVAL, { x: x + 0.5, y: 3.12, w: 0.46, h: 0.46, fill: { color: col }, line: { color: 'FFFFFF', width: 2 } });
+      s.addText(n, { x, y: 2.3, w: 1.46, h: 0.6, fontSize: 17, bold: true, color: col === GREY ? INK : col, align: 'center', fontFace: HEAD, margin: 0, isTextBox: true });
+      s.addText([{ text: d, options: { breakLine: true, color: MUTED } }, { text: 'FND ' + f, options: { bold: true, color: INK } }],
+        { x: x - 0.05, y: 3.8, w: 1.56, h: 1.1, fontSize: 12.5, align: 'center', valign: 'top', fontFace: BODY, margin: 0, isTextBox: true }); });
+    band(s, 'Two big jumps: v3 (no negotiation + cluster reuse) and v8 (direct-to-BS + energy gate).', 5.6);
+  }
+  {
+    const s = base(); title(s, 'v1 – v2: starting from HEED', 'v1 = HEED election + LEACH nearest-CH join · v2 = + fairness penalty cost × (1 + 0.1·timesServed)');
+    singleBar(s, ['v1', 'v2', 'HEED', 'LEACH'], [F('v1_heed_election_leach_join'), F('v2_fairness_penalty'), heed.F, leach.F], [GREY, GREY, ORANGE, BLUE], 0.6, 1.5, 7.2, 4.8, { name: 'FND', valAxisTitle: 'FND (rounds)', showValAxisTitle: true });
+    card(s, 8.1, 1.5, 4.6, 4.8, { head: 'What we learned', icon: 'FaSearch', color: ORANGE, size: 14,
+      body: `FND only ${F('v1_heed_election_leach_join')} → ${F('v2_fairness_penalty')}.\n\nThe negotiation of HEED, paid every round, is the real problem — not fairness.` });
+    lesson(s, 'remove the iterative negotiation.');
+  }
+  {
+    const s = base(); title(s, 'v3 – v4: single-pass election + cluster reuse', 'The biggest jump of the whole study');
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: 1.5, w: 12.1, h: 0.9, rectRadius: 0.08, fill: { color: 'F4F4F0' }, line: { color: LINE } });
+    s.addText('score = T(r) × (E/E0) × (1 + deg/deg_max)   =   rotation × energy × neighbours',
+      { x: 0.8, y: 1.5, w: 11.8, h: 0.9, fontSize: 16, bold: true, fontFace: 'Consolas', color: INK, valign: 'middle', margin: 0, isTextBox: true });
+    singleBar(s, ['v2', 'v3 (reuse 5)', 'v4 (reuse 15)'], [F('v2_fairness_penalty'), F('v3_single_pass_reuse_int5'), F('v4_reuse_int15')], [GREY, AQUA, GREY], 0.6, 2.6, 6.4, 3.8, { name: 'FND', valAxisTitle: 'FND (rounds)', showValAxisTitle: true });
+    card(s, 7.3, 2.6, 5.4, 3.8, { head: `×${(F('v3_single_pass_reuse_int5') / F('v2_fairness_penalty')).toFixed(1)} longer first-node life`, icon: 'FaBolt', color: AQUA, size: 14,
+      body: `Clusters are kept for 5 rounds, so setup is paid once per 5 rounds.\n\n15 rounds is worse (${F('v4_reuse_int15')}, PDR ${C.pct(C.get('v4_reuse_int15').P)}): the CH is overloaded and its members are orphaned when it dies.` });
+    lesson(s, 'reuse clusters for 5 rounds — but protect the members when the CH dies.');
+  }
+  {
+    const s = base(); title(s, 'v5: backup CH', 'The strongest member replaces a dead CH (v5b: only if it has ≥ 5 % of E0)');
+    const r = [['v4', 'v4_reuse_int15'], ['v5 (int 15)', 'v5_backup_int15'], ['v5-exp (int 5)', 'v5x_backup_repair_int5'], ['v5-exp (int 10)', 'v5x_backup_repair_int10'], ['v5b', 'v5b_energy_aware_repair']];
+    tbl(s, [['Version', 'FND', 'HND', 'LND', 'PDR']].concat(r.map(([n, k]) => { const x = C.get(k); return [n, x.F, x.H, x.L, C.pct(x.P)]; })), 0.6, 1.5, 7.0, [2.2, 1.2, 1.2, 1.2, 1.2], { size: 14, rowH: 0.55, center: true, hlLast: true });
+    card(s, 7.9, 1.5, 4.8, 4.6, { head: 'Result', icon: 'FaUserShield', color: BLUE, size: 14, body: 'The backup protects the data (PDR ↑) but does not delay the first death.\n\nInterval 5 is the best again.\n\nv5b becomes the base of v8.' });
+    lesson(s, 'protection improves reliability; lifetime needs something else.');
+  }
+  {
+    const s = base(); title(s, 'v6 – v7: chaining the cluster heads', 'CHs forward to each other towards the BS (idea from PEGASIS)');
+    singleBar(s, ['v5b', 'v6 chain', 'v7 chain + backup', 'v7.1 multihop tree', 'v7.2 (int 10)'], [F('v5b_energy_aware_repair'), F('v6_chain_center'), F('v7_chain_backup_center'), F('v7_1_multihop_int5'), F('v7_2_multihop_int10')],
+      [BLUE, GREY, GREY, GREY, GREY], 0.6, 1.5, 7.4, 4.8, { name: 'FND', valAxisTitle: 'FND (rounds)', showValAxisTitle: true, valAxisMinVal: 0, valAxisMaxVal: 2000 });
+    card(s, 8.3, 1.5, 4.4, 4.8, { head: 'Worse, not better', icon: 'FaExclamationTriangle', color: RED, size: 14,
+      body: 'CHs near the BS carry everybody\'s traffic and die first (the "hot spot" of EEUC [13]).\n\nWith the BS at the centre, forced relaying costs more than it saves.' });
+    lesson(s, 'relay only when it really saves energy.');
+  }
+  {
+    const s = base(); title(s, 'v8: five improvements on top of v5b');
+    const m = [['I1 Epoch fix', 'start a new epoch when nobody is eligible → no round without CHs', 'FaSyncAlt', GREY],
+      ['I2 Handover', 'a CH that cannot finish the round hands over before it dies', 'FaHandshake', GREY],
+      ['I3 Re-join', 'members of a dead CH join the nearest alive CH', 'FaUsers', GREY],
+      ['I4 Direct-to-BS', 'a node not farther from the BS than from its CH sends directly', 'FaRoute', ORANGE],
+      ['I5 Energy gate', 'only nodes with E ≥ network average may become CH', 'FaBatteryQuarter', ORANGE]];
+    m.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 3) * 4.1, 1.5 + Math.floor(i / 3) * 2.4, 3.85, 2.2, { head: h, body: b, icon: ic, color: col, size: 13, headSize: 15 }));
+    stat(s, 8.9, 3.95, 3.8, String(F('v8_center')), `FND (v5b ${F('v5b_energy_aware_repair')}) · PDR ${C.pct(C.get('v8_center').P)}`, BLUE);
+  }
+  {
+    const s = base(); title(s, 'Ablation — which improvement matters?', 'v8 with one improvement switched off');
+    const ab = [['v8 (full)', 'v8_center'], ['− I1 epoch fix', 'v8_without_I1'], ['− I2 handover', 'v8_without_I2'], ['− I3 re-join', 'v8_without_I3'], ['− I5 energy gate', 'v8_without_I5'], ['− I4 direct-to-BS', 'v8_without_I4']];
+    s.addChart(pres.charts.BAR, [{ name: 'FND', labels: ab.map(a => a[0]), values: ab.map(a => F(a[1])) }], Object.assign(chartBase(), {
+      x: 0.6, y: 1.5, w: 8.2, h: 5.4, barDir: 'bar', chartColors: [BLUE], showLegend: false, showValue: true, dataLabelPosition: 'outEnd', catAxisOrientation: 'maxMin', valAxisMinVal: 0, valAxisMaxVal: 3000 }));
+    card(s, 9.1, 1.5, 3.6, 2.6, { head: 'I4 and I5 make the gain', icon: 'FaBolt', color: ORANGE, size: 13, body: `without I4: ${F('v8_without_I4')}\nwithout I5: ${F('v8_without_I5')}` });
+    card(s, 9.1, 4.3, 3.6, 2.6, { head: 'I1, I2, I3 are safety nets', icon: 'FaShieldAlt', color: AQUA, size: 13, body: 'no zero-CH rounds, no lost members, stable PDR' });
+  }
+  {
+    const s = base(); title(s, 'v8-Chain: energy-aware relay', 'A CH forwards through another CH only if it is cheaper than going straight to the BS');
+    s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y: 1.5, w: 12.1, h: 0.85, rectRadius: 0.08, fill: { color: 'F4F4F0' }, line: { color: LINE } });
+    s.addText('relay via CH j  only if   Tx(c → j) + Rx(j) + E_DA(j)  <  Tx(c → BS)', { x: 0.8, y: 1.5, w: 11.8, h: 0.85, fontSize: 18, bold: true, fontFace: 'Consolas', color: INK, valign: 'middle', margin: 0, isTextBox: true });
+    const lab = ['Direct (v8)', 'Ordered chain', 'Energy-aware relay'];
+    for (const [i, bs, t] of [[0, 'center', 'BS at the centre'], [1, 'farBS', 'BS far away (50, −100)']]) {
+      const x = 0.6 + i * 6.2;
+      s.addText(t, { x, y: 2.5, w: 5.9, h: 0.4, fontSize: 15, bold: true, color: NAVY, fontFace: BODY, margin: 0, isTextBox: true });
+      singleBar(s, lab, [0, 1, 2].map(m => F(`${bs}_mode${m}`)), [i ? ORANGE : BLUE], x, 2.9, 5.9, 3.4, { name: 'FND', valAxisMinVal: 0, valAxisMaxVal: 3000 });
+    }
+    band(s, `Centre: nothing to gain, nothing lost (${v8c.F}).  Far BS: +${C.gain(v8cf.F, v8f.F).toFixed(0)} % FND (${v8f.F} → ${v8cf.F}).`, 6.45);
+  }
+  {
+    const s = base(); title(s, 'Evolution — all versions', 'First node death (bars) · unified environment, BS at the centre');
+    const lab = C.EVOLUTION.map(e => e[0]); const vals = C.EVOLUTION.map(e => F(e[1]));
+    singleBar(s, lab, vals, [BLUE], 0.6, 1.4, 12.1, 5.5, { name: 'FND', valAxisTitle: 'FND (rounds)', showValAxisTitle: true, valAxisTitleColor: MUTED });
+  }
   {
     const s = base(); title(s, 'Architecture of v8-Chain', 'Setup once every 5 rounds · data every round · fault tolerance at any time');
-    img(s, 'f12_architecture.png', 0.5, 1.5, 12.3, 5.5);
-    s.addNotes('Setup: epoch check (I1), energy gate (I5), single-pass score, advertise and join, backup CH. Data: proactive handover (I2), direct-to-BS (I4), fusion, energy-aware relay. Fault tolerance: promote backup or orphan re-join (I3).');
+    img(s, 'f12_architecture.png', 0.5, 1.45, 12.3, 5.5);
   }
-  // 18 ── Mechanisms grid
-  {
-    const s = base(); title(s, 'Six mechanisms, each tested on its own');
-    const m = [['Single-pass election', 'P = T(r)·(E/E0)·(1 + deg/deg_max) — HEED\'s intelligence without its negotiation.', 'FaBolt', BLUE],
-      ['Cluster reuse', 'Clusters kept for 5 rounds: setup overhead paid once per interval.', 'FaSyncAlt', BLUE],
-      ['Energy gate (I5)', 'Only nodes with E ≥ network average may volunteer as CH.', 'FaBatteryQuarter', ORANGE],
-      ['Backup + handover (I2)', 'A strong member is ready; a weak CH hands over before it dies.', 'FaUserShield', ORANGE],
-      ['Direct-to-BS (I4)', 'A node closer to the BS than to its CH sends straight to the BS.', 'FaRoute', AQUA],
-      ['Energy-aware relay', 'A CH forwards through a CH nearer the BS only if that costs less.', 'FaProjectDiagram', AQUA]];
-    m.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 3) * 4.1, 1.45 + Math.floor(i / 3) * 2.75, 3.85, 2.5, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 15 }));
-  }
-  // 19 ── Evolution
-  {
-    const s = base(); title(s, 'From v1 to v8-Chain', 'First node death of every version (unified environment, BS at the centre)');
-    const lab = C.EVOLUTION.map(e => e[0]);
-    const vals = C.EVOLUTION.map(e => C.get(e[1]).F);
-    singleBar(s, lab, vals, [BLUE], 0.6, 1.5, 8.6, 5.4, { name: 'FND', valAxisTitle: 'FND (rounds)', showValAxisTitle: true, valAxisTitleColor: MUTED });
-    const v1 = C.get('v1_heed_election_leach_join'), v3 = C.get('v3_single_pass_reuse_int5'), v5b = C.get('v5b_energy_aware_repair'), v8 = C.get('v8_center');
-    card(s, 9.5, 1.5, 3.2, 1.7, { head: `v1 → v3: ×${(v3.F / v1.F).toFixed(1)}`, body: 'no negotiation + cluster reuse', icon: 'FaSyncAlt', color: BLUE, size: 13, headSize: 15 });
-    card(s, 9.5, 3.35, 3.2, 1.7, { head: `v5b → v8: +${C.gain(v8.F, v5b.F).toFixed(0)}%`, body: 'I1–I5 (mostly I4 and I5)', icon: 'FaBolt', color: ORANGE, size: 13, headSize: 15 });
-    card(s, 9.5, 5.2, 3.2, 1.7, { head: 'v6 / v7 chains', body: 'ordered chains cost energy when the BS is central', icon: 'FaStream', color: GREY, size: 13, headSize: 15 });
-  }
-  // 20 ── Topology
   {
     const s = base(); title(s, 'v8-Chain in action', 'Round 50 — relays appear only where they save energy');
-    img(s, 'f11_topology_center.png', 0.6, 1.5, 5.6, 5.45);
-    img(s, 'f11_topology_farBS.png', 6.4, 1.5, 6.3, 5.45);
+    img(s, 'f11_topology_center.png', 0.6, 1.45, 5.6, 5.5); img(s, 'f11_topology_farBS.png', 6.4, 1.45, 6.3, 5.5);
   }
-
-  // ===== 05 Results
-  section('05', 'Results', 'Unified environment, seed 12345, 8 random topologies');
-  // 21 ── Lifetime
   {
-    const s = base(); title(s, 'Network lifetime — best version of every family');
-    lifeChart(s, C.FAMILY.map(f => f[0]), C.FAMILY.map(f => f[1]), 0.6, 1.3, 8.9, 5.6, { showValue: false });
-    s.addText('Exact values: summary table (slide ' + (pageNo + 6) + ')', { x: 0.6, y: 6.9, w: 8.9, h: 0.3, fontSize: 11, color: MUTED, fontFace: BODY, italic: true, margin: 0, isTextBox: true });
-    stat(s, 9.8, 1.5, 3.0, '+' + C.gain(v8c.F, best.F).toFixed(0) + '%', `FND vs the best reproduced protocol (SH-LEACH+, ${best.F})`, BLUE);
-    stat(s, 9.8, 3.3, 3.0, '+' + C.gain(v8c.F, leach.F).toFixed(0) + '%', `FND vs LEACH (${leach.F})`, ORANGE);
-    stat(s, 9.8, 5.1, 3.0, String(v8c.F), 'rounds before the first node dies', AQUA);
+    const s = base(); title(s, 'Final comparison — network lifetime', 'Best version of every family, unified environment');
+    lifeChart(s, C.FAMILY.map(f => f[0]), C.FAMILY.map(f => f[1]), 0.6, 1.3, 8.0, 5.6, { showValue: false });
+    stat(s, 8.9, 1.7, 3.8, String(v8c.F), 'rounds before the first node dies — the latest of all', AQUA);
+    stat(s, 8.9, 3.4, 3.8, '+' + C.gain(v8c.F, leach.F).toFixed(0) + '%', `FND vs LEACH (${leach.F})`, ORANGE);
+    stat(s, 8.9, 5.1, 3.8, '+' + C.gain(v8c.F, best.F).toFixed(0) + '%', `FND vs the best hybrid (SH-LEACH+ ${best.F}); +${C.gain(v8c.F, leach.F).toFixed(0)}% vs LEACH`, BLUE);
   }
-  // 22 ── Alive curves
   {
-    const s = base(); title(s, 'All nodes stay alive longer — then die together', 'A late, steep drop means the load is shared evenly');
-    img(s, 'f3_alive_curves.png', 0.6, 1.5, 12.1, 5.45);
+    const s = base(); title(s, 'Alive nodes and energy per round', 'v8-Chain (blue) keeps every node alive longest, then all die together');
+    img(s, 'f3_alive_curves.png', 0.6, 1.45, 6.0, 5.4); img(s, 'f10_energy_curves.png', 6.8, 1.45, 6.0, 5.4);
   }
-  // 23 ── PDR
   {
-    const s = base(); title(s, 'Reliability — packet delivery ratio');
+    const s = base(); title(s, 'Reliability and robustness');
     const lab = C.FAMILY.map(f => f[0]); const vals = C.FAMILY.map(f => +C.get(f[1]).P.toFixed(2));
-    singleBar(s, lab, vals, [BLUE], 0.6, 1.3, 8.6, 5.6, { name: 'PDR (%)', valAxisMinVal: 98.5, valAxisMaxVal: 100, dataLabelFormatCode: '0.00' });
-    card(s, 9.5, 1.5, 3.2, 5.35, { head: 'Reading', icon: 'FaCheckCircle', color: AQUA, size: 14,
-      body: `v8-Chain delivers ${C.pct(v8c.P)} of all readings.\n\nHEED (${C.pct(C.get('heed_EDITED').P)}) is 0.04 pp higher, but its first node dies ${v8c.F - C.get('heed_EDITED').F} rounds earlier.\n\nAll protocols are above 99 % — lifetime is where they differ.` });
+    singleBar(s, lab, vals, [BLUE], 0.6, 1.4, 6.3, 5.0, { name: 'PDR (%)', valAxisMinVal: 98.5, valAxisMaxVal: 100, dataLabelFormatCode: '0.00', catAxisLabelFontSize: 10 });
+    img(s, 'f7_robustness.png', 7.1, 1.4, 5.7, 3.9);
+    const r = C.robust('v8_chain_center');
+    s.addText(`8 random topologies: FND ${r.Fmin} – ${r.Fmax} (mean ${r.F.toFixed(0)})`, { x: 7.1, y: 5.4, w: 5.7, h: 0.8, fontSize: 15, bold: true, color: INK, fontFace: BODY, margin: 0, isTextBox: true });
+    band(s, 'All protocols deliver > 99 % of readings; they differ in lifetime.  The v8-Chain result is not luck of one layout.', 6.5);
   }
-  // 24 ── Ablation
-  {
-    const s = base(); title(s, 'Ablation — which improvement matters?', 'v8 with one mechanism switched off (compile flag -DI<k>=0)');
-    const ab = [['v8 (full)', 'v8_center'], ['− I1 epoch fix', 'v8_without_I1'], ['− I2 handover', 'v8_without_I2'], ['− I3 re-join', 'v8_without_I3'], ['− I5 energy gate', 'v8_without_I5'], ['− I4 direct-to-BS', 'v8_without_I4']];
-    s.addChart(pres.charts.BAR, [{ name: 'FND', labels: ab.map(a => a[0]), values: ab.map(a => C.get(a[1]).F) }], Object.assign(chartBase(), {
-      x: 0.6, y: 1.6, w: 8.2, h: 5.3, barDir: 'bar', chartColors: [BLUE], showLegend: false, showValue: true, dataLabelPosition: 'outEnd', catAxisOrientation: 'maxMin',
-      valAxisMinVal: 0, valAxisMaxVal: 3000 }));
-    card(s, 9.1, 1.6, 3.6, 2.5, { head: 'I4 and I5 carry the gain', icon: 'FaBolt', color: ORANGE, size: 13,
-      body: `Without direct-to-BS FND falls to ${C.get('v8_without_I4').F}; without the energy gate to ${C.get('v8_without_I5').F}.` });
-    card(s, 9.1, 4.3, 3.6, 2.6, { head: 'I1, I2, I3 are safety nets', icon: 'FaShieldAlt', color: AQUA, size: 13,
-      body: 'They change FND by less than 10 rounds but prevent zero-CH rounds and lost members.' });
-  }
-  // 25 ── Far BS / routing
-  {
-    const s = base(); title(s, 'When the BS is far away, relaying pays off', 'CH → BS routing mode of v8-Chain (compile flag -DCHAIN_MODE)');
-    const lab = ['Direct (v8)', 'Ordered chain', 'Energy-aware relay'];
-    for (const [i, bs, t] of [[0, 'center', 'BS at the centre (50, 50)'], [1, 'farBS', 'BS far away (50, −100)']]) {
-      const x = 0.6 + i * 6.2;
-      s.addText(t, { x, y: 1.55, w: 5.9, h: 0.4, fontSize: 16, bold: true, color: NAVY, fontFace: BODY, margin: 0, isTextBox: true });
-      singleBar(s, lab, [0, 1, 2].map(m => C.get(`${bs}_mode${m}`).F), [i ? ORANGE : BLUE], x, 2.0, 5.9, 4.1, { name: 'FND', valAxisMinVal: 0, valAxisMaxVal: 3000 });
-    }
-    s.addText(`Far BS: energy-aware relay +${C.gain(v8cf.F, v8f.F).toFixed(0)}% FND over direct; at the centre it relays nothing and costs nothing.`,
-      { x: 0.6, y: 6.3, w: 12.1, h: 0.5, fontSize: 15, color: INK, fontFace: BODY, margin: 0, isTextBox: true });
-  }
-  // 26 ── Robustness
-  {
-    const s = base(); title(s, 'Robust across 8 random topologies', 'Seeds 12345, 1, 7, 42, 99, 2024, 31337, 555');
-    img(s, 'f7_robustness.png', 0.6, 1.5, 8.0, 5.4);
-    const rb = [['v5b', C.robust('v5b_center')], ['v8-Chain', C.robust('v8_chain_center')], ['v8-Chain far', C.robust('v8_chain_farBS')]];
-    const rows = [['', 'Mean FND', 'Range']].concat(rb.map(([n, r]) => [n, r.F.toFixed(0), `${r.Fmin}–${r.Fmax}`]));
-    s.addTable(rows.map((r, i) => r.map(c => ({ text: c, options: { bold: i === 0, color: i === 0 ? 'FFFFFF' : INK, fill: { color: i === 0 ? NAVY : 'FFFFFF' } } }))),
-      { x: 8.9, y: 1.7, w: 3.8, colW: [1.4, 1.1, 1.3], fontSize: 13, fontFace: BODY, border: { type: 'solid', color: LINE, pt: 0.5 }, rowH: 0.5 });
-    s.addText('The ranking never changes: v8-Chain\'s first node dies within a ±1.2 % band.', { x: 8.9, y: 4.0, w: 3.8, h: 1.5, fontSize: 15, color: INK, fontFace: BODY, margin: 0, isTextBox: true });
-  }
-  // 27 ── Summary table
   {
     const s = base(); title(s, 'Summary of the comparison', 'Unified environment, BS at the centre');
-    const rows = [['Protocol', 'Family', 'FND', 'HND', 'LND', 'PDR', 'FND vs v8-Chain']];
-    const extra = [['H-LEACH', 'hleach_EDITED', 'Literature hybrid'], ['SH-LEACH', 'shleach_EDITED', 'Literature hybrid'], ['EECH-HEED', 'eechheed_EDITED', 'Recent hybrid']];
-    const list = [C.FAMILY[0], C.FAMILY[1], C.FAMILY[2], extra[1], C.FAMILY[3], extra[0], C.FAMILY[4], extra[2], C.FAMILY[5], C.FAMILY[6]];
+    const rows = [['Protocol', 'Family', 'FND', 'HND', 'LND', 'PDR', 'v8-Chain FND gain']];
+    const list = [['LEACH', 'leach_EDITED', 'classic'], ['HEED', 'heed_EDITED', 'classic'], ['PEGASIS', 'pegasis_EDITED', 'classic'], ['SH-LEACH+', 'shleach_IMPROVED', 'hybrid, fixed'],
+      ['H-LEACH+', 'hleach_IMPROVED', 'hybrid, fixed'], ['EECH-HEED+', 'eechheed_IMPROVED', 'recent hybrid, fixed'], ['v8-Chain', 'v8_chain_center', 'proposed']];
     list.forEach(([n, run, fam]) => { const r = C.get(run); rows.push([n, fam, r.F, r.H, r.L, C.pct(r.P), run === 'v8_chain_center' ? '—' : '+' + C.gain(v8c.F, r.F).toFixed(0) + '%']); });
-    s.addTable(rows.map((r, i) => r.map((c, j) => ({ text: String(c), options: { bold: i === 0 || i === rows.length - 1, align: j >= 2 ? 'center' : 'left',
-      color: i === 0 ? 'FFFFFF' : INK, fill: { color: i === 0 ? NAVY : i === rows.length - 1 ? 'DCE9FA' : (i % 2 ? 'FFFFFF' : TINT) } } }))),
-    { x: 0.6, y: 1.55, w: 12.1, colW: [2.0, 3.0, 1.2, 1.2, 1.2, 1.4, 2.1], fontSize: 13, fontFace: BODY, border: { type: 'solid', color: LINE, pt: 0.5 }, rowH: 0.45 });
+    tbl(s, rows, 0.6, 1.5, 12.1, [2.0, 2.8, 1.3, 1.3, 1.3, 1.4, 2.0], { size: 14, rowH: 0.56, center: true, centerFrom: 2, hlLast: true });
+    band(s, 'v8-Chain has the latest first node death of every protocol: from +69 % (SH-LEACH+) to +294 % (HEED).', 6.2);
+  }
+  {
+    const s = base(); title(s, 'Which version we chose — and why: v8-Chain');
+    const w = [['Latest first death', `FND ${v8c.F} — highest of all protocols and versions`, 'FaTrophy', BLUE],
+      ['Works for any BS position', `same as v8 at the centre, +${C.gain(v8cf.F, v8f.F).toFixed(0)} % when the BS is far`, 'FaMapMarkedAlt', ORANGE],
+      ['Reliable', `PDR ${C.pct(v8c.P)}; no round without CHs; members never orphaned`, 'FaCheckCircle', AQUA],
+      ['Stable', `8 topologies: FND ${C.robust('v8_chain_center').Fmin} – ${C.robust('v8_chain_center').Fmax}`, 'FaBalanceScale', NAVY],
+      ['Lightweight and distributed', 'one-step score, local decisions, no training', 'FaLeaf', AQUA],
+      ['Each part justified', 'every mechanism kept only if the ablation shows it helps', 'FaSearch', GREY]];
+    w.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 3) * 4.1, 1.5 + Math.floor(i / 3) * 2.7, 3.85, 2.45, { head: h, body: b, icon: ic, color: col, size: 16, headSize: 16 }));
   }
 
-  // ===== 06 Discussion
-  section('06', 'Discussion', 'What the results do not show yet');
-  // 28 ── Limitations
+  // ================= 07 SECURITY =================
+  section('07', 'Adding security', 'What hybrid cryptography is expected to cost on top of v8-Chain');
+  {
+    const s = base(); title(s, 'Hybrid cryptography — the plan', 'Public-key once for keys, fast symmetric encryption for every message');
+    const st = [['1  Deployment', 'ECC key agreement once per node → shared keys with the BS / cluster', 'FaKey', ORANGE],
+      ['2  Every message', 'AES encryption + 8-byte integrity code (MIC), as in IEEE 802.15.4 security [17]', 'FaLock', BLUE],
+      ['3  CH fusion', 'CH decrypts, fuses and re-encrypts one packet to the BS', 'FaLayerGroup', AQUA]];
+    st.forEach(([h, b, ic, col], i) => card(s, 0.6 + i * 4.1, 1.5, 3.85, 2.6, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 16 }));
+    tbl(s, [['Assumption used in the experiment', 'Value'], ['Extra bits per frame (auxiliary header + MIC)', '104 bits (data and control)'],
+      ['AES energy (sender and receiver)', '5 nJ/bit (same order as E_DA; assumed)'], ['ECC key setup per node, once', '20 mJ (order reported for 8-bit sensor MCUs [16])']],
+    0.6, 4.35, 12.1, [6.5, 5.6], { size: 14, rowH: 0.5 });
+  }
+  {
+    const s = base(); title(s, 'Expected cost of security on v8-Chain', 'v8-Chain code run with the security overhead switched on (-DSEC_BITS, -DSEC_NJ_PER_BIT, -DSEC_SETUP_MJ)');
+    img(s, 's1_security.png', 0.6, 1.45, 8.1, 5.0);
+    const sc = F('v8_chain_mic104_aes5nJ_ecc20mJ_center');
+    card(s, 8.9, 1.5, 3.8, 4.9, { head: 'Expected', icon: 'FaLock', color: BLUE, size: 14,
+      body: `FND drops by about 9 % – 19 %.\n\nWith everything on: ${sc} rounds — still +${C.gain(sc, leach.F).toFixed(0)} % over LEACH and +${C.gain(sc, best.F).toFixed(0)} % over SH-LEACH+ without any security.\n\nPDR stays above 99 %.` });
+    band(s, 'Security is affordable on v8-Chain: the lifetime saved by the protocol pays for the protection.', 6.5);
+  }
+
+  // ================= 08 CONCLUSION =================
+  section('08', 'Conclusion', 'Limitations, summary and references');
   {
     const s = base(); title(s, 'Limitations');
-    const L = [['Analytical energy model', 'The long runs use the first-order radio model, not a packet-level MAC/PHY: no collisions, retransmissions or fading.', 'FaMicrochip'],
-      ['Static, homogeneous nodes', '100 static nodes with equal energy; no mobility or heterogeneous hardware.', 'FaMapMarkedAlt'],
-      ['PEGASIS keeps a longer LND', `PEGASIS's last node lives to round ${peg.L} (v8-Chain ${v8c.L}); v8-Chain optimises the first death.`, 'FaStream'],
-      ['Assumptions in the papers', 'Missing settings (e.g. SH-LEACH packet size, EECH-HEED sensor signal) had to be assumed and documented.', 'FaBook'],
-      ['Security not yet evaluated', 'The hybrid-cryptography layer of the title is designed but not simulated in this study.', 'FaLock'],
-      ['Simulation only', 'No hardware test-bed; results are for one field size and one node count.', 'FaFlask']];
-    L.forEach(([h, b, ic], i) => card(s, 0.6 + (i % 2) * 6.15, 1.45 + Math.floor(i / 2) * 1.85, 5.95, 1.65, { head: h, body: b, icon: ic, color: i === 4 ? RED : GREY, size: 13, headSize: 15 }));
+    const L = [['Analytical energy model', 'Long runs use the first-order radio model: no collisions, retransmissions or fading (the demo shows packet level on a small scale).', 'FaMicrochip'],
+      ['Static, equal nodes', '100 static nodes with equal energy; no mobility or heterogeneous hardware.', 'FaMapMarkedAlt'],
+      ['One field size', '100 × 100 m and 100 nodes; larger networks not tested.', 'FaThLarge'],
+      ['Security only estimated', 'Crypto costs are assumed values; attacks and key management are not simulated.', 'FaLock'],
+      ['Missing paper details', 'Some settings (packet size, sensor signal) had to be assumed and documented.', 'FaBook'],
+      ['PEGASIS keeps a longer LND', `${peg.L} vs ${v8c.L}: v8-Chain is designed for the first death, not the last.`, 'FaStream']];
+    L.forEach(([h, b, ic], i) => card(s, 0.6 + (i % 2) * 6.15, 1.45 + Math.floor(i / 2) * 1.85, 5.95, 1.65, { head: h, body: b, icon: ic, color: i === 3 ? RED : GREY, size: 12.5, headSize: 15 }));
   }
-  // 29 ── Future work
-  {
-    const s = base(); title(s, 'Future work');
-    const F = [['Hybrid cryptography layer', 'Symmetric keys inside clusters, lightweight public-key between CHs and the BS; measure its energy cost on top of v8-Chain.', 'FaLock', RED],
-      ['Packet-level validation', 'Run v8-Chain over lr-wpan with collisions and ACKs (the demo is the first step).', 'FaBroadcastTower', BLUE],
-      ['Scale and heterogeneity', 'Sweep field size, node count, BS position and heterogeneous energy.', 'FaThLarge', ORANGE],
-      ['Optimal routing', 'Compare the greedy relay rule with a minimum-energy tree.', 'FaProjectDiagram', AQUA]];
-    F.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 2) * 6.15, 1.5 + Math.floor(i / 2) * 2.7, 5.95, 2.45, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 16 }));
-  }
-  // 30 ── Conclusion
   {
     const s = base(NAVY);
-    s.addText('Conclusion', { x: 0.8, y: 0.6, w: 11, h: 0.9, fontSize: 38, bold: true, color: 'FFFFFF', fontFace: HEAD, margin: 0, isTextBox: true });
-    const k = [[String(v8c.F), 'rounds before the first node dies — the latest of every protocol'], ['+' + C.gain(v8c.F, best.F).toFixed(0) + '%', 'over the best reproduced protocol (SH-LEACH+)'], [C.pct(v8c.P), 'packet delivery ratio']];
-    k.forEach(([b, l], i) => {
-      s.addText(b, { x: 0.8 + i * 4.1, y: 2.0, w: 3.8, h: 1.1, fontSize: 50, bold: true, color: [BLUE, ORANGE, AQUA][i], fontFace: HEAD, margin: 0, isTextBox: true });
-      s.addText(l, { x: 0.8 + i * 4.1, y: 3.1, w: 3.7, h: 0.9, fontSize: 15, color: 'C9D4E8', fontFace: BODY, margin: 0, valign: 'top', isTextBox: true });
-    });
-    bullets(s, ['Six published protocols were reproduced, validated and compared in one fair environment; flaws in three hybrids were found and fixed.',
-      'v8-Chain combines single-pass election, cluster reuse, CH protection and energy-aware relaying.',
-      'The gain holds across 8 random topologies and grows when the BS is far away.'], 0.8, 4.4, 11.6, 2.4, 17, 'FFFFFF');
+    s.addText('Summary', { x: 0.8, y: 0.5, w: 11, h: 0.9, fontSize: 38, bold: true, color: 'FFFFFF', fontFace: HEAD, margin: 0, isTextBox: true });
+    const k = [[String(v8c.F), 'rounds before the first node dies'], ['+' + C.gain(v8c.F, best.F).toFixed(0) + '%', 'over the best fixed hybrid'], [C.pct(v8c.P), 'packet delivery ratio']];
+    k.forEach(([b, l], i) => { s.addText(b, { x: 0.8 + i * 4.1, y: 1.6, w: 3.8, h: 1.1, fontSize: 48, bold: true, color: [BLUE, ORANGE, AQUA][i], fontFace: HEAD, margin: 0, isTextBox: true });
+      s.addText(l, { x: 0.8 + i * 4.1, y: 2.7, w: 3.7, h: 0.6, fontSize: 15, color: 'C9D4E8', fontFace: BODY, margin: 0, valign: 'top', isTextBox: true }); });
+    bullets(s, ['Six protocols reproduced and validated against their papers, then compared in one fair environment.',
+      'Flaws found and fixed in three hybrids: all of them had broken LEACH\'s rotation.',
+      'v8-Chain built step by step: single-pass election, cluster reuse, CH protection, direct-to-BS, energy gate and energy-aware relay.',
+      'Adding hybrid cryptography is expected to cost 9 – 19 % of lifetime — v8-Chain still outlives every unsecured baseline.'], 0.8, 3.6, 11.7, 3.4, 16, 'FFFFFF');
   }
-  // 31-32 ── References
-  for (const part of [[0, 8], [8, 15]]) {
+  for (const part of [[0, 9], [9, C.REFS.length]]) {
     const s = base(); title(s, 'References' + (part[0] ? ' (continued)' : ''));
     s.addText(C.REFS.slice(part[0], part[1]).map((r, i) => ({ text: `[${part[0] + i + 1}]  ${r}`, options: { breakLine: i < part[1] - part[0] - 1 } })),
-      { x: 0.6, y: 1.4, w: 12.1, h: 5.5, fontSize: 15, color: INK, fontFace: BODY, valign: 'top', margin: 0, paraSpaceAfter: 12, isTextBox: true });
+      { x: 0.6, y: 1.3, w: 12.1, h: 5.8, fontSize: 13.5, color: INK, fontFace: BODY, valign: 'top', margin: 0, paraSpaceAfter: 10, isTextBox: true });
   }
-  // 33 ── Thanks
   {
     const s = base(NAVY);
-    circleIcon(s, 'FaLeaf', 6.17, 1.6, 1.0, AQUA);
-    s.addText('Thank you', { x: 0.8, y: 2.9, w: 11.7, h: 1.2, fontSize: 48, bold: true, color: 'FFFFFF', fontFace: HEAD, align: 'center', margin: 0, isTextBox: true });
-    s.addText('Questions and discussion', { x: 0.8, y: 4.1, w: 11.7, h: 0.6, fontSize: 20, color: 'C9D4E8', fontFace: BODY, align: 'center', margin: 0, isTextBox: true });
-    s.addText('Code, results and papers: github.com/RahmaOshba/WSNs', { x: 0.8, y: 5.6, w: 11.7, h: 0.5, fontSize: 14, color: 'C9D4E8', fontFace: BODY, align: 'center', margin: 0, isTextBox: true });
+    circleIcon(s, 'FaLeaf', 6.17, 1.4, 1.0, AQUA);
+    s.addText('Thank you', { x: 0.8, y: 2.7, w: 11.7, h: 1.2, fontSize: 50, bold: true, color: 'FFFFFF', fontFace: HEAD, align: 'center', margin: 0, isTextBox: true });
+    s.addText('Special thanks to my supervisors Dr. Hesham ElZouka, Dr. Amani Saad and Dr. Khaled Saada', { x: 0.8, y: 3.95, w: 11.7, h: 0.6, fontSize: 18, color: 'C9D4E8', fontFace: BODY, align: 'center', margin: 0, isTextBox: true });
+    s.addText('Questions and discussion', { x: 0.8, y: 4.7, w: 11.7, h: 0.6, fontSize: 20, color: 'FFFFFF', fontFace: BODY, align: 'center', margin: 0, isTextBox: true });
+    s.addText('Code, results and papers: github.com/RahmaOshba/WSNs', { x: 0.8, y: 5.9, w: 11.7, h: 0.5, fontSize: 14, color: 'C9D4E8', fontFace: BODY, align: 'center', margin: 0, isTextBox: true });
   }
 
   await pres.writeFile({ fileName: OUT });

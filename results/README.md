@@ -101,4 +101,25 @@ Side experiment (not part of the main line):
 | v8_farBS | 1443 | 1627 | 1679 | 99.36% | 1391–1481 |
 | v8_chain_farBS | 1682 | 1872 | 1934 | 99.41% | 1641–1721 |
 
+## Expected cost of security — `v8_chain_*.cc` with `-DSEC_BITS / -DSEC_NJ_PER_BIT / -DSEC_SETUP_MJ`
+
+What adding hybrid cryptography (ECC key establishment + AES data protection) is expected to cost.
+Assumptions: 104 extra bits per frame (IEEE 802.15.4 security: 5-byte auxiliary header + 8-byte MIC);
+AES energy 5 nJ/bit for the sender and for the receiver (same order as E_DA; assumed);
+one ECC key establishment per node at deployment, 20 mJ (order of magnitude reported for ECC on 8-bit sensor MCUs).
+Folders: `4_PROPOSED/extra/security/`.
+
+| Scenario | BS | FND | HND | LND | PDR | FND change |
+|---|---|---:|---:|---:|---:|---:|
+| No security (= v8-Chain) | Center | 2501 | 2589 | 2631 | 99.64% | — |
+| + 104-bit header/MIC | Center | 2286 | 2376 | 2411 | 99.74% | −8.6% |
+| + header/MIC + ECC setup | Center | 2181 | 2278 | 2326 | 99.70% | −12.8% |
+| + header/MIC + AES | Center | 2096 | 2176 | 2221 | 99.72% | −16.2% |
+| + header/MIC + AES + ECC setup | Center | 2031 | 2108 | 2146 | 99.69% | −18.8% |
+| No security (= v8-Chain) | Far | 1671 | 1851 | 1906 | 99.36% | — |
+| + 104-bit header/MIC | Far | 1526 | 1716 | 1766 | 99.40% | −8.7% |
+| + header/MIC + ECC setup | Far | 1441 | 1651 | 1696 | 99.40% | −13.8% |
+| + header/MIC + AES | Far | 1356 | 1591 | 1641 | 99.52% | −18.9% |
+| + header/MIC + AES + ECC setup | Far | 1361 | 1535 | 1576 | 99.30% | −18.5% |
+
 `summary_all.csv` has every run in one table.

@@ -85,3 +85,13 @@ robustness,v8_chain_farBS_seed42,1716,1891,1951,0.993293
 robustness,v8_chain_farBS_seed555,1641,1856,1916,0.994133
 robustness,v8_chain_farBS_seed7,1681,1881,1956,0.993912
 robustness,v8_chain_farBS_seed99,1721,1876,1926,0.995348
+security,v8_chain_none_center,2501,2589,2631,0.996392
+security,v8_chain_none_far,1671,1851,1906,0.993581
+security,v8_chain_mic104_center,2286,2376,2411,0.997435
+security,v8_chain_mic104_far,1526,1716,1766,0.994026
+security,v8_chain_mic104_aes5nJ_center,2096,2176,2221,0.997241
+security,v8_chain_mic104_aes5nJ_far,1356,1591,1641,0.995202
+security,v8_chain_mic104_ecc20mJ_center,2181,2278,2326,0.997045
+security,v8_chain_mic104_ecc20mJ_far,1441,1651,1696,0.993964
+security,v8_chain_mic104_aes5nJ_ecc20mJ_center,2031,2108,2146,0.996917
+security,v8_chain_mic104_aes5nJ_ecc20mJ_far,1361,1535,1576,0.993044

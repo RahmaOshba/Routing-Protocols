@@ -118,8 +118,26 @@ static constexpr uint32_t SETUP_INTERVAL = 5; // requested variant: interval=5, 
                                                 // with Backup CH Failover + Chain/Cluster Repair below.
 
 // --------------------------- Radio / traffic -------------------------------
-static constexpr uint32_t PACKET_BITS = 2000;
-static constexpr uint32_t CONTROL_BITS = 200;
+// Optional security overhead (all 0 by default = the thesis results).
+// Used for the "expected cost of adding hybrid cryptography" experiment:
+//   SEC_BITS        extra bits per frame (e.g. 104 = IEEE 802.15.4 security:
+//                   5-byte auxiliary header + 8-byte MIC), data and control
+//   SEC_NJ_PER_BIT  symmetric-cipher energy per bit, paid by the sender
+//                   (encrypt) and by the receiver (decrypt)
+//   SEC_SETUP_MJ    one-time public-key (ECC) key-establishment energy per
+//                   node at deployment, in mJ
+#ifndef SEC_BITS
+#define SEC_BITS 0
+#endif
+#ifndef SEC_NJ_PER_BIT
+#define SEC_NJ_PER_BIT 0.0
+#endif
+#ifndef SEC_SETUP_MJ
+#define SEC_SETUP_MJ 0.0
+#endif
+static constexpr uint32_t PACKET_BITS = 2000 + SEC_BITS;
+static constexpr uint32_t CONTROL_BITS = 200 + SEC_BITS;
+static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_ELEC = 50e-9;
 static constexpr double E_FS = 10e-12;
 static constexpr double E_MP = 0.0013e-12;
@@ -174,11 +192,11 @@ static double D0() { return sqrt(E_FS / E_MP); }
 
 static double TxEnergy(uint32_t bits, double d)
 {
-    if (d <= 0.0) return bits * E_ELEC;
-    if (d < D0()) return bits * (E_ELEC + E_FS * d * d);
-    return bits * (E_ELEC + E_MP * pow(d, 4.0));
+    if (d <= 0.0) return bits * (E_ELEC + E_SEC);
+    if (d < D0()) return bits * (E_ELEC + E_SEC + E_FS * d * d);
+    return bits * (E_ELEC + E_SEC + E_MP * pow(d, 4.0));
 }
-static double RxEnergy(uint32_t bits) { return bits * E_ELEC; }
+static double RxEnergy(uint32_t bits) { return bits * (E_ELEC + E_SEC); }
 static double AggEnergy(uint32_t bits) { return bits * E_DA; }
 static double TxTimeSec(uint32_t bits) { return static_cast<double>(bits) / DATA_RATE; }
 static double DelayMs(uint32_t bits, double d) { return (TxTimeSec(bits) + d / LIGHT) * 1000.0; }
@@ -714,7 +732,7 @@ int main(int argc, char* argv[])
         nodes[i].id = i;
         nodes[i].x = pos(topologyRng);
         nodes[i].y = pos(topologyRng);
-        nodes[i].energy = E0;
+        nodes[i].energy = E0 - SEC_SETUP_MJ * 1e-3;   // key setup at deployment (0 by default)
         nodes[i].alive = true;
     }
 

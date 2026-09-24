@@ -77,6 +77,7 @@ v8 improvements (switch one off with `-DI1=0` … `-DI5=0`):
 
 `v8_chain_*` also takes `-DCHAIN_MODE=0` (direct, which equals v8), `1` (ordered chain) or `2` (energy-aware relay, the default).
 `v5b` and all v8 files take `-DTOPO_SEED=<n>` for the 8-topology robustness runs.
+`v8_chain_*` also take `-DSEC_BITS=<bits>`, `-DSEC_NJ_PER_BIT=<nJ>` and `-DSEC_SETUP_MJ=<mJ>` (all 0 by default) to estimate the energy cost of adding security (extra header/MIC bits, cipher energy per bit, one-time key setup). Results: `results/4_PROPOSED/extra/security/`.
 
 ### Fixes made in this revision
 
