@@ -16,6 +16,21 @@
 //   - Cost = 1/(degree+1) (favors high-degree nodes): this is explicitly
 //     one of the paper's own two supported configurations (Table 1,
 //     "Dense clusters" goal, "Same power" column -> "1/node degree").
+//   PAPER-FIDELITY FIXES (this revision):
+//   - Number of nodes: the paper's application experiments use 300-700
+//     nodes (Fig. 8a-c) and 500 nodes (Fig. 8d); N = 500 here.
+//   - Data packet = 100-byte payload + 25-byte header = 1000 bits (Table 2).
+//   - One round (T_NO) = 5 TDM frames: clustering runs once per round, then
+//     every node sends data 5 times (Table 2, "Round (T_NO) 5 TDM frames").
+//   - HEED election follows the paper's pseudocode (Fig. 2) exactly: no
+//     extra random pre-election, per-node termination one step after
+//     CH_prob reaches 1, final/tentative announcements, and Phase III
+//     ("uncovered" nodes announce themselves final CH).
+//   - Control-message energy follows Lemma 4: each node broadcasts its cost
+//     once (Phase I); ONLY nodes that announce themselves (tentative/final
+//     CH) transmit in Phase II; a regular node stays silent until it sends
+//     one join message to its CH.
+//   - Data fusion: members' signals + the CH's own (5 nJ/bit/signal).
 // For the version made directly comparable with LEACH/SH-LEACH/EECH-HEED
 // under one shared environment, see heed_EDITED_unified.cc.
 // ============================================================================
@@ -123,7 +138,10 @@ struct RoundResult {
 };
 
 // ----------------------------- Network -------------------------------------
-static constexpr uint32_t N = 100;
+#ifndef HEED_N
+#define HEED_N 500
+#endif
+static constexpr uint32_t N = HEED_N;   // ORIGINAL: paper's Fig. 8 uses 300-700 nodes (500 in Fig. 8d)
 static constexpr double AREA = 100.0;
 static constexpr double BSX = 50.0;
 static constexpr double BSY = 175.0;  // ORIGINAL: paper's own Table 2, "Sink at (50,175)"
@@ -136,7 +154,8 @@ static constexpr double CPROB = 0.05;   // ORIGINAL: paper's own example (Cprob=
 static constexpr double PMIN = 0.0005;  // ORIGINAL: paper's Section 4 default (pmin=0.0005)
 
 // --------------------------- Radio / traffic -------------------------------
-static constexpr uint32_t PACKET_BITS = 800;    // ORIGINAL: paper's Table 2, "Data packet size: 100 bytes"
+static constexpr uint32_t PACKET_BITS = 800 + 200; // ORIGINAL: Table 2, 100-byte data + 25-byte header
+static constexpr uint32_t FRAMES_PER_ROUND = 5;   // ORIGINAL: Table 2, "Round (T_NO): 5 TDM frames"
 static constexpr uint32_t CONTROL_BITS = 200;   // matches paper's Table 2, "Broadcast packet size: 25 bytes"
 static constexpr double E_ELEC = 50e-9;       // J/bit
 static constexpr double E_FS = 10e-12;         // J/bit/m^2
@@ -145,7 +164,7 @@ static constexpr double E_DA = 5e-9;           // J/bit
 static constexpr double DATA_RATE = 250000.0;  // bit/s
 static constexpr double LIGHT = 3.0e8;         // m/s
 
-static constexpr uint32_t MAX_ROUNDS = 2000;
+static constexpr uint32_t MAX_ROUNDS = 20000; // run until the last node dies
 static constexpr uint32_t SEED = 12345;
 
 // ----------------------------- Geometry ------------------------------------
@@ -255,154 +274,111 @@ static uint32_t BestCH(const vector<uint32_t>& candidates,
 }
 
 // ------------------------------ HEED ---------------------------------------
+// Number of cluster_head_msg announcements each node sent in the last election
+static vector<uint32_t> g_announce;
+
+// HEED election -- the paper's pseudocode (Fig. 2), synchronous iterations
 static uint32_t RunHEED(vector<SensorNode>& nodes,
                         const vector<vector<uint32_t>>& nb,
                         mt19937& rng)
 {
     uniform_real_distribution<double> U(0.0, 1.0);
+    g_announce.assign(N, 0);
+    vector<bool> done(N, false);
 
+    // Phase I: CH_prob = max(Cprob * Eresidual / Emax, pmin)
     for (auto& n : nodes) {
         n.tentative = false;
         n.finalCH = false;
         n.clusterHead = numeric_limits<uint32_t>::max();
         n.chProb = n.alive ? max(CPROB * n.energy / E0, PMIN) : 0.0;
+        done[n.id] = !n.alive;
     }
 
-    for (auto& n : nodes) {
-        if (n.alive && U(rng) <= n.chProb)
-            n.tentative = true;
-    }
-
+    // Phase II: repeat ... until CH_previous = 1 (per node)
     uint32_t iterations = 0;
-
     while (iterations < 64) {
+        bool anyRunning = false;
+        for (uint32_t i = 0; i < N; ++i)
+            if (!done[i]) anyRunning = true;
+        if (!anyRunning)
+            break;
         ++iterations;
 
-        vector<bool> oldT(N, false);
-        vector<bool> oldF(N, false);
-        vector<bool> newT(N, false);
-        vector<bool> newF(N, false);
-
-        bool allAtOne = true;
+        vector<bool> oldT(N), oldF(N);
         for (uint32_t i = 0; i < N; ++i) {
             oldT[i] = nodes[i].tentative;
             oldF[i] = nodes[i].finalCH;
-
-            if (nodes[i].alive && nodes[i].chProb < 1.0 - 1e-12)
-                allAtOne = false;
         }
+        vector<bool> newT = oldT, newF = oldF;
 
         for (uint32_t i = 0; i < N; ++i) {
-            if (!nodes[i].alive)
+            if (done[i])
                 continue;
 
-            if (oldF[i]) {
-                newF[i] = true;
-                continue;
-            }
-
+            // S_CH = {v : v is a (tentative or final) cluster head}
             vector<uint32_t> sch;
-
-            for (uint32_t c : nb[i]) {
+            for (uint32_t c : nb[i])
                 if (nodes[c].alive && (oldT[c] || oldF[c]))
                     sch.push_back(c);
-            }
-
-            if (oldT[i])
+            if (oldT[i] || oldF[i])
                 sch.push_back(i);
 
-            sort(sch.begin(), sch.end());
-            sch.erase(unique(sch.begin(), sch.end()), sch.end());
-
+            newT[i] = false;
             if (!sch.empty()) {
-                uint32_t best = BestCH(sch, nodes);
-                if (best == i)
-                    newT[i] = true;
-            } else {
-                if (U(rng) <= nodes[i].chProb)
-                    newT[i] = true;
+                if (BestCH(sch, nodes) == i) {           // my_cluster_head = me
+                    if (nodes[i].chProb >= 1.0 - 1e-12) newF[i] = true;   // final_CH msg
+                    else                                newT[i] = true;   // tentative_CH msg
+                    ++g_announce[i];
+                }
+            } else if (nodes[i].chProb >= 1.0 - 1e-12) {  // ElseIf CH_prob = 1
+                newF[i] = true;
+                ++g_announce[i];
+            } else if (U(rng) <= nodes[i].chProb) {       // ElseIf Random <= CH_prob
+                newT[i] = true;
+                ++g_announce[i];
             }
+
+            const double previous = nodes[i].chProb;
+            nodes[i].chProb = min(2.0 * nodes[i].chProb, 1.0);
+            if (previous >= 1.0 - 1e-12)
+                done[i] = true;
         }
 
         for (uint32_t i = 0; i < N; ++i) {
-            nodes[i].tentative = newT[i];
+            nodes[i].tentative = newT[i] && !newF[i];
             nodes[i].finalCH = newF[i];
         }
-
-        for (auto& n : nodes) {
-            if (n.alive)
-                n.chProb = min(2.0 * n.chProb, 1.0);
-        }
-
-        if (allAtOne)
-            break;
     }
 
-    for (auto& n : nodes) {
-        if (n.alive && n.tentative)
-            n.finalCH = true;
-    }
-
-    auto liveNb = BuildNeighbors(nodes);
-    vector<bool> visited(N, false);
-
-    for (uint32_t start = 0; start < N; ++start) {
-        if (!nodes[start].alive || visited[start])
+    // Phase III: finalize
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive || nodes[i].finalCH)
             continue;
-
-        vector<uint32_t> component;
-        vector<uint32_t> q{start};
-        visited[start] = true;
-
-        for (size_t h = 0; h < q.size(); ++h) {
-            uint32_t u = q[h];
-            component.push_back(u);
-
-            for (uint32_t v : liveNb[u]) {
-                if (!visited[v]) {
-                    visited[v] = true;
-                    q.push_back(v);
-                }
-            }
-        }
-
-        bool hasCH = false;
-        for (uint32_t id : component) {
-            if (nodes[id].finalCH) {
-                hasCH = true;
-                break;
-            }
-        }
-
-        if (!hasCH) {
-            uint32_t best = component.front();
-            for (uint32_t id : component) {
-                if (nodes[id].energy > nodes[best].energy ||
-                    (fabs(nodes[id].energy - nodes[best].energy) < 1e-12 && id < best)) {
-                    best = id;
-                }
-            }
-            nodes[best].finalCH = true;
+        bool heardFinal = false;
+        for (uint32_t c : nb[i])
+            if (nodes[c].alive && nodes[c].finalCH) { heardFinal = true; break; }
+        if (!heardFinal) {                  // uncovered -> announce final CH
+            nodes[i].finalCH = true;
+            ++g_announce[i];
         }
     }
+    for (auto& n : nodes)
+        n.tentative = false;
 
+    // join_cluster: least-cost final CH within cluster range
     for (auto& n : nodes) {
         n.clusterHead = numeric_limits<uint32_t>::max();
-
         if (!n.alive)
             continue;
-
         if (n.finalCH) {
             n.clusterHead = n.id;
             continue;
         }
-
         vector<uint32_t> candidates;
-        for (uint32_t c : nb[n.id]) {
+        for (uint32_t c : nb[n.id])
             if (nodes[c].alive && nodes[c].finalCH)
                 candidates.push_back(c);
-        }
-
         if (!candidates.empty())
             n.clusterHead = BestCH(candidates, nodes);
     }
@@ -426,38 +402,45 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
         return sum;
     }();
 
+    // ---- Control-message energy (paper Lemma 4) ----
+    // A node dies when it cannot afford a message.
+    auto spend = [&](uint32_t i, double e) -> bool {
+        if (!nodes[i].alive) return false;
+        if (e >= nodes[i].energy) { nodes[i].energy = 0.0; nodes[i].alive = false; return false; }
+        nodes[i].energy -= e;
+        return true;
+    };
+    auto startNb = BuildNeighbors(nodes);
+    // Phase I: every node broadcasts its cost once; neighbours receive it.
+    // Phase II/III: every cluster_head_msg announcement (tentative or final).
     for (uint32_t i = 0; i < N; ++i) {
         if (!nodes[i].alive)
             continue;
-
-        double e = heedIterations * TxEnergy(CONTROL_BITS, RANGE);
-
-        if (e >= nodes[i].energy) {
-            nodes[i].energy = 0.0;
-            nodes[i].alive = false;
-        } else {
-            nodes[i].energy -= e;
-            r.controlTx += heedIterations;
+        const uint32_t msgs = 1 + g_announce[i];
+        for (uint32_t m = 0; m < msgs; ++m) {
+            if (!spend(i, TxEnergy(CONTROL_BITS, RANGE)))
+                break;
+            ++r.controlTx;
+            for (uint32_t v : startNb[i])
+                if (spend(v, RxEnergy(CONTROL_BITS)))
+                    ++r.controlRx;
         }
+    }
+    // join_cluster: a regular node's single join message to its CH.
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive || nodes[i].finalCH)
+            continue;
+        const uint32_t c = nodes[i].clusterHead;
+        if (c >= N || !nodes[c].alive)
+            continue;
+        if (!spend(i, TxEnergy(CONTROL_BITS, Dist(nodes[i], nodes[c]))))
+            continue;
+        ++r.controlTx;
+        if (spend(c, RxEnergy(CONTROL_BITS)))
+            ++r.controlRx;
     }
 
     auto liveNb = BuildNeighbors(nodes);
-
-    for (uint32_t i = 0; i < N; ++i) {
-        if (!nodes[i].alive)
-            continue;
-
-        double e = static_cast<double>(liveNb[i].size()) *
-                   heedIterations * RxEnergy(CONTROL_BITS);
-
-        if (e >= nodes[i].energy) {
-            nodes[i].energy = 0.0;
-            nodes[i].alive = false;
-        } else {
-            nodes[i].energy -= e;
-            r.controlRx += static_cast<uint64_t>(liveNb[i].size()) * heedIterations;
-        }
-    }
 
     for (auto& n : nodes) {
         if (!n.alive)
@@ -492,87 +475,89 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
         if (n.alive && n.finalCH)
             ++r.chCount;
 
+    // ---- Steady state: 5 TDM frames per round (paper Table 2) ----
+    double delaySum = 0.0;
+    uint32_t deliveredSources = 0;
+    for (uint32_t frame = 0; frame < FRAMES_PER_ROUND; ++frame) {
     for (const auto& n : nodes)
         if (n.alive)
             ++r.generated;
 
-    vector<uint32_t> membersPerCH(N, 0);
-    vector<bool> memberDeliveredToCH(N, false);
-    vector<double> delayToCH(N, 0.0);
-
-    for (uint32_t i = 0; i < N; ++i) {
-        if (!nodes[i].alive || nodes[i].finalCH)
-            continue;
-
-        uint32_t c = nodes[i].clusterHead;
-
-        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) {
-            ++r.unclustered;
-            continue;
-        }
-
-        double d = Dist(nodes[i], nodes[c]);
-        if (d > RANGE) {
-            ++r.unclustered;
-            continue;
-        }
-
-        double tx = TxEnergy(PACKET_BITS, d);
-        double rx = RxEnergy(PACKET_BITS);
-
-        if (tx > nodes[i].energy || rx > nodes[c].energy) {
-            ++r.lost;
-            continue;
-        }
-
-        nodes[i].energy -= tx;
-        nodes[c].energy -= rx;
-        ++r.dataTx;
-        ++r.dataRx;
-        ++membersPerCH[c];
-        memberDeliveredToCH[i] = true;
-        delayToCH[i] = DelayMs(PACKET_BITS, d);
-    }
-
-    double delaySum = 0.0;
-    uint32_t deliveredSources = 0;
-
-    for (uint32_t c = 0; c < N; ++c) {
-        if (!nodes[c].alive || !nodes[c].finalCH)
-            continue;
-
-        const uint32_t members = membersPerCH[c];
-        const double agg = static_cast<double>(members) * AggEnergy(PACKET_BITS);
-
-        if (agg > nodes[c].energy) {
-            ++r.lost;
-            nodes[c].energy = 0.0;
-            nodes[c].alive = false;
-            continue;
-        }
-
-        nodes[c].energy -= agg;
-
-        const double dBS = DistBS(nodes[c]);
-        const double txBS = TxEnergy(PACKET_BITS, dBS);
-
-        if (txBS > nodes[c].energy) {
-            ++r.lost;
-            nodes[c].energy = 0.0;
-            nodes[c].alive = false;
-            continue;
-        }
-
-        nodes[c].energy -= txBS;
-        ++r.dataTx;
-        ++r.dataRx;
-
-        deliveredSources += members + 1;
-        delaySum += DelayMs(PACKET_BITS, dBS);
+        vector<uint32_t> membersPerCH(N, 0);
+        vector<bool> memberDeliveredToCH(N, false);
+        vector<double> delayToCH(N, 0.0);
 
         for (uint32_t i = 0; i < N; ++i) {
-            if (memberDeliveredToCH[i] && nodes[i].clusterHead == c)
-                delaySum += delayToCH[i] + DelayMs(PACKET_BITS, dBS);
+            if (!nodes[i].alive || nodes[i].finalCH)
+                continue;
+
+            uint32_t c = nodes[i].clusterHead;
+
+            if (c >= N || !nodes[c].alive || !nodes[c].finalCH) {
+                ++r.unclustered;
+                continue;
+            }
+
+            double d = Dist(nodes[i], nodes[c]);
+            if (d > RANGE) {
+                ++r.unclustered;
+                continue;
+            }
+
+            double tx = TxEnergy(PACKET_BITS, d);
+            double rx = RxEnergy(PACKET_BITS);
+
+            if (tx > nodes[i].energy || rx > nodes[c].energy) {
+                ++r.lost;
+                continue;
+            }
+
+            nodes[i].energy -= tx;
+            nodes[c].energy -= rx;
+            ++r.dataTx;
+            ++r.dataRx;
+            ++membersPerCH[c];
+            memberDeliveredToCH[i] = true;
+            delayToCH[i] = DelayMs(PACKET_BITS, d);
+        }
+
+        for (uint32_t c = 0; c < N; ++c) {
+            if (!nodes[c].alive || !nodes[c].finalCH)
+                continue;
+
+            const uint32_t members = membersPerCH[c];
+            const double agg = static_cast<double>(members + 1) * AggEnergy(PACKET_BITS); // members' + own signal
+
+            if (agg > nodes[c].energy) {
+                ++r.lost;
+                nodes[c].energy = 0.0;
+                nodes[c].alive = false;
+                continue;
+            }
+
+            nodes[c].energy -= agg;
+
+            const double dBS = DistBS(nodes[c]);
+            const double txBS = TxEnergy(PACKET_BITS, dBS);
+
+            if (txBS > nodes[c].energy) {
+                ++r.lost;
+                nodes[c].energy = 0.0;
+                nodes[c].alive = false;
+                continue;
+            }
+
+            nodes[c].energy -= txBS;
+            ++r.dataTx;
+            ++r.dataRx;
+
+            deliveredSources += members + 1;
+            delaySum += DelayMs(PACKET_BITS, dBS);
+
+            for (uint32_t i = 0; i < N; ++i) {
+                if (memberDeliveredToCH[i] && nodes[i].clusterHead == c)
+                    delaySum += delayToCH[i] + DelayMs(PACKET_BITS, dBS);
+            }
         }
     }
 
@@ -854,18 +839,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (LND == 0) {
-        for (const auto& n : nodes) {
-            if (n.alive) {
-                LND = 0;
-                break;
-            }
-        }
-        if (LND == 0) {
-            for (uint32_t d : deathRound)
-                LND = max(LND, d);
-        }
-    }
+    // LND is only reported when the last node really died (otherwise "Not reached").
 
     for (uint32_t i = 0; i < N; ++i) {
         lifetime << i << ','

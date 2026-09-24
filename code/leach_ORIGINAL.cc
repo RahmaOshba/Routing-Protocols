@@ -11,6 +11,21 @@
 //     "base station is fixed and located far from the sensors"), not at
 //     the field center.
 //   - P_CH=0.05, matching the paper's own example.
+//   PAPER-FIDELITY FIXES (this revision):
+//   - A node that has no reachable CH sends its data directly to the BS
+//     (direct transmission, paper Sec. 3) instead of being counted as lost.
+//   - NOT in the paper (gap-filling, documented): if no node passes T(n) in
+//     a round, one eligible node is picked at random as CH. The paper does
+//     not define this case; this choice reproduces its Table 2 best.
+//   - CH advertisement: every CH uses the SAME transmit energy, large enough
+//     for all nodes to hear it (paper Sec. 5.1) -> field diagonal, not a
+//     short fixed "reference range".
+//   - TDMA schedule is sent with just enough power to reach the CH's
+//     farthest member.
+//   - Data fusion: the CH fuses its members' signals AND its own
+//     (members + 1 signals, 5 nJ/bit/signal).
+//   - Setup control messages are not charged (the paper's own simulation
+//     did not account for them, Sec. 4).
 // For the version made directly comparable with HEED/SH-LEACH/EECH-HEED
 // under one shared environment, see leach_EDITED_unified.cc.
 // ============================================================================
@@ -96,8 +111,7 @@ static constexpr double BSY = -100.0;  // for the 50x50m field (0-50 range), pla
                                         // field at y=-100 keeps the nearest node (~y=0) at ~100m,
                                         // matching the paper's own stated distance.
 static constexpr double E0 = 0.5;       // J/node
-static constexpr double RANGE = 12.5;   // m (reference control TX distance -- FIXED: scaled down
-                                          // proportionally for the 50x50m field, was 25m for 100x100m)
+static const double ADV_RANGE = AREA * std::sqrt(2.0); // m: CH advertisement reaches the whole field (paper Sec. 5.1)
 
 // ------------------------------- LEACH --------------------------------------
 static constexpr double P_CH = 0.05;
@@ -106,6 +120,12 @@ static constexpr uint32_t EPOCH = 20;   // 1 / P_CH
 // --------------------------- Radio / traffic -------------------------------
 static constexpr uint32_t PACKET_BITS = 2000;
 static constexpr uint32_t CONTROL_BITS = 200;
+// PAPER Sec. 4: "these simulations do not account for the setup time to
+// configure the dynamic clusters (nor ... any necessary routing start-up
+// costs)". The paper-faithful reproduction therefore does NOT charge the
+// setup control messages (advertisement, join, TDMA schedule). The unified
+// environment (leach_EDITED_unified.cc) charges them for every protocol.
+static constexpr bool COUNT_SETUP_ENERGY = false;
 static constexpr double E_ELEC = 50e-9;       // J/bit
 static constexpr double E_AMP = 100e-12;      // J/bit/m^2 (ORIGINAL: paper's single term "epsilon_amp",
                                                // no separate free-space/multipath split -- Table 1, Eq. 1)
@@ -113,7 +133,7 @@ static constexpr double E_DA = 5e-9;          // J/bit
 static constexpr double DATA_RATE = 250000.0; // bit/s
 static constexpr double LIGHT = 3.0e8;        // m/s
 
-static constexpr uint32_t MAX_ROUNDS = 2000;
+static constexpr uint32_t MAX_ROUNDS = 20000; // run until the last node dies
 static constexpr uint32_t SEED = 12345;
 
 // ----------------------------- Geometry ------------------------------------
@@ -140,6 +160,10 @@ static double RxEnergy(uint32_t bits)
 {
     return bits * E_ELEC;
 }
+
+// Setup control messages (see COUNT_SETUP_ENERGY)
+static double CtrlTx(double d) { return COUNT_SETUP_ENERGY ? TxEnergy(CONTROL_BITS, d) : 0.0; }
+static double CtrlRx() { return COUNT_SETUP_ENERGY ? RxEnergy(CONTROL_BITS) : 0.0; }
 
 static double AggEnergy(uint32_t bits)
 {
@@ -205,6 +229,9 @@ static uint32_t RunLEACH(vector<SensorNode>& nodes,
     // threshold=1.0 (last round of its epoch) WILL actually become CH,
     // instead of being randomly discarded.
     // ------------------------------------------------------------------
+    // The paper does not say what happens if no node passes T(n) in a round.
+    // Gap-filling safeguard (kept because it reproduces the paper's Table 2
+    // best): pick one eligible node at random so the round still has a CH.
     if (candidates.empty()) {
         vector<uint32_t> eligible;
         for (const auto& n : nodes)
@@ -283,7 +310,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
         if (!nodes[c].alive || !nodes[c].finalCH)
             continue;
 
-        const double tx = TxEnergy(CONTROL_BITS, RANGE);
+        const double tx = CtrlTx(ADV_RANGE);
         if (tx > nodes[c].energy) {
             nodes[c].energy = 0.0;
             nodes[c].alive = false;
@@ -298,7 +325,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
             if (v == c || !nodes[v].alive)
                 continue;
 
-            const double rx = RxEnergy(CONTROL_BITS);
+            const double rx = CtrlRx();
             if (rx > nodes[v].energy) {
                 nodes[v].energy = 0.0;
                 nodes[v].alive = false;
@@ -358,8 +385,8 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
             continue;
 
         const double d = Dist(nodes[i], nodes[c]);
-        const double tx = TxEnergy(CONTROL_BITS, d);
-        const double rx = RxEnergy(CONTROL_BITS);
+        const double tx = CtrlTx(d);
+        const double rx = CtrlRx();
 
         if (tx > nodes[i].energy || rx > nodes[c].energy) {
             if (tx > nodes[i].energy) { nodes[i].energy = 0.0; nodes[i].alive = false; nodes[i].finalCH = false; }
@@ -379,17 +406,18 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
             continue;
 
         bool hasMember = false;
+        double farthest = 0.0;
         for (uint32_t i = 0; i < N; ++i) {
             if (nodes[i].alive && !nodes[i].finalCH && nodes[i].clusterHead == c) {
                 hasMember = true;
-                break;
+                farthest = max(farthest, Dist(nodes[i], nodes[c]));
             }
         }
 
         if (!hasMember)
             continue;
 
-        const double tx = TxEnergy(CONTROL_BITS, RANGE);
+        const double tx = CtrlTx(farthest);
         if (tx > nodes[c].energy) {
             nodes[c].energy = 0.0;
             nodes[c].alive = false;
@@ -404,7 +432,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
             if (!nodes[i].alive || nodes[i].finalCH || nodes[i].clusterHead != c)
                 continue;
 
-            const double rx = RxEnergy(CONTROL_BITS);
+            const double rx = CtrlRx();
             if (rx > nodes[i].energy) {
                 nodes[i].energy = 0.0;
                 nodes[i].alive = false;
@@ -476,6 +504,8 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
     vector<uint32_t> membersPerCH(N, 0);
     vector<bool> memberDelivered(N, false);
     vector<double> delayToCH(N, 0.0);
+    uint32_t directDelivered = 0;
+    double directDelaySum = 0.0;
 
     // ---------------- MEMBER -> CH ----------------
     for (uint32_t i = 0; i < N; ++i) {
@@ -485,7 +515,21 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
         const uint32_t c = nodes[i].clusterHead;
 
         if (c >= N || !nodes[c].alive || !nodes[c].finalCH) {
+            // PAPER: a node with no CH (e.g. a zero-CH round) sends its data
+            // directly to the BS (direct transmission).
             ++r.unclustered;
+            const double dBS = DistBS(nodes[i]);
+            const double txBS = TxEnergy(PACKET_BITS, dBS);
+            if (txBS > nodes[i].energy) {
+                nodes[i].energy = 0.0;
+                nodes[i].alive = false;
+                continue;
+            }
+            nodes[i].energy -= txBS;
+            ++r.dataTx;
+            ++r.dataRx;
+            ++directDelivered;
+            directDelaySum += DelayMs(PACKET_BITS, dBS);
             continue;
         }
 
@@ -516,7 +560,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
             continue;
 
         const uint32_t members = membersPerCH[c];
-        const double agg = static_cast<double>(members) * AggEnergy(PACKET_BITS);
+        const double agg = static_cast<double>(members + 1) * AggEnergy(PACKET_BITS); // PAPER: fuse members' + own signal
 
         if (agg > nodes[c].energy) {
             nodes[c].energy = 0.0;
@@ -552,6 +596,8 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
         }
     }
 
+    deliveredSources += directDelivered;
+    delaySum += directDelaySum;
     r.delivered = min(deliveredSources, r.generated);
     r.lost = r.generated - r.delivered;
 
@@ -677,14 +723,15 @@ int main(int argc, char* argv[])
     cout << "Initial Energy = " << E0 << " J/node\n";
     cout << "CH Probability P = " << P_CH << "\n";
     cout << "Epoch = " << EPOCH << " rounds\n";
-    cout << "Reference control range = " << RANGE << " m\n";
+    cout << "CH advertisement range = " << ADV_RANGE << " m (whole field)\n";
     cout << "Packet = " << PACKET_BITS << " bits\n";
     cout << "Radio model = single amplifier term (paper's Eq. 1, no d0 threshold)\n";
     cout << "Metrics = analytical baseline (not PHY/MAC packet-level)\n";
     cout << "Connectivity = no hard range cutoff; distance affects energy\n";
     cout << "LEACH G-set = reset at the start of every 20-round epoch\n";
-    cout << "FIX = removed artificial CH-count truncation (see header comment)\n";
-    cout << "Visualization = leach-clustering.xml (NetAnim)\n";
+    cout << "Setup control energy = " << (COUNT_SETUP_ENERGY ? "charged" : "not charged (as in the paper's simulation)") << "\n";
+    cout << "Zero-CH round safeguard = one random eligible node (paper does not define this case)\n";
+    cout << "Visualization = leach-ORIGINAL-clustering.xml (NetAnim)\n";
     cout << "========================================\n";
 
     mt19937 topologyRng(SEED);
@@ -829,19 +876,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (LND == 0) {
-        for (const auto& n : nodes) {
-            if (n.alive) {
-                LND = 0;
-                break;
-            }
-        }
-
-        if (LND == 0) {
-            for (uint32_t d : deathRound)
-                LND = max(LND, d);
-        }
-    }
+    // LND is only reported when the last node really died (otherwise "Not reached").
 
     for (uint32_t i = 0; i < N; ++i) {
         lifetime << i << ','
@@ -875,10 +910,10 @@ int main(int argc, char* argv[])
     cout << "Delivered Packets      = " << totalDelivered << "\n";
     cout << "Overall PDR            = " << overallPdr << "\n";
     cout << "\nCSV outputs:\n";
-    cout << "  leach-results.csv\n";
-    cout << "  leach-node-energy.csv\n";
-    cout << "  leach-node-lifetime.csv\n";
-    cout << "  leach-clustering.xml\n";
+    cout << "  leach-ORIGINAL-results.csv\n";
+    cout << "  leach-ORIGINAL-node-energy.csv\n";
+    cout << "  leach-ORIGINAL-node-lifetime.csv\n";
+    cout << "  leach-ORIGINAL-clustering.xml\n";
     cout << "========================================\n";
 
     return 0;
