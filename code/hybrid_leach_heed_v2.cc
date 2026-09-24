@@ -1,0 +1,542 @@
+#include "ns3/core-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/netanim-module.h"
+#include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <random>
+#include <string>
+#include <vector>
+
+#include "ns3/command-line.h"
+using namespace ns3;
+using namespace std;
+
+// ============================================================================
+// HYBRID PROTOCOL v2: LEACH clustering + MODIFIED HEED CH selection
+// ns-3.41 / C++
+//
+// Same as Hybrid v1 (hybrid_leach_heed_v1_CLEAN.cc), EXCEPT Phase 1 (CH
+// selection) now uses MODIFIED HEED instead of Original HEED -- i.e. the
+// cost formula includes the light rotation-fairness penalty from
+// heed_ROTATION_FIX.cc (cost = [1/(degree+1)] x [1 + 0.1*timesServed]),
+// on top of the same Fix 1 (favor high-degree hubs). Phase 2 (clustering)
+// is unchanged: LEACH-style nearest-distance join.
+//
+// Purpose: test whether Modified HEED's rotation-fairness improvement
+// (which helped plain HEED's FND) also helps when combined with LEACH's
+// simpler join rule in this Hybrid design.
+//
+// Clean/reliable version: analytical energy model + simple NetAnim
+// node-color visualization only (no WiFi/packet layer). Exports
+// node-positions.csv for the Python cluster-circle visualizer.
+// ============================================================================
+
+struct SensorNode {
+    uint32_t id = 0;
+    double x = 0.0;
+    double y = 0.0;
+    double energy = 0.0;
+    bool alive = true;
+    bool tentative = false;
+    bool finalCH = false;
+    uint32_t clusterHead = numeric_limits<uint32_t>::max();
+    uint32_t degree = 0;
+    double cost = 0.0;
+    double chProb = 0.0;
+    uint32_t chTimesServed = 0;  // Hybrid v2: light rotation-fairness counter (from Modified HEED)
+};
+
+struct RoundResult {
+    uint32_t round = 0;
+    uint32_t alive = 0;
+    uint32_t dead = 0;
+    uint32_t chCount = 0;
+    uint32_t generated = 0;
+    uint32_t delivered = 0;
+    uint32_t lost = 0;
+    uint32_t unclustered = 0;
+    uint64_t controlTx = 0;
+    uint64_t controlRx = 0;
+    uint64_t dataTx = 0;
+    uint64_t dataRx = 0;
+    double energyUsed = 0.0;
+    double residualEnergy = 0.0;
+    double avgClusterSize = 0.0;
+    double avgDelayMs = 0.0;
+    double pdr = 0.0;
+    double throughputKbps = 0.0;
+    double roundDurationSec = 0.0;
+    uint32_t heedIterations = 0;
+};
+
+// ----------------------------- Network -------------------------------------
+static constexpr uint32_t N = 100;
+static constexpr double AREA = 100.0;
+static constexpr double BSX = 50.0;
+static constexpr double BSY = 50.0;
+static constexpr double E0 = 0.5;
+static constexpr double RANGE = 25.0;
+
+// ------------------------------- HEED selection params ----------------------
+static constexpr double CPROB = 0.20;
+static constexpr double PMIN = 0.05;
+// Hybrid v2 addition (from Modified HEED): light rotation penalty so
+// frequently-served hub nodes gradually share the CH role.
+static constexpr double ROTATION_LAMBDA = 0.1;
+
+// --------------------------- Radio / traffic -------------------------------
+static constexpr uint32_t PACKET_BITS = 2000;
+static constexpr uint32_t CONTROL_BITS = 200;
+static constexpr double E_ELEC = 50e-9;
+static constexpr double E_FS = 10e-12;
+static constexpr double E_MP = 0.0013e-12;
+static constexpr double E_DA = 5e-9;
+static constexpr double DATA_RATE = 250000.0;
+static constexpr double LIGHT = 3.0e8;
+
+static constexpr uint32_t MAX_ROUNDS = 2000;
+static constexpr uint32_t SEED = 12345;
+
+
+
+// ----------------------------- Geometry ------------------------------------
+static double Dist(const SensorNode& a, const SensorNode& b) { return hypot(a.x - b.x, a.y - b.y); }
+static double DistBS(const SensorNode& a) { return hypot(a.x - BSX, a.y - BSY); }
+static double D0() { return sqrt(E_FS / E_MP); }
+
+static double TxEnergy(uint32_t bits, double d)
+{
+    if (d <= 0.0) return bits * E_ELEC;
+    if (d < D0()) return bits * (E_ELEC + E_FS * d * d);
+    return bits * (E_ELEC + E_MP * pow(d, 4.0));
+}
+static double RxEnergy(uint32_t bits) { return bits * E_ELEC; }
+static double AggEnergy(uint32_t bits) { return bits * E_DA; }
+static double TxTimeSec(uint32_t bits) { return static_cast<double>(bits) / DATA_RATE; }
+static double DelayMs(uint32_t bits, double d) { return (TxTimeSec(bits) + d / LIGHT) * 1000.0; }
+
+static vector<vector<uint32_t>> BuildNeighbors(const vector<SensorNode>& nodes)
+{
+    vector<vector<uint32_t>> nb(N);
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive) continue;
+        for (uint32_t j = 0; j < N; ++j) {
+            if (i == j || !nodes[j].alive) continue;
+            if (Dist(nodes[i], nodes[j]) <= RANGE) nb[i].push_back(j);
+        }
+    }
+    return nb;
+}
+
+static void UpdateCost(vector<SensorNode>& nodes, const vector<vector<uint32_t>>& nb)
+{
+    // Used ONLY for Phase 1 (who becomes CH) -- NOT used for Phase 2 (joining).
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive) { nodes[i].degree = 0; nodes[i].cost = numeric_limits<double>::infinity(); continue; }
+        nodes[i].degree = static_cast<uint32_t>(nb[i].size());
+        // Fix 1 (favor high-degree hubs) + Hybrid v2 rotation penalty
+        const double base = 1.0 / (static_cast<double>(nodes[i].degree) + 1.0);
+        const double penalty = 1.0 + ROTATION_LAMBDA * static_cast<double>(nodes[i].chTimesServed);
+        nodes[i].cost = base * penalty;
+    }
+}
+
+static uint32_t BestCH(const vector<uint32_t>& candidates, const vector<SensorNode>& nodes)
+{
+    NS_ASSERT(!candidates.empty());
+    uint32_t best = candidates.front();
+    for (uint32_t c : candidates)
+        if (nodes[c].cost < nodes[best].cost ||
+            (fabs(nodes[c].cost - nodes[best].cost) < 1e-12 && c < best))
+            best = c;
+    return best;
+}
+
+// --------------------- PHASE 1: HEED-style CH selection (unchanged) --------
+static uint32_t RunHEED(vector<SensorNode>& nodes, const vector<vector<uint32_t>>& nb, mt19937& rng)
+{
+    uniform_real_distribution<double> U(0.0, 1.0);
+
+    for (auto& n : nodes) {
+        n.tentative = false;
+        n.finalCH = false;
+        n.clusterHead = numeric_limits<uint32_t>::max();
+        n.chProb = n.alive ? max(CPROB * n.energy / E0, PMIN) : 0.0;
+    }
+    for (auto& n : nodes)
+        if (n.alive && U(rng) <= n.chProb) n.tentative = true;
+
+    uint32_t iterations = 0;
+    while (iterations < 64) {
+        ++iterations;
+        vector<bool> oldT(N, false), oldF(N, false), newT(N, false), newF(N, false);
+        bool allAtOne = true;
+        for (uint32_t i = 0; i < N; ++i) {
+            oldT[i] = nodes[i].tentative;
+            oldF[i] = nodes[i].finalCH;
+            if (nodes[i].alive && nodes[i].chProb < 1.0 - 1e-12) allAtOne = false;
+        }
+        for (uint32_t i = 0; i < N; ++i) {
+            if (!nodes[i].alive) continue;
+            if (oldF[i]) { newF[i] = true; continue; }
+            vector<uint32_t> sch;
+            for (uint32_t c : nb[i]) if (nodes[c].alive && (oldT[c] || oldF[c])) sch.push_back(c);
+            if (oldT[i]) sch.push_back(i);
+            sort(sch.begin(), sch.end());
+            sch.erase(unique(sch.begin(), sch.end()), sch.end());
+            if (!sch.empty()) { if (BestCH(sch, nodes) == i) newT[i] = true; }
+            else { if (U(rng) <= nodes[i].chProb) newT[i] = true; }
+        }
+        for (uint32_t i = 0; i < N; ++i) { nodes[i].tentative = newT[i]; nodes[i].finalCH = newF[i]; }
+        for (auto& n : nodes) if (n.alive) n.chProb = min(2.0 * n.chProb, 1.0);
+        if (allAtOne) break;
+    }
+
+    for (auto& n : nodes) if (n.alive && n.tentative) n.finalCH = true;
+
+    auto liveNb = BuildNeighbors(nodes);
+    vector<bool> visited(N, false);
+    for (uint32_t start = 0; start < N; ++start) {
+        if (!nodes[start].alive || visited[start]) continue;
+        vector<uint32_t> component;
+        vector<uint32_t> q{start};
+        visited[start] = true;
+        for (size_t h = 0; h < q.size(); ++h) {
+            uint32_t u = q[h];
+            component.push_back(u);
+            for (uint32_t v : liveNb[u]) if (!visited[v]) { visited[v] = true; q.push_back(v); }
+        }
+        bool hasCH = false;
+        for (uint32_t id : component) if (nodes[id].finalCH) { hasCH = true; break; }
+        if (!hasCH) {
+            uint32_t best = component.front();
+            for (uint32_t id : component)
+                if (nodes[id].energy > nodes[best].energy ||
+                    (fabs(nodes[id].energy - nodes[best].energy) < 1e-12 && id < best))
+                    best = id;
+            nodes[best].finalCH = true;
+        }
+    }
+
+    // ---- PHASE 2 (HYBRID DIFFERENCE): nearest-distance join, LEACH-style ----
+    // Original HEED would call BestCH() here (cost/degree-based). Instead,
+    // every member simply joins the closest alive final CH by Euclidean
+    // distance -- exactly LEACH's join rule.
+    for (auto& n : nodes) {
+        n.clusterHead = numeric_limits<uint32_t>::max();
+        if (!n.alive) continue;
+        if (n.finalCH) { n.clusterHead = n.id; continue; }
+
+        double bestDistance = numeric_limits<double>::infinity();
+        uint32_t bestCH = numeric_limits<uint32_t>::max();
+        for (uint32_t c : nb[n.id]) {
+            if (!nodes[c].alive || !nodes[c].finalCH) continue;
+            const double d = Dist(n, nodes[c]);
+            if (d < bestDistance - 1e-12 || (fabs(d - bestDistance) < 1e-12 && c < bestCH)) {
+                bestDistance = d;
+                bestCH = c;
+            }
+        }
+        if (bestCH != numeric_limits<uint32_t>::max()) n.clusterHead = bestCH;
+    }
+
+    return iterations;
+}
+
+static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, uint32_t heedIterations)
+{
+    RoundResult r;
+    r.round = round;
+    r.heedIterations = heedIterations;
+
+    const double before = [&]() { double s = 0.0; for (const auto& n : nodes) s += n.energy; return s; }();
+
+    // Setup control-energy cost (same accounting style as HEED, since the
+    // Phase-1 iterative election is unchanged and drives this cost).
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive) continue;
+        double e = heedIterations * TxEnergy(CONTROL_BITS, RANGE);
+        if (e >= nodes[i].energy) { nodes[i].energy = 0.0; nodes[i].alive = false; }
+        else { nodes[i].energy -= e; r.controlTx += heedIterations; }
+    }
+
+    auto liveNb = BuildNeighbors(nodes);
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive) continue;
+        double e = static_cast<double>(liveNb[i].size()) * heedIterations * RxEnergy(CONTROL_BITS);
+        if (e >= nodes[i].energy) { nodes[i].energy = 0.0; nodes[i].alive = false; }
+        else { nodes[i].energy -= e; r.controlRx += static_cast<uint64_t>(liveNb[i].size()) * heedIterations; }
+    }
+
+    for (auto& n : nodes) if (!n.alive) n.finalCH = false;
+    liveNb = BuildNeighbors(nodes);
+
+    // Re-association after setup deaths -- SAME rule as Phase 2: nearest
+    // distance, LEACH-style (not cost-based).
+    for (auto& n : nodes) {
+        if (!n.alive) { n.clusterHead = numeric_limits<uint32_t>::max(); continue; }
+        if (n.finalCH) { n.clusterHead = n.id; continue; }
+
+        double bestDistance = numeric_limits<double>::infinity();
+        uint32_t bestCH = numeric_limits<uint32_t>::max();
+        for (uint32_t c : liveNb[n.id]) {
+            if (!nodes[c].alive || !nodes[c].finalCH) continue;
+            const double d = Dist(n, nodes[c]);
+            if (d < bestDistance - 1e-12 || (fabs(d - bestDistance) < 1e-12 && c < bestCH)) {
+                bestDistance = d;
+                bestCH = c;
+            }
+        }
+        n.clusterHead = bestCH;
+    }
+
+    for (const auto& n : nodes) if (n.alive && n.finalCH) ++r.chCount;
+
+    // Hybrid v2: update rotation-fairness counter
+    for (auto& n : nodes) if (n.alive && n.finalCH) ++n.chTimesServed;
+
+    for (const auto& n : nodes) if (n.alive) ++r.generated;
+
+    vector<uint32_t> membersPerCH(N, 0);
+    vector<bool> memberDeliveredToCH(N, false);
+    vector<double> delayToCH(N, 0.0);
+
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive || nodes[i].finalCH) continue;
+        uint32_t c = nodes[i].clusterHead;
+        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) { ++r.unclustered; continue; }
+        double d = Dist(nodes[i], nodes[c]);
+        if (d > RANGE) { ++r.unclustered; continue; }
+        double tx = TxEnergy(PACKET_BITS, d);
+        double rx = RxEnergy(PACKET_BITS);
+        if (tx > nodes[i].energy || rx > nodes[c].energy) { ++r.lost; continue; }
+        nodes[i].energy -= tx;
+        nodes[c].energy -= rx;
+        ++r.dataTx; ++r.dataRx;
+        ++membersPerCH[c];
+        memberDeliveredToCH[i] = true;
+        delayToCH[i] = DelayMs(PACKET_BITS, d);
+    }
+
+    double delaySum = 0.0;
+    uint32_t deliveredSources = 0;
+
+    for (uint32_t c = 0; c < N; ++c) {
+        if (!nodes[c].alive || !nodes[c].finalCH) continue;
+        const uint32_t members = membersPerCH[c];
+        const double agg = static_cast<double>(members) * AggEnergy(PACKET_BITS);
+        if (agg > nodes[c].energy) { ++r.lost; nodes[c].energy = 0.0; nodes[c].alive = false; continue; }
+        nodes[c].energy -= agg;
+        const double dBS = DistBS(nodes[c]);
+        const double txBS = TxEnergy(PACKET_BITS, dBS);
+        if (txBS > nodes[c].energy) { ++r.lost; nodes[c].energy = 0.0; nodes[c].alive = false; continue; }
+        nodes[c].energy -= txBS;
+        ++r.dataTx; ++r.dataRx;
+        deliveredSources += members + 1;
+        delaySum += DelayMs(PACKET_BITS, dBS);
+        for (uint32_t i = 0; i < N; ++i)
+            if (memberDeliveredToCH[i] && nodes[i].clusterHead == c)
+                delaySum += delayToCH[i] + DelayMs(PACKET_BITS, dBS);
+    }
+
+    r.delivered = min(deliveredSources, r.generated);
+    r.lost = r.generated - r.delivered;
+
+    double after = 0.0;
+    uint32_t assigned = 0;
+    for (auto& n : nodes) {
+        if (n.energy <= 0.0) { n.energy = 0.0; n.alive = false; }
+        after += n.energy;
+        if (n.alive) ++r.alive;
+        if (n.alive && !n.finalCH && n.clusterHead < N &&
+            nodes[n.clusterHead].alive && nodes[n.clusterHead].finalCH)
+            ++assigned;
+    }
+
+    r.dead = N - r.alive;
+    r.energyUsed = max(0.0, before - after);
+    r.residualEnergy = after;
+    r.avgClusterSize = r.chCount ? static_cast<double>(assigned + r.chCount) / r.chCount : 0.0;
+
+    if (r.alive == 0) {
+        r.chCount = 0; r.generated = 0; r.delivered = 0; r.lost = 0; r.unclustered = 0;
+        r.avgClusterSize = 0.0; r.avgDelayMs = 0.0; r.pdr = 0.0; r.throughputKbps = 0.0;
+    }
+
+    r.pdr = r.generated ? static_cast<double>(r.delivered) / r.generated : 0.0;
+    r.avgDelayMs = r.delivered ? delaySum / r.delivered : 0.0;
+
+    const double controlTime = static_cast<double>(r.controlTx) * TxTimeSec(CONTROL_BITS);
+    const double dataTxTime = static_cast<double>(r.dataTx) * TxTimeSec(PACKET_BITS);
+    r.roundDurationSec = controlTime + dataTxTime;
+    r.throughputKbps = r.roundDurationSec > 0.0
+        ? static_cast<double>(r.delivered * PACKET_BITS) / r.roundDurationSec / 1000.0 : 0.0;
+
+    return r;
+}
+
+static void ApplyVisualState(AnimationInterface* anim, uint32_t nodeId, const SensorNode& n,
+                             const vector<SensorNode>& snapshot)
+{
+    if (!n.alive) { anim->UpdateNodeColor(nodeId, 120, 120, 120); anim->UpdateNodeDescription(nodeId, ""); return; }
+    if (n.finalCH) { anim->UpdateNodeColor(nodeId, 255, 80, 80); anim->UpdateNodeDescription(nodeId, "CH " + to_string(n.id)); return; }
+    if (n.clusterHead < N && snapshot[n.clusterHead].alive && snapshot[n.clusterHead].finalCH) {
+        static const uint8_t palette[][3] = {
+            {80,160,255},{80,210,140},{190,120,255},{255,170,70},{70,200,210},{220,100,170},
+            {150,190,80},{120,120,230},{230,140,110},{100,210,190},{180,160,90},{160,110,210}
+        };
+        constexpr uint32_t paletteSize = sizeof(palette) / sizeof(palette[0]);
+        const uint32_t idx = snapshot[n.clusterHead].id % paletteSize;
+        anim->UpdateNodeColor(nodeId, palette[idx][0], palette[idx][1], palette[idx][2]);
+        anim->UpdateNodeDescription(nodeId, "");
+        return;
+    }
+    anim->UpdateNodeColor(nodeId, 220, 220, 220);
+    anim->UpdateNodeDescription(nodeId, "");
+}
+
+int main(int argc, char* argv[])
+{
+    CommandLine cmd;
+    cmd.Parse(argc, argv);
+
+    cout << "\n========================================\n";
+    cout << "  HYBRID v2: LEACH clustering + MODIFIED HEED CH selection\n";
+    cout << "========================================\n";
+    cout << "Cprob=" << CPROB << " pMin=" << PMIN
+         << " | Selection cost=[1/(degree+1)]x[1+" << ROTATION_LAMBDA << "*timesServed]\n";
+    cout << "Join rule = LEACH-style nearest distance (NOT cost-based)\n";
+    cout << "========================================\n";
+
+    mt19937 rng(SEED);
+    uniform_real_distribution<double> pos(0.0, AREA);
+    vector<SensorNode> nodes(N);
+
+    for (uint32_t i = 0; i < N; ++i) {
+        nodes[i].id = i;
+        nodes[i].x = pos(rng);
+        nodes[i].y = pos(rng);
+        nodes[i].energy = E0;
+        nodes[i].alive = true;
+        nodes[i].chTimesServed = 0;
+    }
+
+    ofstream positions("node-positions.csv");
+    positions << "Node,X,Y\n";
+    for (const auto& n : nodes) positions << n.id << ',' << n.x << ',' << n.y << '\n';
+    positions << N << ',' << BSX << ',' << BSY << '\n';
+    positions.close();
+
+    NodeContainer visualNodes;
+    visualNodes.Create(N + 1);
+    Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+    for (const auto& n : nodes) positionAlloc->Add(Vector(n.x, n.y, 0.0));
+    positionAlloc->Add(Vector(BSX, BSY, 0.0));
+    MobilityHelper mobility;
+    mobility.SetPositionAllocator(positionAlloc);
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(visualNodes);
+
+    AnimationInterface anim("hybrid-v2-clustering.xml");
+    anim.SetMobilityPollInterval(Seconds(1.0));
+    anim.UpdateNodeDescription(N, "SINK");
+    anim.UpdateNodeColor(N, 255, 215, 0);
+    for (const auto& n : nodes) ApplyVisualState(&anim, n.id, n, nodes);
+
+    ofstream rounds("hybrid-v2-results.csv");
+    ofstream energy("hybrid-v2-node-energy.csv");
+    ofstream lifetime("hybrid-v2-node-lifetime.csv");
+    if (!rounds || !energy || !lifetime) NS_FATAL_ERROR("Cannot create CSV output files.");
+
+    rounds << "Round,Alive,Dead,CH_Count,Generated,Delivered,Lost,Unclustered,"
+              "Selection_Iterations,Control_TX,Control_RX,Data_TX,Data_RX,"
+              "Energy_Used_J,Residual_Energy_J,Avg_Cluster_Size,Avg_Delay_ms,"
+              "PDR,Round_Duration_s,Throughput_kbps\n";
+    energy << "Round,Node,Energy_J,Alive,Is_CH,ClusterHead\n";
+    lifetime << "Node,Death_Round\n";
+
+    uint32_t FND = 0, HND = 0, LND = 0;
+    bool fnd = false, hnd = false;
+    vector<uint32_t> deathRound(N, 0);
+    uint64_t totalGenerated = 0, totalDelivered = 0;
+    double totalUsed = 0.0;
+
+    cout << "\nSimulation starts...\n";
+
+    for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
+        auto nb = BuildNeighbors(nodes);
+        UpdateCost(nodes, nb);
+        uint32_t iterations = RunHEED(nodes, nb, rng);
+        RoundResult r = SimulateRound(nodes, round, iterations);
+
+        const vector<SensorNode> visualSnapshot = nodes;
+        const double visualTime = static_cast<double>(round);
+        Simulator::Schedule(Seconds(visualTime), [&anim, visualSnapshot]() {
+            for (const auto& n : visualSnapshot) ApplyVisualState(&anim, n.id, n, visualSnapshot);
+        });
+
+        totalGenerated += r.generated;
+        totalDelivered += r.delivered;
+        totalUsed += r.energyUsed;
+
+        rounds << fixed << setprecision(10)
+               << r.round << ',' << r.alive << ',' << r.dead << ',' << r.chCount << ','
+               << r.generated << ',' << r.delivered << ',' << r.lost << ',' << r.unclustered << ','
+               << r.heedIterations << ',' << r.controlTx << ',' << r.controlRx << ','
+               << r.dataTx << ',' << r.dataRx << ',' << r.energyUsed << ',' << r.residualEnergy << ','
+               << r.avgClusterSize << ',' << r.avgDelayMs << ',' << r.pdr << ','
+               << r.roundDurationSec << ',' << r.throughputKbps << '\n';
+
+        for (const auto& n : nodes) {
+            energy << round << ',' << n.id << ',' << setprecision(10) << n.energy << ','
+                   << (n.alive ? 1 : 0) << ',' << (n.alive && n.finalCH ? 1 : 0) << ','
+                   << (n.clusterHead < N ? to_string(n.clusterHead) : "-1") << '\n';
+            if (!n.alive && deathRound[n.id] == 0) deathRound[n.id] = round;
+        }
+
+        if (!fnd && r.dead >= 1) { FND = round; fnd = true; }
+        if (!hnd && r.alive <= N / 2) { HND = round; hnd = true; }
+
+        cout << fixed << setprecision(4)
+             << "Round " << setw(4) << round << " | Alive=" << setw(3) << r.alive
+             << " | CH=" << setw(3) << r.chCount << " | PDR=" << setw(7) << r.pdr
+             << " | Residual=" << setw(9) << r.residualEnergy << " J\n";
+
+        if (r.alive == 0) { LND = round; break; }
+    }
+
+    if (LND == 0) {
+        for (const auto& n : nodes) if (n.alive) { LND = 0; break; }
+        if (LND == 0) for (uint32_t d : deathRound) LND = max(LND, d);
+    }
+
+    for (uint32_t i = 0; i < N; ++i)
+        lifetime << i << ',' << (deathRound[i] ? to_string(deathRound[i]) : "Not_Dead") << '\n';
+
+    rounds.close(); energy.close(); lifetime.close();
+
+    Simulator::Stop(Seconds(static_cast<double>(MAX_ROUNDS) + 2.0));
+    Simulator::Run();
+    Simulator::Destroy();
+
+    const double overallPdr = totalGenerated ? static_cast<double>(totalDelivered) / totalGenerated : 0.0;
+
+    cout << "\n========================================\n";
+    cout << "             FINAL RESULTS\n";
+    cout << "========================================\n";
+    cout << "FND = " << (fnd ? to_string(FND) : "Not reached") << " rounds\n";
+    cout << "HND = " << (hnd ? to_string(HND) : "Not reached") << " rounds\n";
+    cout << "LND = " << (LND ? to_string(LND) : "Not reached") << " rounds\n";
+    cout << fixed << setprecision(6);
+    cout << "Total Energy Used = " << totalUsed << " J\n";
+    cout << "Overall PDR = " << overallPdr << "\n";
+    cout << "\nCSV outputs: hybrid-v2-results.csv, hybrid-v2-node-energy.csv,\n";
+    cout << "             hybrid-v2-node-lifetime.csv, hybrid-v2-clustering.xml\n";
+    cout << "========================================\n";
+
+    return 0;
+}

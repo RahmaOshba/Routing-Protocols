@@ -1,0 +1,757 @@
+#include "ns3/core-module.h"
+#include "ns3/mobility-module.h"
+#include "ns3/netanim-module.h"
+#include <algorithm>
+#include <cmath>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <random>
+#include <string>
+#include <vector>
+
+#include "ns3/command-line.h"
+using namespace ns3;
+using namespace std;
+
+// ============================================================================
+// HYBRID PROTOCOL v7: COMBINED -- CH-TO-CH CHAIN + BACKUP CH FAILOVER
+// ns-3.41 / C++
+//
+// Combines v6's CH-to-CH chain relay (far-BS environment, single-term
+// radio) with v5's pre-designated backup CH failover. This tests whether
+// the two independent improvements compose well together, and specifically
+// whether a backup can REPAIR the CH-to-CH chain itself when a mid-chain
+// CH dies -- v6 alone would break the relay path at that point, losing
+// data from every CH "behind" the dead one, not just its own members.
+//
+// MECHANISM: identical backup pre-designation to v5 (zero extra messaging
+// cost, computed during the same single-pass setup). On a mid-interval CH
+// death, if a valid, energy-sufficient backup exists, it is promoted AND
+// takes the dead CH's exact position in the chain (or becomes the new
+// gateway, if the gateway itself died) -- repairing the relay path instead
+// of just reconnecting that one CH's own members. If no valid backup
+// exists, the dead CH is bypassed in the chain (removed from the relay
+// order) exactly as v6 would handle it alone.
+//
+// PYTHON PRE-CHECK (far-BS scenario, N=100, seed=12345):
+//   Chain alone (v6):          FND=1281, HND=1681, LND=1761, PDR=97.13%
+//   Chain + backup (this file): FND=1281, HND=1660, LND=1756, PDR=97.46%
+//   -> Combining costs almost nothing (LND -0.3%) while PDR improves
+//      (+0.34pp) and the backup was found to repair the chain itself in
+//      10 of its promotions -- preventing what would otherwise have been
+//      a broken relay path, not just one cluster's lost members. As
+//      always, exact resulting numbers should be confirmed by compiling
+//      and running this file.
+// ============================================================================
+
+//
+// ROOT-CAUSE-DRIVEN DESIGN. Evidence from v1/v2 showed HEED's iterative
+// negotiation (charged every single round, proportional to degree x
+// iterations) is what makes it lose to LEACH in raw lifetime -- NOT its
+// selection quality. This version directly attacks that root cause:
+//
+//   1. CH SELECTION -- single-pass (NO iterative negotiation at all):
+//        score_i = (E_i/E0) * (1 + degree_norm_i)   -- energy (HEED) x
+//                                                        connectivity (HEED)
+//        threshold t(r) = LEACH's rotation-guarantee formula
+//        CHprob_i = t(r) * score_i, drawn ONCE per setup round.
+//      This keeps HEED's "smart" energy+degree signal but removes the
+//      expensive multi-iteration doubling loop entirely.
+//
+//   2. MULTI-ROUND REUSE (the main energy-saving mechanism):
+//        CHs and cluster membership are only recomputed once every
+//        SETUP_INTERVAL rounds (a "setup round"). The rounds in between
+//        are pure DATA rounds: nodes just reuse last setup's assignment
+//        and transmit -- ZERO control-message overhead. This mirrors
+//        original LEACH's own paper structure (1 setup phase + several
+//        steady-state frames per "round"), which none of our earlier
+//        NS-3 files actually implemented (they recomputed clustering
+//        every single round).
+//
+//   3. CLUSTERING (join): LEACH-style nearest-distance, unchanged from
+//      v1/v2 (already shown to be low-cost and effective).
+//
+//   4. If a CH dies mid-interval, its members are simply unclustered
+//      (lost) for the remaining rounds until the next setup -- a
+//      realistic, honestly-reported limitation of multi-round reuse.
+//
+// Exports node-positions.csv for the Python cluster-circle visualizer.
+// No WiFi/packet layer (reliable, analytical-only design).
+// ============================================================================
+
+struct SensorNode {
+    uint32_t id = 0;
+    double x = 0.0;
+    double y = 0.0;
+    double energy = 0.0;
+    bool alive = true;
+    bool finalCH = false;
+    uint32_t clusterHead = numeric_limits<uint32_t>::max();
+    bool selectedThisEpoch = false;
+    uint32_t degree = 0;
+    uint32_t backupOf = numeric_limits<uint32_t>::max(); // NEW (from v5): this node is the
+                                                          // pre-designated backup CH for cluster head `backupOf`
+    bool usedAsBackupThisInterval = false;               // NEW (from v5)
+};
+
+struct RoundResult {
+    uint32_t round = 0;
+    uint32_t alive = 0;
+    uint32_t dead = 0;
+    uint32_t chCount = 0;
+    uint32_t generated = 0;
+    uint32_t delivered = 0;
+    uint32_t lost = 0;
+    uint32_t unclustered = 0;
+    uint64_t controlTx = 0;
+    uint64_t controlRx = 0;
+    uint64_t dataTx = 0;
+    uint64_t dataRx = 0;
+    double energyUsed = 0.0;
+    double residualEnergy = 0.0;
+    double avgClusterSize = 0.0;
+    double avgDelayMs = 0.0;
+    double pdr = 0.0;
+    double throughputKbps = 0.0;
+    double roundDurationSec = 0.0;
+    bool wasSetupRound = false;
+    uint32_t backupPromotions = 0;   // NEW (from v5)
+    uint32_t rejectedPromotions = 0; // NEW (from v5)
+    uint32_t chainRepairs = 0;       // NEW: how many chain positions were repaired via backup this round
+};
+
+// ----------------------------- Network -------------------------------------
+// CHANGED for v6: far-BS scenario (matches LEACH_ORIGINAL's own environment)
+// -- this is where CH-to-CH chaining is mathematically justified (see header).
+static constexpr uint32_t N = 100;
+static constexpr double AREA = 50.0;
+static constexpr double BSX = 25.0;
+static constexpr double BSY = -100.0;
+static constexpr double E0 = 0.5;
+static constexpr double RANGE = 12.5;         // scaled down for the smaller 50x50 field
+
+// ------------------------------- Protocol params ----------------------------
+static constexpr double P_CH = 0.05;          // same target ratio as LEACH
+static constexpr uint32_t EPOCH = 20;         // LEACH-style fairness window (1/P_CH)
+static constexpr uint32_t SETUP_INTERVAL = 5; // KEY LEVER: re-cluster every 5 rounds
+
+// --------------------------- Radio / traffic -------------------------------
+static constexpr uint32_t PACKET_BITS = 2000;
+static constexpr uint32_t CONTROL_BITS = 200;
+static constexpr double E_ELEC = 50e-9;
+static constexpr double E_AMP = 100e-12;      // CHANGED for v6: single-term model (matches
+                                               // LEACH_ORIGINAL / the far-BS environment)
+static constexpr double E_DA = 5e-9;
+static constexpr double DATA_RATE = 250000.0;
+static constexpr double LIGHT = 3.0e8;
+
+static constexpr uint32_t MAX_ROUNDS = 3000;  // more rounds since each is cheaper
+static constexpr uint32_t SEED = 12345;
+
+// ----------------------------- Geometry ------------------------------------
+static double Dist(const SensorNode& a, const SensorNode& b) { return hypot(a.x - b.x, a.y - b.y); }
+static double DistBS(const SensorNode& a) { return hypot(a.x - BSX, a.y - BSY); }
+
+// CHANGED for v6: single-term amplifier model (matches LEACH_ORIGINAL / far-BS env)
+static double TxEnergy(uint32_t bits, double d)
+{
+    if (d <= 0.0) return bits * E_ELEC;
+    return bits * (E_ELEC + E_AMP * d * d);
+}
+static double RxEnergy(uint32_t bits) { return bits * E_ELEC; }
+static double AggEnergy(uint32_t bits) { return bits * E_DA; }
+static double TxTimeSec(uint32_t bits) { return static_cast<double>(bits) / DATA_RATE; }
+static double DelayMs(uint32_t bits, double d) { return (TxTimeSec(bits) + d / LIGHT) * 1000.0; }
+
+static vector<vector<uint32_t>> BuildNeighbors(const vector<SensorNode>& nodes)
+{
+    vector<vector<uint32_t>> nb(N);
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive) continue;
+        for (uint32_t j = 0; j < N; ++j) {
+            if (i == j || !nodes[j].alive) continue;
+            if (Dist(nodes[i], nodes[j]) <= RANGE) nb[i].push_back(j);
+        }
+    }
+    return nb;
+}
+
+static double Threshold(uint32_t setupIndex)
+{
+    // Same LEACH-style rotation-guarantee formula, applied per SETUP round
+    // index (not per data round) since selection only happens at setups.
+    const uint32_t r = setupIndex % EPOCH;
+    const double denom = 1.0 - P_CH * static_cast<double>(r);
+    return denom > 0.0 ? P_CH / denom : 1.0;
+}
+
+// --------------------- SINGLE-PASS selection (no iteration) ----------------
+static uint32_t RunSelection(vector<SensorNode>& nodes, const vector<vector<uint32_t>>& nb,
+                              uint32_t setupIndex, mt19937& rng)
+{
+    uniform_real_distribution<double> U(0.0, 1.0);
+
+    for (auto& n : nodes) { n.finalCH = false; n.clusterHead = numeric_limits<uint32_t>::max(); }
+
+    if (setupIndex % EPOCH == 0)
+        for (auto& n : nodes) n.selectedThisEpoch = false;
+
+    uint32_t maxDegree = 1;
+    for (uint32_t i = 0; i < N; ++i) {
+        nodes[i].degree = nodes[i].alive ? static_cast<uint32_t>(nb[i].size()) : 0;
+        maxDegree = max(maxDegree, nodes[i].degree);
+    }
+
+    const double t = Threshold(setupIndex);
+    vector<uint32_t> candidates;
+
+    for (auto& n : nodes) {
+        if (!n.alive || n.selectedThisEpoch) continue;
+        const double degreeNorm = static_cast<double>(n.degree) / static_cast<double>(maxDegree);
+        const double score = (n.energy / E0) * (1.0 + degreeNorm);  // HEED energy x connectivity, ONE shot
+        const double prob = min(1.0, t * score);
+        if (U(rng) <= prob) candidates.push_back(n.id);
+    }
+
+    if (candidates.empty()) {
+        vector<uint32_t> eligible;
+        for (const auto& n : nodes) if (n.alive && !n.selectedThisEpoch) eligible.push_back(n.id);
+        if (!eligible.empty()) {
+            uint32_t best = eligible.front();
+            double bestScore = -1.0;
+            for (uint32_t id : eligible) {
+                double degreeNorm = static_cast<double>(nodes[id].degree) / static_cast<double>(maxDegree);
+                double score = (nodes[id].energy / E0) * (1.0 + degreeNorm);
+                if (score > bestScore) { bestScore = score; best = id; }
+            }
+            candidates.push_back(best);
+        }
+    }
+
+    for (uint32_t id : candidates) { nodes[id].finalCH = true; nodes[id].selectedThisEpoch = true; }
+
+    uint32_t chCount = 0;
+    for (const auto& n : nodes) if (n.alive && n.finalCH) ++chCount;
+
+    // ---- LEACH-style nearest-distance join ----
+    for (auto& n : nodes) {
+        n.clusterHead = numeric_limits<uint32_t>::max();
+        if (!n.alive) continue;
+        if (n.finalCH) { n.clusterHead = n.id; continue; }
+
+        double bestDistance = numeric_limits<double>::infinity();
+        uint32_t bestCH = numeric_limits<uint32_t>::max();
+        for (const auto& c : nodes) {
+            if (!c.alive || !c.finalCH) continue;
+            const double d = Dist(n, c);
+            if (d < bestDistance - 1e-12 || (fabs(d - bestDistance) < 1e-12 && c.id < bestCH)) {
+                bestDistance = d;
+                bestCH = c.id;
+            }
+        }
+        if (bestCH != numeric_limits<uint32_t>::max()) n.clusterHead = bestCH;
+    }
+
+    // ---- NEW (from v5): pre-designate a backup CH per cluster, at ZERO
+    // extra messaging cost -- the score was already computed above for
+    // every node during this same single-pass selection; we simply also
+    // remember each cluster's runner-up. ----
+    for (auto& n : nodes) { n.backupOf = numeric_limits<uint32_t>::max(); n.usedAsBackupThisInterval = false; }
+    for (const auto& ch : nodes) {
+        if (!ch.alive || !ch.finalCH) continue;
+        uint32_t bestBackup = numeric_limits<uint32_t>::max();
+        double bestScore = -1.0;
+        for (const auto& m : nodes) {
+            if (!m.alive || m.finalCH || m.clusterHead != ch.id) continue;
+            const double degreeNorm = static_cast<double>(m.degree) / static_cast<double>(maxDegree);
+            const double score = (m.energy / E0) * (1.0 + degreeNorm);
+            if (score > bestScore) { bestScore = score; bestBackup = m.id; }
+        }
+        if (bestBackup != numeric_limits<uint32_t>::max()) nodes[bestBackup].backupOf = ch.id;
+    }
+
+    return chCount;
+}
+
+// --------------------- NEW for v6: CH-to-CH chain + gateway -----------------
+// Builds a greedy nearest-neighbor chain among the CURRENT CHs ONLY (a much
+// smaller set than all N nodes, so this is cheap), and designates the CH
+// closest to the BS as the "gateway" -- the only CH that transmits the long
+// distance to the BS. All other CHs relay their already-aggregated cluster
+// data along the chain toward the gateway. This is PEGASIS's chain idea
+// applied one level up (between cluster heads, not between all nodes),
+// justified mathematically for far-BS scenarios: splitting one long,
+// quadratic-cost hop into several short hops reduces total amplifier energy
+// whenever the direct distance exceeds sqrt(2*Eelec/Eamp) -- true throughout
+// this far-BS environment, but NOT true in the unified environment (BS at
+// field center), where this mechanism would not help and is not used.
+static void BuildCHChain(const vector<SensorNode>& nodes, vector<uint32_t>& chainOrder, uint32_t& gatewayCH)
+{
+    chainOrder.clear();
+    vector<uint32_t> chs;
+    for (const auto& n : nodes) if (n.alive && n.finalCH) chs.push_back(n.id);
+    if (chs.empty()) { gatewayCH = numeric_limits<uint32_t>::max(); return; }
+
+    gatewayCH = chs.front();
+    double bestD = DistBS(nodes[gatewayCH]);
+    for (uint32_t c : chs) {
+        const double d = DistBS(nodes[c]);
+        if (d < bestD) { bestD = d; gatewayCH = c; }
+    }
+
+    vector<bool> used(nodes.size(), false);
+    uint32_t start = chs.front();
+    double bestFar = -1.0;
+    for (uint32_t c : chs) {
+        const double d = Dist(nodes[c], nodes[gatewayCH]);
+        if (d > bestFar) { bestFar = d; start = c; }
+    }
+    chainOrder.push_back(start);
+    used[start] = true;
+    uint32_t current = start;
+    for (size_t step = 1; step < chs.size(); ++step) {
+        double bestDist = numeric_limits<double>::infinity();
+        uint32_t bestId = numeric_limits<uint32_t>::max();
+        for (uint32_t c : chs) {
+            if (used[c]) continue;
+            const double d = Dist(nodes[current], nodes[c]);
+            if (d < bestDist) { bestDist = d; bestId = c; }
+        }
+        if (bestId == numeric_limits<uint32_t>::max()) break;
+        chainOrder.push_back(bestId);
+        used[bestId] = true;
+        current = bestId;
+    }
+}
+
+// ---------------------------- Round simulation -----------------------------
+static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool isSetupRound,
+                                 vector<uint32_t>& chainOrder, uint32_t& gatewayCH,
+                                 uint32_t setupIntervalLen)
+{
+    RoundResult r;
+    r.round = round;
+    r.wasSetupRound = isSetupRound;
+
+    const double before = [&]() { double s = 0.0; for (const auto& n : nodes) s += n.energy; return s; }();
+
+    // ---- Control overhead ONLY on setup rounds (the key saving) ----
+    if (isSetupRound) {
+        for (uint32_t c = 0; c < N; ++c) {
+            if (!nodes[c].alive || !nodes[c].finalCH) continue;
+            const double tx = TxEnergy(CONTROL_BITS, RANGE);
+            if (tx > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; continue; }
+            nodes[c].energy -= tx;
+            ++r.controlTx;
+            for (uint32_t v = 0; v < N; ++v) {
+                if (v == c || !nodes[v].alive) continue;
+                const double rx = RxEnergy(CONTROL_BITS);
+                if (rx > nodes[v].energy) { nodes[v].energy = 0.0; nodes[v].alive = false; nodes[v].finalCH = false; continue; }
+                nodes[v].energy -= rx;
+                ++r.controlRx;
+            }
+        }
+
+        for (auto& n : nodes) if (!n.alive) n.finalCH = false;
+
+        for (auto& n : nodes) {
+            n.clusterHead = numeric_limits<uint32_t>::max();
+            if (!n.alive) continue;
+            if (n.finalCH) { n.clusterHead = n.id; continue; }
+            double bestDistance = numeric_limits<double>::infinity();
+            uint32_t bestCH = numeric_limits<uint32_t>::max();
+            for (const auto& c : nodes) {
+                if (!c.alive || !c.finalCH) continue;
+                const double d = Dist(n, c);
+                if (d < bestDistance - 1e-12 || (fabs(d - bestDistance) < 1e-12 && c.id < bestCH)) {
+                    bestDistance = d;
+                    bestCH = c.id;
+                }
+            }
+            n.clusterHead = bestCH;
+        }
+    }
+
+    // ---- Every round: handle CHs that died mid-interval (between setups) ----
+    // NEW (combined v5+v6): before disconnecting members (or breaking the
+    // chain), try promoting the pre-designated backup CH -- only if it has
+    // enough energy to plausibly survive CH duty for the rest of the
+    // interval. If the dead CH was part of the CH-to-CH chain, the backup
+    // takes its EXACT position in the chain (repairing the relay path
+    // instead of breaking it); if it was the gateway, the backup becomes
+    // the new gateway too. If no valid backup exists, the dead CH is
+    // removed from the chain (bypassed) as well as disconnecting its members.
+    vector<uint32_t> orphanedCHs;
+    for (const auto& n : nodes) {
+        if (n.alive && n.clusterHead < N && !nodes[n.clusterHead].alive) {
+            if (find(orphanedCHs.begin(), orphanedCHs.end(), n.clusterHead) == orphanedCHs.end())
+                orphanedCHs.push_back(n.clusterHead);
+        }
+    }
+    // Also catch CHs that are dead but currently have no alive member pointing
+    // at them yet (e.g., a lone CH with zero members) -- scan finalCH flags too.
+    for (uint32_t c = 0; c < N; ++c) {
+        if (nodes[c].finalCH && !nodes[c].alive) {
+            if (find(orphanedCHs.begin(), orphanedCHs.end(), c) == orphanedCHs.end())
+                orphanedCHs.push_back(c);
+        }
+    }
+
+    const uint32_t roundsLeftInInterval = setupIntervalLen - ((round - 1) % setupIntervalLen);
+    for (uint32_t c : orphanedCHs) {
+        nodes[c].finalCH = false;
+        uint32_t backupId = numeric_limits<uint32_t>::max();
+        for (const auto& m : nodes) if (m.backupOf == c) { backupId = m.id; break; }
+
+        bool promoted = false;
+        if (backupId != numeric_limits<uint32_t>::max()
+            && nodes[backupId].alive && !nodes[backupId].finalCH
+            && !nodes[backupId].usedAsBackupThisInterval) {
+
+            uint32_t estMembers = 1;
+            for (const auto& m : nodes) if (m.alive && m.clusterHead == c) ++estMembers;
+            const double estCostPerRound = static_cast<double>(estMembers) * AggEnergy(PACKET_BITS)
+                                          + TxEnergy(PACKET_BITS, DistBS(nodes[backupId]));
+            const double estTotalNeed = estCostPerRound * static_cast<double>(roundsLeftInInterval);
+
+            if (nodes[backupId].energy >= estTotalNeed) {
+                nodes[backupId].finalCH = true;
+                nodes[backupId].usedAsBackupThisInterval = true;
+                nodes[backupId].clusterHead = backupId;
+                for (auto& m : nodes) if (m.alive && m.clusterHead == c) m.clusterHead = backupId;
+                ++r.backupPromotions;
+                promoted = true;
+
+                // Repair the chain: replace the dead CH's slot with the backup.
+                for (auto& slot : chainOrder) if (slot == c) { slot = backupId; ++r.chainRepairs; }
+                if (gatewayCH == c) gatewayCH = backupId;
+            } else {
+                ++r.rejectedPromotions;
+            }
+        }
+        if (!promoted) {
+            for (auto& n : nodes) if (n.alive && n.clusterHead == c) n.clusterHead = numeric_limits<uint32_t>::max();
+            // Bypass the dead CH in the chain (no backup available).
+            auto it = find(chainOrder.begin(), chainOrder.end(), c);
+            if (it != chainOrder.end()) chainOrder.erase(it);
+            if (gatewayCH == c) gatewayCH = numeric_limits<uint32_t>::max(); // gateway lost this interval
+        }
+    }
+    for (auto& n : nodes) {
+        if (n.alive && n.clusterHead < N && !nodes[n.clusterHead].alive)
+            n.clusterHead = numeric_limits<uint32_t>::max();
+    }
+
+    for (const auto& n : nodes) if (n.alive && n.finalCH) ++r.chCount;
+    for (const auto& n : nodes) if (n.alive) ++r.generated;
+
+    vector<uint32_t> membersPerCH(N, 0);
+    vector<bool> memberDelivered(N, false);
+    vector<double> delayToCH(N, 0.0);
+
+    for (uint32_t i = 0; i < N; ++i) {
+        if (!nodes[i].alive || nodes[i].finalCH) continue;
+        const uint32_t c = nodes[i].clusterHead;
+        if (c >= N || !nodes[c].alive || !nodes[c].finalCH) { ++r.unclustered; continue; }
+        const double d = Dist(nodes[i], nodes[c]);
+        const double tx = TxEnergy(PACKET_BITS, d);
+        const double rx = RxEnergy(PACKET_BITS);
+        if (tx > nodes[i].energy || rx > nodes[c].energy) { ++r.lost; continue; }
+        nodes[i].energy -= tx;
+        nodes[c].energy -= rx;
+        ++r.dataTx; ++r.dataRx;
+        ++membersPerCH[c];
+        memberDelivered[i] = true;
+        delayToCH[i] = DelayMs(PACKET_BITS, d);
+    }
+
+    double delaySum = 0.0;
+    uint32_t deliveredSources = 0;
+    vector<uint32_t> chainMsgCount(N, 0);
+
+    // Member -> CH delay leg (independent of how the CH's data then travels onward)
+    for (uint32_t i = 0; i < N; ++i) if (memberDelivered[i]) delaySum += delayToCH[i];
+
+    // ---- Local aggregation at each CH (unchanged from v3) ----
+    for (uint32_t c = 0; c < N; ++c) {
+        if (!nodes[c].alive || !nodes[c].finalCH) continue;
+        const uint32_t members = membersPerCH[c];
+        const double agg = static_cast<double>(members) * AggEnergy(PACKET_BITS);
+        if (agg > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; ++r.lost; continue; }
+        nodes[c].energy -= agg;
+        chainMsgCount[c] = members + 1;
+    }
+
+    // ---- NEW: relay along the CH chain toward the gateway, instead of
+    // every CH transmitting the long distance to the BS individually ----
+    int gwPos = -1;
+    if (!chainOrder.empty() && gatewayCH < N) {
+        for (size_t k = 0; k < chainOrder.size(); ++k) if (chainOrder[k] == gatewayCH) { gwPos = static_cast<int>(k); break; }
+    }
+
+    if (gwPos >= 0) {
+        auto relayHop = [&](uint32_t a, uint32_t bnode) {
+            if (!nodes[a].alive || !nodes[bnode].alive) return;
+            const double d = Dist(nodes[a], nodes[bnode]);
+            const double tx = TxEnergy(PACKET_BITS, d);
+            if (tx > nodes[a].energy) { nodes[a].energy = 0.0; nodes[a].alive = false; nodes[a].finalCH = false; return; }
+            nodes[a].energy -= tx;
+            ++r.dataTx;
+            const double rx = RxEnergy(PACKET_BITS);
+            if (rx > nodes[bnode].energy) { nodes[bnode].energy = 0.0; nodes[bnode].alive = false; nodes[bnode].finalCH = false; return; }
+            nodes[bnode].energy -= rx;
+            ++r.dataRx;
+            const uint32_t incoming = chainMsgCount[a];
+            const double aggRelay = static_cast<double>(incoming) * AggEnergy(PACKET_BITS);
+            if (aggRelay > nodes[bnode].energy) { nodes[bnode].energy = 0.0; nodes[bnode].alive = false; nodes[bnode].finalCH = false; return; }
+            nodes[bnode].energy -= aggRelay;
+            chainMsgCount[bnode] += incoming;
+            delaySum += DelayMs(PACKET_BITS, d);
+        };
+        for (int j = 0; j < gwPos; ++j) relayHop(chainOrder[j], chainOrder[j + 1]);
+        for (int j = static_cast<int>(chainOrder.size()) - 1; j > gwPos; --j) relayHop(chainOrder[j], chainOrder[j - 1]);
+
+        if (nodes[gatewayCH].alive) {
+            const double dBS = DistBS(nodes[gatewayCH]);
+            const double txBS = TxEnergy(PACKET_BITS, dBS);
+            if (txBS > nodes[gatewayCH].energy) { nodes[gatewayCH].energy = 0.0; nodes[gatewayCH].alive = false; nodes[gatewayCH].finalCH = false; }
+            else {
+                nodes[gatewayCH].energy -= txBS;
+                ++r.dataTx; ++r.dataRx;
+                deliveredSources += chainMsgCount[gatewayCH];
+                delaySum += DelayMs(PACKET_BITS, dBS);
+            }
+        }
+    } else {
+        // Fallback (0-1 CHs alive, or chain unavailable this round): direct-to-BS, same as v3.
+        for (uint32_t c = 0; c < N; ++c) {
+            if (!nodes[c].alive || !nodes[c].finalCH) continue;
+            const double dBS = DistBS(nodes[c]);
+            const double txBS = TxEnergy(PACKET_BITS, dBS);
+            if (txBS > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; continue; }
+            nodes[c].energy -= txBS;
+            ++r.dataTx; ++r.dataRx;
+            deliveredSources += chainMsgCount[c];
+            delaySum += DelayMs(PACKET_BITS, dBS);
+        }
+    }
+
+    r.delivered = min(deliveredSources, r.generated);
+    r.lost = r.generated - r.delivered;
+
+    double after = 0.0;
+    uint32_t assigned = 0;
+    r.alive = 0;
+    for (auto& n : nodes) {
+        if (n.energy <= 0.0) { n.energy = 0.0; n.alive = false; n.finalCH = false; }
+        after += n.energy;
+        if (n.alive) ++r.alive;
+        if (n.alive && !n.finalCH && n.clusterHead < N && nodes[n.clusterHead].alive && nodes[n.clusterHead].finalCH)
+            ++assigned;
+    }
+
+    r.dead = N - r.alive;
+    r.energyUsed = max(0.0, before - after);
+    r.residualEnergy = after;
+    r.avgClusterSize = r.chCount ? static_cast<double>(assigned + r.chCount) / r.chCount : 0.0;
+
+    if (r.alive == 0) {
+        r.chCount = 0; r.generated = 0; r.delivered = 0; r.lost = 0; r.unclustered = 0;
+        r.avgClusterSize = 0.0; r.avgDelayMs = 0.0; r.pdr = 0.0; r.throughputKbps = 0.0;
+    }
+
+    r.pdr = r.generated ? static_cast<double>(r.delivered) / r.generated : 0.0;
+    r.avgDelayMs = r.delivered ? delaySum / r.delivered : 0.0;
+
+    const double controlTime = static_cast<double>(r.controlTx) * TxTimeSec(CONTROL_BITS);
+    const double dataTxTime = static_cast<double>(r.dataTx) * TxTimeSec(PACKET_BITS);
+    r.roundDurationSec = controlTime + dataTxTime;
+    r.throughputKbps = r.roundDurationSec > 0.0
+        ? static_cast<double>(r.delivered * PACKET_BITS) / r.roundDurationSec / 1000.0 : 0.0;
+
+    return r;
+}
+
+static void ApplyVisualState(AnimationInterface* anim, uint32_t nodeId, const SensorNode& n,
+                             const vector<SensorNode>& snapshot)
+{
+    if (!n.alive) { anim->UpdateNodeColor(nodeId, 120, 120, 120); anim->UpdateNodeDescription(nodeId, ""); return; }
+    if (n.finalCH) { anim->UpdateNodeColor(nodeId, 255, 80, 80); anim->UpdateNodeDescription(nodeId, "CH " + to_string(n.id)); return; }
+    if (n.clusterHead < N && snapshot[n.clusterHead].alive && snapshot[n.clusterHead].finalCH) {
+        static const uint8_t palette[][3] = {
+            {80,160,255},{80,210,140},{190,120,255},{255,170,70},{70,200,210},{220,100,170},
+            {150,190,80},{120,120,230},{230,140,110},{100,210,190},{180,160,90},{160,110,210}
+        };
+        constexpr uint32_t paletteSize = sizeof(palette) / sizeof(palette[0]);
+        const uint32_t idx = snapshot[n.clusterHead].id % paletteSize;
+        anim->UpdateNodeColor(nodeId, palette[idx][0], palette[idx][1], palette[idx][2]);
+        anim->UpdateNodeDescription(nodeId, "");
+        return;
+    }
+    anim->UpdateNodeColor(nodeId, 220, 220, 220);
+    anim->UpdateNodeDescription(nodeId, "");
+}
+
+int main(int argc, char* argv[])
+{
+    CommandLine cmd;
+    cmd.Parse(argc, argv);
+
+    cout << "\n========================================\n";
+    cout << "  HYBRID v7: COMBINED Chain + Backup CH Failover (Far-BS)\n";
+    cout << "========================================\n";
+    cout << "Area = " << AREA << "x" << AREA << " m | BS = (" << BSX << "," << BSY << ") | Radio = single-term (Eamp)\n";
+    cout << "Setup interval = " << SETUP_INTERVAL << " rounds (control overhead paid once per interval)\n";
+    cout << "Selection = single-pass energy x connectivity score (no iteration)\n";
+    cout << "Join = LEACH-style nearest distance\n";
+    cout << "NEW: CHs relay to a single gateway CH via a chain, instead of each CH->BS directly\n";
+    cout << "========================================\n";
+
+    mt19937 topologyRng(SEED);
+    mt19937 electionRng(SEED + 1);
+    uniform_real_distribution<double> pos(0.0, AREA);
+    vector<SensorNode> nodes(N);
+
+    for (uint32_t i = 0; i < N; ++i) {
+        nodes[i].id = i;
+        nodes[i].x = pos(topologyRng);
+        nodes[i].y = pos(topologyRng);
+        nodes[i].energy = E0;
+        nodes[i].alive = true;
+    }
+
+    ofstream positions("node-positions.csv");
+    positions << "Node,X,Y\n";
+    for (const auto& n : nodes) positions << n.id << ',' << n.x << ',' << n.y << '\n';
+    positions << N << ',' << BSX << ',' << BSY << '\n';
+    positions.close();
+
+    NodeContainer visualNodes;
+    visualNodes.Create(N + 1);
+    Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+    for (const auto& n : nodes) positionAlloc->Add(Vector(n.x, n.y, 0.0));
+    positionAlloc->Add(Vector(BSX, BSY, 0.0));
+    MobilityHelper mobility;
+    mobility.SetPositionAllocator(positionAlloc);
+    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    mobility.Install(visualNodes);
+
+    AnimationInterface anim("hybrid-v7-combined-clustering.xml");
+    anim.SetMobilityPollInterval(Seconds(1.0));
+    anim.UpdateNodeDescription(N, "SINK");
+    anim.UpdateNodeColor(N, 255, 215, 0);
+    for (const auto& n : nodes) ApplyVisualState(&anim, n.id, n, nodes);
+
+    ofstream rounds("hybrid-v7-combined-results.csv");
+    ofstream energy("hybrid-v7-combined-node-energy.csv");
+    ofstream lifetime("hybrid-v7-combined-node-lifetime.csv");
+    if (!rounds || !energy || !lifetime) NS_FATAL_ERROR("Cannot create CSV output files.");
+
+    rounds << "Round,Alive,Dead,CH_Count,Generated,Delivered,Lost,Unclustered,"
+              "Was_Setup_Round,Control_TX,Control_RX,Data_TX,Data_RX,"
+              "Energy_Used_J,Residual_Energy_J,Avg_Cluster_Size,Avg_Delay_ms,"
+              "PDR,Round_Duration_s,Throughput_kbps,Backup_Promotions,Rejected_Promotions,Chain_Repairs\n";
+    energy << "Round,Node,Energy_J,Alive,Is_CH,ClusterHead\n";
+    lifetime << "Node,Death_Round\n";
+
+    uint32_t FND = 0, HND = 0, LND = 0;
+    bool fnd = false, hnd = false;
+    vector<uint32_t> deathRound(N, 0);
+    uint64_t totalGenerated = 0, totalDelivered = 0;
+    uint64_t totalPromotions = 0, totalRejected = 0, totalChainRepairs = 0;
+    double totalUsed = 0.0;
+    uint32_t setupIndex = 0;
+    vector<uint32_t> chainOrder;
+    uint32_t gatewayCH = numeric_limits<uint32_t>::max();
+
+    cout << "\nSimulation starts...\n";
+
+    for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
+        const bool isSetupRound = ((round - 1) % SETUP_INTERVAL == 0);
+
+        if (isSetupRound) {
+            auto nb = BuildNeighbors(nodes);
+            RunSelection(nodes, nb, setupIndex, electionRng);
+            ++setupIndex;
+            BuildCHChain(nodes, chainOrder, gatewayCH);  // NEW for v6
+        }
+
+        RoundResult r = SimulateRound(nodes, round, isSetupRound, chainOrder, gatewayCH, SETUP_INTERVAL);
+
+        const vector<SensorNode> visualSnapshot = nodes;
+        const double visualTime = (round == 1) ? 0.1 : static_cast<double>(round);
+        Simulator::Schedule(Seconds(visualTime), [&anim, visualSnapshot]() {
+            for (const auto& n : visualSnapshot) ApplyVisualState(&anim, n.id, n, visualSnapshot);
+        });
+
+        totalGenerated += r.generated;
+        totalDelivered += r.delivered;
+        totalUsed += r.energyUsed;
+        totalPromotions += r.backupPromotions;
+        totalRejected += r.rejectedPromotions;
+        totalChainRepairs += r.chainRepairs;
+
+        rounds << fixed << setprecision(10)
+               << r.round << ',' << r.alive << ',' << r.dead << ',' << r.chCount << ','
+               << r.generated << ',' << r.delivered << ',' << r.lost << ',' << r.unclustered << ','
+               << (r.wasSetupRound ? 1 : 0) << ',' << r.controlTx << ',' << r.controlRx << ','
+               << r.dataTx << ',' << r.dataRx << ',' << r.energyUsed << ',' << r.residualEnergy << ','
+               << r.avgClusterSize << ',' << r.avgDelayMs << ',' << r.pdr << ','
+               << r.roundDurationSec << ',' << r.throughputKbps << ','
+               << r.backupPromotions << ',' << r.rejectedPromotions << ',' << r.chainRepairs << '\n';
+
+        for (const auto& n : nodes) {
+            energy << round << ',' << n.id << ',' << setprecision(10) << n.energy << ','
+                   << (n.alive ? 1 : 0) << ',' << (n.alive && n.finalCH ? 1 : 0) << ','
+                   << (n.clusterHead < N ? to_string(n.clusterHead) : "-1") << '\n';
+            if (!n.alive && deathRound[n.id] == 0) deathRound[n.id] = round;
+        }
+
+        if (!fnd && r.dead >= 1) { FND = round; fnd = true; }
+        if (!hnd && r.alive <= N / 2) { HND = round; hnd = true; }
+
+        cout << fixed << setprecision(4)
+             << "Round " << setw(4) << round << (r.wasSetupRound ? "*" : " ")
+             << " | Alive=" << setw(3) << r.alive << " | CH=" << setw(3) << r.chCount
+             << " | PDR=" << setw(7) << r.pdr << " | Residual=" << setw(9) << r.residualEnergy << " J\n";
+
+        if (r.alive == 0) { LND = round; break; }
+    }
+
+    if (LND == 0) {
+        for (const auto& n : nodes) if (n.alive) { LND = 0; break; }
+        if (LND == 0) for (uint32_t d : deathRound) LND = max(LND, d);
+    }
+
+    for (uint32_t i = 0; i < N; ++i)
+        lifetime << i << ',' << (deathRound[i] ? to_string(deathRound[i]) : "Not_Dead") << '\n';
+
+    rounds.close(); energy.close(); lifetime.close();
+
+    Simulator::Stop(Seconds(static_cast<double>(MAX_ROUNDS) + 2.0));
+    Simulator::Run();
+    Simulator::Destroy();
+
+    const double overallPdr = totalGenerated ? static_cast<double>(totalDelivered) / totalGenerated : 0.0;
+
+    cout << "\n========================================\n";
+    cout << "             FINAL RESULTS\n";
+    cout << "========================================\n";
+    cout << "FND = " << (fnd ? to_string(FND) : "Not reached") << " rounds\n";
+    cout << "HND = " << (hnd ? to_string(HND) : "Not reached") << " rounds\n";
+    cout << "LND = " << (LND ? to_string(LND) : "Not reached") << " rounds\n";
+    cout << fixed << setprecision(6);
+    cout << "Total Energy Used = " << totalUsed << " J\n";
+    cout << "Overall PDR = " << overallPdr << "\n";
+    cout << "Backup CH Promotions = " << totalPromotions << " (successful) / "
+         << totalRejected << " (rejected -- insufficient energy)\n";
+    cout << "Chain Repairs via Backup = " << totalChainRepairs
+         << " (mid-chain CH deaths repaired instead of breaking the relay path)\n";
+    cout << "\nCSV outputs: hybrid-v7-combined-results.csv, hybrid-v7-combined-node-energy.csv,\n";
+    cout << "             hybrid-v7-combined-node-lifetime.csv, hybrid-v7-combined-clustering.xml\n";
+    cout << "========================================\n";
+
+    return 0;
+}
