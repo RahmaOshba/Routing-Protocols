@@ -166,3 +166,24 @@ for (r_,c_),cell in t.get_celld().items():
 ax.set_title('IEEE 802.15.4 frames heard by the sink (demo capture, first 14 frames)',loc='left',fontsize=11,color=INK,fontweight='bold')
 save(fig,'k1_packets.png')
 print('done')
+
+# ---------------- PDR charts ----------------
+def pdr_bars(labels, runs, name, colors=None, lo=98.4, title=''):
+    fig,ax=plt.subplots(figsize=(max(6,0.75*len(labels)+1.5),3.6)); vals=[v(r)[3] for r in runs]
+    ax.bar(labels,vals,0.6,color=colors or [AQUA]*len(labels),zorder=3)
+    for i,val in enumerate(vals): ax.text(i,val+0.03,f'{val:.2f}',ha='center',fontsize=9,color=INK)
+    ax.set_ylim(lo,100.1); ax.set_ylabel('PDR (%)')
+    if title: ax.set_title(title,loc='left',fontweight='bold',color=INK)
+    save(fig,name)
+pdr_bars(['LEACH','HEED','HEED+fair','PEGASIS'],['leach_EDITED','heed_EDITED','heed_fairness_EDITED','pegasis_EDITED'],'pdr_classic.png',title='PDR — classic protocols (EDITED)')
+fig,ax=plt.subplots(figsize=(8,3.6)); x=np.arange(3); w=0.26
+for j,(s,c) in enumerate([('ORIGINAL',GREY),('EDITED',ORANGE),('IMPROVED',BLUE)]):
+    vals=[v(f'{k}_{s}')[3] for k in ('shleach','hleach','eechheed')]
+    ax.bar(x+(j-1)*w,vals,w-0.03,color=c,zorder=3,label=s)
+    for i,val in enumerate(vals): ax.text(x[i]+(j-1)*w,val+0.05,f'{val:.2f}',ha='center',fontsize=8,color=INK,rotation=90)
+ax.set_xticks(x); ax.set_xticklabels(['SH-LEACH','H-LEACH','EECH-HEED']); ax.set_ylim(94.5,101.8); ax.set_ylabel('PDR (%)'); ax.legend(ncol=3,loc='upper center')
+ax.set_title('PDR — hybrids',loc='left',fontweight='bold',color=INK); save(fig,'pdr_hybrids.png')
+EV=[('v1','v1_heed_election_leach_join'),('v2','v2_fairness_penalty'),('v3','v3_single_pass_reuse_int5'),('v4','v4_reuse_int15'),('v5','v5_backup_int15'),('v5-exp','v5x_backup_repair_int5'),
+    ('v5b','v5b_energy_aware_repair'),('v6','v6_chain_center'),('v7','v7_chain_backup_center'),('v7.1','v7_1_multihop_int5'),('v8','v8_center'),('v8-Chain','v8_chain_center')]
+pdr_bars([a for a,_ in EV],[b for _,b in EV],'pdr_versions.png',colors=[AQUA]*10+[BLUE]*2,lo=95,title='PDR — every version of the proposed protocol')
+print('pdr done')
