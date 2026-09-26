@@ -6,9 +6,9 @@ Every number in the deck, the reports and the workbook is read from
 | Script | Output |
 |---|---|
 | `make_figures.py` | charts in `fig/` (set `SNAP_DIR` to a folder with `v8_chain_*-node-energy.csv` for the topology snapshots) |
-| `make_figures2.py` | background diagrams, energy-vs-distance, paper-vs-code charts, hybrid CH counts, security cost, demo packet table (`fig/b*`, `e1`, `p1`, `h1`, `h2`, `c1`, `s1`, `k1`) |
-| `make_figures3.py` | security figures for the proposal scheme (AES + RSA / ECC) and the Wireshark frame decode (`fig/s2`–`s5`, `k2`, `eq_security`) |
-| `make_steps.py` | `fig/v8_steps.png` — step-by-step infographic of the proposed protocol |
+| `make_figures2.py` | background diagrams, energy-vs-distance, paper-vs-code charts, hybrid CH counts, demo packet table (`fig/b*`, `e1`, `p1`, `h1`, `h2`, `c1`, `k1`) |
+| `make_figures3.py` | security figures for the planned security part (ECC + AES, RSA) and the Wireshark frame decode (`fig/s2`–`s5`, `k2`, `eq_security`) |
+| `make_concept.py` | `fig/v8_concept.png` — illustrated concept of the proposed protocol (sensor field → BS → user, and the five steps) |
 | `make_architecture.py` | `fig/f12_architecture.png` — architecture of v8-Chain |
 | `make_demo_figure.py` | `fig/demo_layout.png` + `fig/demo_results.json` from `demo_output.txt` (real ns-3.41 run of `code/0_FIRST_EXPERIMENTS/demo_clustered_wsn.cc`) |
 | `deck.js` | `../Thesis_Defense_v8-Chain.pptx` |

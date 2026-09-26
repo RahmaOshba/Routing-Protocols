@@ -103,25 +103,6 @@ Side experiment (not part of the main line):
 | v8_farBS | 1412 | 1604 | 1650 | 99.37% | 1346–1476 |
 | v8_chain_farBS | 1652 | 1850 | 1898 | 99.46% | 1596–1681 |
 
-## Expected cost of security — `v8_chain_*.cc` with `-DSEC_BITS / -DSEC_NJ_PER_BIT / -DSEC_SETUP_MJ`
-
-First estimate (superseded by the next section). Assumptions: 104 extra bits per frame (IEEE 802.15.4 security: 5-byte auxiliary header + 8-byte MIC);
-AES energy 5 nJ/bit for the sender and for the receiver (assumed); one ECC key establishment per node at deployment, 20 mJ.
-Folders: `4_PROPOSED/extra/security/`.
-
-| Scenario | BS | FND | HND | LND | PDR | FND change |
-|---|---|---:|---:|---:|---:|---:|
-| No security (= v8-Chain) | Center | 2446 | 2536 | 2566 | 99.72% | — |
-| + 104-bit header/MIC | Center | 2246 | 2321 | 2351 | 99.76% | −8.2% |
-| + header/MIC + ECC setup | Center | 2156 | 2231 | 2261 | 99.72% | −11.9% |
-| + header/MIC + AES | Center | 2061 | 2141 | 2176 | 99.79% | −15.7% |
-| + header/MIC + AES + ECC setup | Center | 1971 | 2062 | 2091 | 99.70% | −19.4% |
-| No security (= v8-Chain) | Far | 1626 | 1821 | 1881 | 99.56% | — |
-| + 104-bit header/MIC | Far | 1491 | 1686 | 1721 | 99.56% | −8.3% |
-| + header/MIC + ECC setup | Far | 1426 | 1611 | 1661 | 99.58% | −12.3% |
-| + header/MIC + AES | Far | 1361 | 1566 | 1616 | 99.39% | −16.3% |
-| + header/MIC + AES + ECC setup | Far | 1336 | 1506 | 1546 | 99.50% | −17.8% |
-
 ## Security as planned in the thesis proposal — LEACH, PEGASIS and v8 / v8-Chain
 
 Codes: `leach_EDITED.cc`, `pegasis_EDITED.cc`, `v8_chain_center.cc`, `v8_chain_farBS.cc` with

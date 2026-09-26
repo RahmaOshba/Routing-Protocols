@@ -137,16 +137,6 @@ for i,val in enumerate(vals): ax.text(val+25,i,f'{val}'+('' if i==6 else f'   (v
 ax.set_xlabel('FND — first node death (rounds)'); ax.set_xlim(0,3300)
 save(fig,'c1_fnd_rank.png')
 
-# ---------------- S1 security cost ----------------
-sc=[('No security','none'),('+ header/MIC\n(104 bits)','mic104'),('+ MIC\n+ ECC setup','mic104_ecc20mJ'),('+ MIC\n+ AES','mic104_aes5nJ'),('+ MIC + AES\n+ ECC setup','mic104_aes5nJ_ecc20mJ')]
-fig,ax=plt.subplots(figsize=(10,4.2)); x=np.arange(len(sc)); w=0.38
-for j,(bs,c,lab) in enumerate([('center',BLUE,'BS at the centre'),('far',ORANGE,'BS far away')]):
-    vals=[v(f'v8_chain_{k}_{bs}')[0] for _,k in sc]
-    ax.bar(x+(j-0.5)*w,vals,w-0.03,color=c,zorder=3,label=lab)
-    for i,val in enumerate(vals): ax.text(x[i]+(j-0.5)*w,val+25,str(val)+('' if i==0 else f'\n({(val/vals[0]-1)*100:.0f}%)'),ha='center',fontsize=8.5,color=INK)
-ax.axhline(v('leach_EDITED')[0],color=GREY,ls='--',lw=1.2,label='LEACH without security (1383)')
-ax.set_xticks(x); ax.set_xticklabels([s for s,_ in sc],fontsize=9.5); ax.set_ylabel('FND (rounds)'); ax.set_ylim(0,3300); ax.legend(loc='upper center',ncol=3,fontsize=9.5)
-save(fig,'s1_security.png')
 
 # ---------------- K1 demo packets (from the sink capture) ----------------
 b=open(os.path.join(ROOT,'figures','demo','demo-clustered-wsn-12-0.pcap'),'rb').read(); o=24; rows=[]

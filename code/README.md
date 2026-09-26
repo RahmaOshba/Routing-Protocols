@@ -13,7 +13,6 @@ The results of every file are in `../results/<same folder>/<same name>/`.
 | `2_EDITED/` | The same algorithms in **one unified environment** (fair comparison) |
 | `3_IMPROVED/` | The literature hybrids after **our fix** of their main flaw |
 | `4_PROPOSED/` | **Our protocol**, version by version, v1 → v8-Chain |
-| `archive/` | Superseded variants kept only for history (not used in the thesis) |
 
 ## Unified environment (2_EDITED, 3_IMPROVED, 4_PROPOSED)
 
@@ -90,18 +89,12 @@ The EDITED and IMPROVED codes, v3 and v5b take `-DBS_Y=-100` for the far-BS runs
    - The v8-Chain comments still said "v6"; they now say "v8".
    - All files now follow the version name used in the thesis, and their output files carry the same name.
 3. **Stale header text.** v4's header quoted numbers from old, since-corrected codes (EECH-HEED 3808, PEGASIS 2887); it now describes the actual reason for the test.
-4. **Old-environment variants.** These were moved to `archive/`:
-   - v3/v6/v7 with the BS at (25, −100) in a 50 × 50 m field;
-   - the v6 centre variant without the zero-CH fix;
-   - the old packet-visualisation versions of LEACH and HEED.
+4. **Old-environment variants** (BS at (25, −100) in a 50 × 50 m field, v6 without the zero-CH fix, old packet-visualisation LEACH/HEED) were removed; the `*_farBS` files and `2_EDITED` replace them.
 
-## archive/ and 0_FIRST_EXPERIMENTS/
+## 0_FIRST_EXPERIMENTS/
 
 | File | What it is |
 |---|---|
-| `archive/v3_old_farBS_25_-100`, `v6_old_farBS_25_-100`, `v7_old_farBS_25_-100` | Early far-BS tests (50 × 50 m, BS at (25, −100)); replaced by the `*_farBS` files at (50, −100) |
-| `archive/v6_old_center_no_zeroCH_fix` | First centre-BS v6; replaced by `v6_chain_center` (which has the zero-CH fix) |
-| `archive/leach_old_with_packets`, `modified_heed_old_with_packets` | Old versions with a WiFi packet-animation layer; replaced by `1_ORIGINAL` / `2_EDITED` |
 | `0_FIRST_EXPERIMENTS/demo_clustered_wsn` | **Demo** (prints every packet; one Wireshark `.pcap` per node, `--pcap=0` to turn off) — 12 sensors in 3 clusters + sink over real IEEE 802.15.4 (lr-wpan) packets: CH rotation, TDMA slots, fused packets to the sink, energy model and NetAnim packet animation (`./ns3 run "scratch/demo_clustered_wsn --rounds=6"`, open `demo-clustered-wsn.xml`). Tested on ns-3.41: 72/72 readings delivered in 18 packets |
 | `0_FIRST_EXPERIMENTS/WSN-Day3_first_lrwpan_experiment` | First experiment: 3 sensors + sink over IEEE 802.15.4 (lr-wpan) |
 | `0_FIRST_EXPERIMENTS/wsn_first_packet` | First WSN run with energy models and packet statistics (fixed: it crashed at exit because the energy-source container was a global object) |

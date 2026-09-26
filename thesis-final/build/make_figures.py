@@ -36,12 +36,6 @@ def grouped(ax,labels,data,hl=None,ymax=None,valfont=8):
 fig,ax=plt.subplots(figsize=(10,4.6)); d=[v(r)[:3] for _,r,_ in FAM]
 grouped(ax,[f for f,_,_ in FAM],d,hl=6,ymax=4200); ax.set_title('Network lifetime — unified environment, BS at the centre',loc='left',fontweight='bold',color=INK)
 save(fig,'f1_lifetime_families.png')
-# F2 PDR
-fig,ax=plt.subplots(figsize=(10,3.6)); p=[v(r)[3] for _,r,_ in FAM]
-cols=[GREY]*6+[BLUE]; b=ax.bar([f for f,_,_ in FAM],p,0.55,color=cols,zorder=3)
-for i,val in enumerate(p): ax.text(i,val+0.02,f'{val:.2f}%',ha='center',va='bottom',fontsize=10,color=INK)
-ax.set_ylim(98.5,100.0); ax.set_ylabel('PDR (%)'); ax.set_title('Packet delivery ratio',loc='left',fontweight='bold',color=INK)
-save(fig,'f2_pdr_families.png')
 # F3 alive nodes + F10 residual energy (highlight v8)
 for key,idx,ylabel,name,title in [('alive',1,'Alive nodes','f3_alive_curves.png','Alive nodes per round'),('energy',2,'Residual energy (J)','f10_energy_curves.png','Residual network energy per round')]:
     fig,ax=plt.subplots(figsize=(10,4.6)); labels=[]
@@ -93,15 +87,6 @@ for i,(n,c) in enumerate(names):
 ax.set_xticks(range(len(names))); ax.set_xticklabels([n for n,_ in names]); ax.set_ylabel('FND (rounds)'); ax.set_ylim(1200,2700)
 ax.set_title('Robustness — 8 random topologies (dots) and their mean (bar)',loc='left',fontweight='bold',color=INK)
 save(fig,'f7_robustness.png')
-# F8 hybrids ORIGINAL/EDITED/IMPROVED
-fig,axs=plt.subplots(1,3,figsize=(11,3.6),sharey=True)
-for ax,(n,k) in zip(axs,[('SH-LEACH','shleach'),('H-LEACH','hleach'),('EECH-HEED','eechheed')]):
-    st3=[v(f'{k}_{s}')[0] for s in ('ORIGINAL','EDITED','IMPROVED')]
-    ax.bar(['Original','Edited','Improved'],st3,0.55,color=[GREY,GREY,BLUE],zorder=3)
-    for i,val in enumerate(st3): ax.text(i,val+20,str(val),ha='center',fontsize=10,color=INK)
-    ax.set_title(n,fontsize=12,color=INK,fontweight='bold')
-axs[0].set_ylabel('FND (rounds)'); axs[0].set_ylim(0,1800); fig.tight_layout()
-save(fig,'f8_hybrids.png')
 # F9 validation
 fig,ax=plt.subplots(figsize=(8,3.6)); cats=['LEACH LND','PEGASIS FND','PEGASIS LND','EECH-HEED FND']
 pub=[1312,1578,2192,1250]; ours=[v('leach_ORIGINAL')[2],v('pegasis_ORIGINAL')[0],v('pegasis_ORIGINAL')[2],v('eechheed_ORIGINAL')[0]]

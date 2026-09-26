@@ -85,16 +85,6 @@ robustness,v8_farBS_seed42,1436,1631,1666,0.993628
 robustness,v8_farBS_seed555,1396,1566,1616,0.993724
 robustness,v8_farBS_seed7,1476,1621,1671,0.994442
 robustness,v8_farBS_seed99,1416,1626,1666,0.993002
-security,v8_chain_mic104_aes5nJ_center,2061,2141,2176,0.997941
-security,v8_chain_mic104_aes5nJ_ecc20mJ_center,1971,2062,2091,0.997036
-security,v8_chain_mic104_aes5nJ_ecc20mJ_far,1336,1506,1546,0.995020
-security,v8_chain_mic104_aes5nJ_far,1361,1566,1616,0.993940
-security,v8_chain_mic104_center,2246,2321,2351,0.997584
-security,v8_chain_mic104_ecc20mJ_center,2156,2231,2261,0.997196
-security,v8_chain_mic104_ecc20mJ_far,1426,1611,1661,0.995774
-security,v8_chain_mic104_far,1491,1686,1721,0.995580
-security,v8_chain_none_center,2446,2536,2566,0.997168
-security,v8_chain_none_far,1626,1821,1881,0.995637
 far_bs,eechheed_EDITED_farBS,970,1377,1400,0.995210
 far_bs,eechheed_IMPROVED_farBS,1410,1437,1457,0.991819
 far_bs,heed_EDITED_farBS,350,765,1375,0.995336
