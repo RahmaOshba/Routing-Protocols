@@ -10,7 +10,7 @@ EECH-HEED, and the proposed protocol (v1 → v8-Chain).
 | `results/` | The output of every code, in the same folders (see `results/README.md`) |
 | `papers/` | The research papers, split into `1_ORIGINAL`, `2_HYBRID`, `3_RECENT` (see `papers/README.md`) |
 | `figures/` | Screenshots and diagrams |
-| `thesis-final/` | Defense deck, State-of-the-Art report, Literature Review (Word + Excel comparison) and Results Comparison workbook — all built from `results/` (see `thesis-final/build/README.md`) |
+| `thesis-final/` | Defense deck, State-of-the-Art report, Literature Review (one Excel sheet), Results Comparison workbook and Simulation Parameters Guide — all built from `results/` (see `thesis-final/build/README.md`) |
 
 Headline result (unified environment, BS at the centre): **v8 FND 2446 /
 HND 2536 / LND 2566 rounds, PDR 99.72%**; with the BS far away **v8-Chain FND 1626**.

@@ -13,9 +13,8 @@ Every number in the deck, the reports and the workbook is read from
 | `make_demo_figure.py` | `fig/demo_layout.png` + `fig/demo_results.json` from `demo_output.txt` (real ns-3.41 run of `code/0_FIRST_EXPERIMENTS/demo_clustered_wsn.cc`) |
 | `deck.js` | `../Thesis_Defense_v8-Chain.pptx` |
 | `build_sota.js` | `../SOTA_Report_v8-Chain.docx` — short version: what we did, results, comparisons, charts |
-| `build_litreview.js` | `../Literature_Review.docx` |
 | `build_results_xlsx.py` | `../Results_Comparison.xlsx` (then recalculate the formulas, e.g. open it in Excel) |
-| `build_litreview_xlsx.py` | `../Literature_Review_Comparison.xlsx` — literature review as a comparison table |
+| `build_litreview_xlsx.py` | `../Literature_Review.xlsx` — the literature review: one sheet, one row per paper |
 | `build_parameters.js` | `../Simulation_Parameters_Guide.docx` — meaning, role and choice of every simulation parameter |
 
 `common.js` (data, references, environment) and `docx_lib.js` (Word helpers) are shared.
