@@ -119,13 +119,20 @@ static constexpr uint32_t SETUP_INTERVAL = 5; // requested variant: interval=5, 
 
 // --------------------------- Radio / traffic -------------------------------
 // Optional security overhead (all 0 by default = the thesis results).
-// Used for the "expected cost of adding hybrid cryptography" experiment:
+// Used for the "cost of hybrid cryptography" experiment (thesis proposal:
+// symmetric inside the cluster, public-key only between the CH and the sink):
 //   SEC_BITS        extra bits per frame (e.g. 104 = IEEE 802.15.4 security:
 //                   5-byte auxiliary header + 8-byte MIC), data and control
 //   SEC_NJ_PER_BIT  symmetric-cipher energy per bit, paid by the sender
 //                   (encrypt) and by the receiver (decrypt)
-//   SEC_SETUP_MJ    one-time public-key (ECC) key-establishment energy per
-//                   node at deployment, in mJ
+//   SEC_SETUP_MJ    one-time public-key key-establishment energy per node at
+//                   deployment, in mJ
+//   SEC_AUTH_MJ     public-key energy paid by every newly elected CH (or chain
+//                   leader) to authenticate to the sink and receive its
+//                   credentials / session key, in mJ (hybrid scheme)
+//   SEC_PK_TX_MJ    public-key operation per DATA packet, paid by the sender,
+//   SEC_PK_RX_MJ    and by the receiving node, in mJ ("full public-key" mode:
+//                   every packet encrypted with RSA/ECC; the sink is mains-powered)
 #ifndef SEC_BITS
 #define SEC_BITS 0
 #endif
@@ -135,9 +142,21 @@ static constexpr uint32_t SETUP_INTERVAL = 5; // requested variant: interval=5, 
 #ifndef SEC_SETUP_MJ
 #define SEC_SETUP_MJ 0.0
 #endif
+#ifndef SEC_AUTH_MJ
+#define SEC_AUTH_MJ 0.0
+#endif
+#ifndef SEC_PK_TX_MJ
+#define SEC_PK_TX_MJ 0.0
+#endif
+#ifndef SEC_PK_RX_MJ
+#define SEC_PK_RX_MJ 0.0
+#endif
+static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
+static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
+static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent
+static constexpr double E_PK_RX = SEC_PK_RX_MJ * 1e-3;   // J per data packet received
 static constexpr uint32_t PACKET_BITS = 2000 + SEC_BITS;
 static constexpr uint32_t CONTROL_BITS = 200 + SEC_BITS;
-static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_ELEC = 50e-9;
 static constexpr double E_FS = 10e-12;
 static constexpr double E_MP = 0.0013e-12;
@@ -192,11 +211,14 @@ static double D0() { return sqrt(E_FS / E_MP); }
 
 static double TxEnergy(uint32_t bits, double d)
 {
-    if (d <= 0.0) return bits * (E_ELEC + E_SEC);
-    if (d < D0()) return bits * (E_ELEC + E_SEC + E_FS * d * d);
-    return bits * (E_ELEC + E_SEC + E_MP * pow(d, 4.0));
+    const double pk = (bits >= PACKET_BITS) ? E_PK_TX : 0.0;   // full public-key mode only
+    if (d <= 0.0) return pk + bits * (E_ELEC + E_SEC);
+    if (d < D0()) return pk + bits * (E_ELEC + E_SEC + E_FS * d * d);
+    return pk + bits * (E_ELEC + E_SEC + E_MP * pow(d, 4.0));
 }
-static double RxEnergy(uint32_t bits) { return bits * (E_ELEC + E_SEC); }
+static double RxEnergy(uint32_t bits) { return ((bits >= PACKET_BITS) ? E_PK_RX : 0.0) + bits * (E_ELEC + E_SEC); }
+// Hybrid scheme: a node that takes the CH role authenticates to the sink once.
+static void ChargeAuth(SensorNode& n) { if (E_AUTH > 0.0) n.energy = max(0.0, n.energy - E_AUTH); }
 static double AggEnergy(uint32_t bits) { return bits * E_DA; }
 static double TxTimeSec(uint32_t bits) { return static_cast<double>(bits) / DATA_RATE; }
 static double DelayMs(uint32_t bits, double d) { return (TxTimeSec(bits) + d / LIGHT) * 1000.0; }
@@ -252,6 +274,7 @@ static void TryFailover(vector<SensorNode>& nodes, uint32_t deadCH, RoundResult&
         return;
     }
     nodes[static_cast<uint32_t>(b)].finalCH = true;
+    ChargeAuth(nodes[static_cast<uint32_t>(b)]);
     nodes[static_cast<uint32_t>(b)].clusterHead = static_cast<uint32_t>(b);
     for (auto& n : nodes)
         if (n.alive && !n.finalCH && n.clusterHead == deadCH && !LowEnergy(n.energy)) // NEW: only reconnect members that can plausibly benefit
@@ -335,6 +358,7 @@ static bool ProactiveHandover(vector<SensorNode>& nodes, uint32_t ch, RoundResul
     nodes[nb].energy -= announce;
     ++r.controlTx;
     nodes[nb].finalCH = true;
+    ChargeAuth(nodes[nb]);
     nodes[nb].clusterHead = nb;
     nodes[ch].finalCH = false;
     for (auto& n : nodes) {
@@ -506,6 +530,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
 
     // ---- Control overhead ONLY on setup rounds (the key saving) ----
     if (isSetupRound) {
+        for (auto& n : nodes) if (n.alive && n.finalCH) ChargeAuth(n);   // hybrid security (0 by default)
         for (uint32_t c = 0; c < N; ++c) {
             if (!nodes[c].alive || !nodes[c].finalCH) continue;
             const double tx = TxEnergy(CONTROL_BITS, ADV_RANGE);   // unified env: every node hears it and may join

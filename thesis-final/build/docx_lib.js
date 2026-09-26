@@ -26,13 +26,13 @@ function caption(t) {
     children: [new TextRun({ text: t, italics: true, size: 18, color: MUTED })] });
 }
 function img(file, widthIn, cap) {
-  const f = path.join(FIG, file);
+  const f = path.isAbsolute(file) ? file : path.join(FIG, file);
   const buf = fs.readFileSync(f);
   const w = buf.readUInt32BE(16), h = buf.readUInt32BE(20);         // PNG header
   const W = Math.round(widthIn * 96), H = Math.round(W * h / w);
   const out = [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 40 }, keepNext: true,
     children: [new ImageRun({ type: 'png', data: buf, transformation: { width: W, height: H },
-      altText: { title: cap || file, description: cap || file, name: file } })] })];
+      altText: { title: cap || path.basename(file), description: cap || path.basename(file), name: path.basename(file) } })] })];
   if (cap) out.push(caption(cap));
   return out;
 }

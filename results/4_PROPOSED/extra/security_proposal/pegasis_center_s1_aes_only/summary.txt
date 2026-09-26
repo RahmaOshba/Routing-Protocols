@@ -1,0 +1,11 @@
+             FINAL RESULTS
+========================================
+FND = 1196 rounds
+HND = 2043 rounds
+LND = 3077 rounds
+Total Energy Used = 50.000000 J
+Overall PDR = 0.994152
+
+CSV outputs: pegasis_EDITED-results.csv, pegasis_EDITED-node-energy.csv,
+             pegasis_EDITED-node-lifetime.csv, pegasis_EDITED-clustering.xml
+========================================

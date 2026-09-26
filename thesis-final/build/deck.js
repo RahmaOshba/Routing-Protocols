@@ -168,7 +168,7 @@ async function build() {
     const items = [['01', 'Background', 'WSNs and clustering', 'FaWifi'], ['02', 'Energy & first experiments', 'energy model, ns-3, demo', 'FaBolt'],
       ['03', 'Classic protocols', 'LEACH · HEED · PEGASIS', 'FaBook'], ['04', 'Hybrid protocols', 'SH-LEACH · H-LEACH · EECH-HEED', 'FaLayerGroup'],
       ['05', 'Recent work', 'and literature review', 'FaSearch'], ['06', 'Proposed protocol', 'v1 → v8-Chain', 'FaCogs'],
-      ['07', 'Adding security', 'expected cost', 'FaLock'], ['08', 'Conclusion', 'limitations · summary', 'FaFlagCheckered']];
+      ['07', 'Adding security', 'AES · RSA · ECC — the proposal scheme', 'FaLock'], ['08', 'Conclusion', 'limitations · summary', 'FaFlagCheckered']];
     items.forEach(([n, h, b, ic], i) => {
       const x = 0.6 + (i % 4) * 3.07, y = 1.55 + Math.floor(i / 4) * 2.7;
       card(s, x, y, 2.85, 2.4, { head: h, body: b, icon: ic, color: [BLUE, ORANGE, AQUA, NAVY][i % 4], size: 14, headSize: 15 });
@@ -261,10 +261,36 @@ async function build() {
     band(s, 'ns-3.41 built from source inside an Ubuntu virtual machine; results processed in Python.', 6.45);
   }
   {
-    const s = base(); title(s, 'First experiments — real IEEE 802.15.4 packets', 'WSN-Day3: 3 sensors → sink with ACKs · wsn_first_packet: + energy model + NetAnim');
-    imgAbs(s, path.join(SHOTS, 'first_terminal.png'), 0.6, 1.5, 4.9, 4.8);
-    imgAbs(s, path.join(SHOTS, 'first_netanim.png'), 5.7, 1.5, 7.0, 4.8);
-    band(s, 'Learned: how packets, ACKs and the energy model work — and that the radio spends energy even when it only listens.', 6.45);
+    const s = base(); title(s, 'Running ns-3 for the first time', 'Every experiment is a C++ file in scratch/ and runs with ./ns3 run · NetAnim is started from its own folder');
+    imgAbs(s, path.join(SHOTS, 'run_template.png'), 0.6, 1.55, 12.1, 2.6);
+    imgAbs(s, path.join(SHOTS, 'netanim_cmd.png'), 0.6, 4.35, 12.1, 1.0);
+    band(s, 'Step 1: check that ns-3.41 builds and runs (scratch-simulator).  Step 2: open NetAnim to watch the XML trace.', 6.1);
+  }
+  {
+    const s = base(); title(s, 'Experiment 1 — WSN-Day3: 3 sensors → 1 sink', 'Real IEEE 802.15.4 (lr-wpan) MAC · every data frame asks for an ACK · 5 packets per sensor');
+    imgAbs(s, path.join(SHOTS, 'day3_terminal.png'), 0.6, 1.5, 6.0, 4.75);
+    imgAbs(s, path.join(SHOTS, 'day3_summary.png'), 6.75, 1.5, 6.0, 4.75);
+    band(s, 'Each line: a sensor sends → the sink receives (LQI 255) → the MAC confirms SUCCESS (ACK received).  Result: 15 / 15, PDR 100 %.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'Experiment 2 — energy model + long run', 'wsn_first_packet · 3 sensors + sink · 100 J each · one 50-byte packet every 10 s · 1000 s');
+    imgAbs(s, path.join(SHOTS, 'first_packet_run.png'), 0.6, 1.5, 6.0, 4.75);
+    imgAbs(s, path.join(SHOTS, 'first_packet_energy.png'), 6.75, 1.5, 6.0, 4.75);
+    band(s, '300 / 300 packets delivered, but every node used ≈ 62.6 J — the radio spends energy even when it only listens.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'Experiment 2 in NetAnim', 'Left: packets moving to the sink · right: remaining energy of every node over time (Stats → Counter Tables)');
+    imgAbs(s, path.join(SHOTS, 'first_netanim.png'), 0.6, 1.5, 6.6, 4.75);
+    imgAbs(s, path.join(SHOTS, 'netanim_stats.png'), 7.4, 1.5, 5.3, 4.75);
+    band(s, 'The energy of each node drops step by step (100 → 99.37 → 98.75 J …) — the same numbers the code prints.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'Reading the packets in Wireshark', 'Capture of the sink (wsn-day3-3-0.pcap): data frame (31 bytes) → ACK (5 bytes), for every packet');
+    imgAbs(s, path.join(SHOTS, 'wireshark_day3.png'), 0.6, 1.45, 6.2, 3.25);
+    bullets(s, ['Source 0x0001 → destination 0x0004 (the sink)', 'The ACK comes ≈ 0.2 ms later', '“LwMesh” is only a Wireshark guess: Analyze → Enabled Protocols → untick LWM',
+      'FCS is valid (checksums enabled in the code)'], 7.1, 1.5, 5.6, 3.2, 15);
+    img(s, 'k2_frame_decode.png', 0.6, 4.75, 12.1, 1.6);
+    band(s, 'Frame 1 byte by byte: 9 header bytes + 20 payload bytes + 2 FCS bytes = 31 bytes.', 6.45);
   }
   {
     const s = base(); title(s, 'Demo — clustering with real packets', '12 sensors · 3 clusters · 1 sink · CH rotates every round · TDMA · fusion');
@@ -275,14 +301,21 @@ async function build() {
     st.forEach(([b, l, c], k) => stat(s, 0.6 + k * 3.1, 5.5, 2.9, b, l, c));
   }
   {
+    const s = base(); title(s, 'Demo — terminal output', 'Every packet is printed: member → CH (TDMA slot), CH fuses 4 readings, CH → sink');
+    imgAbs(s, path.join(SHOTS, 'demo_terminal.png'), 0.6, 1.5, 6.0, 4.75);
+    imgAbs(s, path.join(SHOTS, 'demo_results.png'), 6.75, 1.5, 6.0, 4.75);
+    band(s, '72 readings, PDR 100 %, but only 18 packets reach the sink (instead of 72) — that is the saving of clustering.', 6.45);
+  }
+  {
     const s = base(); title(s, 'Demo in NetAnim', 'End of round 6 — red = CH (CH1, CH4, CH9) · colours = clusters · gold = sink with 72 readings');
     imgAbs(s, path.join(C.ROOT, 'figures', 'ns3_screens', 'demo_netanim.png'), 0.6, 1.5, 12.1, 4.85);
     band(s, 'Every node shows its remaining energy (16.3 J of 20 J); the CH role moved to a new node every round.', 6.5);
   }
   {
-    const s = base(); title(s, 'Demo packets in Wireshark', 'Capture of the sink: 72 data frames + 72 ACKs (IEEE 802.15.4)');
-    img(s, 'k1_packets.png', 0.6, 1.45, 12.1, 4.9);
-    band(s, 'Each member frame (51 bytes = 40-byte reading + header + FCS) is answered by a 5-byte ACK.', 6.5);
+    const s = base(); title(s, 'Demo packets in Wireshark', 'Capture of CH / sink traffic (demo-clustered-wsn-12-0.pcap): 51-byte data frames, each answered by a 5-byte ACK');
+    imgAbs(s, path.join(SHOTS, 'wireshark_demo.png'), 0.6, 1.45, 7.2, 4.9);
+    img(s, 'k1_packets.png', 8.0, 1.45, 4.7, 4.9);
+    band(s, 'Each member frame: 9-byte header + 40-byte reading + 2-byte FCS = 51 bytes; the ACK proves it arrived.', 6.5);
   }
 
   // ================= 03 CLASSIC =================
@@ -576,7 +609,7 @@ async function build() {
     card(s, 0.6, 1.5, 6.1, 4.8, { head: 'No existing protocol combines', icon: 'FaBullseye', color: ORANGE, size: 16,
       body: '• a cheap single-pass CH election (energy + connectivity)\n• cluster reuse to cut setup overhead\n• protection of the CH before and after it fails\n• relaying between CHs only when it saves energy\n\n…and they are never compared in the same environment.' });
     card(s, 6.9, 1.5, 5.8, 4.8, { head: 'Our answer', icon: 'FaLightbulb', color: BLUE, size: 16,
-      body: '1. Reproduce all protocols fairly (ORIGINAL → EDITED).\n2. Fix the flaws of the hybrids (IMPROVED).\n3. Build a new protocol step by step (v1 → v8-Chain).\n4. Estimate the cost of adding security.' });
+      body: '1. Reproduce all protocols fairly (ORIGINAL → EDITED).\n2. Fix the flaws of the hybrids (IMPROVED).\n3. Build a new protocol step by step (v1 → v8-Chain).\n4. Test the hybrid cryptography of the proposal (vs no security and full RSA).' });
   }
 
   // ================= 06 PROPOSED =================
@@ -741,24 +774,59 @@ async function build() {
   }
 
   // ================= 07 SECURITY =================
-  section('07', 'Adding security', 'What hybrid cryptography is expected to cost on top of v8 / v8-Chain');
+  section('07', 'Adding security', 'The hybrid cryptography of the thesis proposal, tested on LEACH, PEGASIS and v8 / v8-Chain');
+  const SG = (p, bs, k) => C.get(`sec_${p}_${bs}_${k}`);
   {
-    const s = base(); title(s, 'Hybrid cryptography — the plan', 'Public-key once for keys, fast symmetric encryption for every message');
-    const st = [['1  Deployment', 'ECC key agreement once per node → shared keys with the BS / cluster', 'FaKey', ORANGE],
-      ['2  Every message', 'AES encryption + 8-byte integrity code (MIC), as in IEEE 802.15.4 security [17]', 'FaLock', BLUE],
-      ['3  CH fusion', 'CH decrypts, fuses and re-encrypts one packet to the BS', 'FaLayerGroup', AQUA]];
-    st.forEach(([h, b, ic, col], i) => card(s, 0.6 + i * 4.1, 1.5, 3.85, 2.6, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 16 }));
-    tbl(s, [['Assumption used in the experiment', 'Value'], ['Extra bits per frame (auxiliary header + MIC)', '104 bits (data and control)'],
-      ['AES energy (sender and receiver)', '5 nJ/bit (same order as E_DA; assumed)'], ['ECC key setup per node, once', '20 mJ (order reported for 8-bit sensor MCUs [16])']],
-    0.6, 4.35, 12.1, [6.5, 5.6], { size: 14, rowH: 0.5 });
+    const s = base(); title(s, 'Why not RSA for everything?', 'Energy of one operation on an 8-bit sensor MCU (ATmega128, Wander et al. [16]) — log scale');
+    img(s, 's5_sec_ops.png', 0.6, 1.45, 8.3, 4.9);
+    stat(s, 9.2, 1.5, 3.5, '912 mJ', 'to RSA-decrypt ONE 2000-bit reading — the whole battery is 500 mJ', RED);
+    stat(s, 9.2, 3.55, 3.5, '10 µJ', 'to AES-encrypt the same reading (≈ 90 000× cheaper)', AQUA);
+    band(s, 'Proposal idea: symmetric crypto for every message; public-key crypto only where it is really needed.', 6.5);
   }
   {
-    const s = base(); title(s, 'Expected cost of security', 'Centre = v8, far BS = v8-Chain, run with the security overhead switched on (-DSEC_BITS, -DSEC_NJ_PER_BIT, -DSEC_SETUP_MJ)');
-    img(s, 's1_security.png', 0.6, 1.45, 8.1, 5.0);
-    const sc = F('v8_chain_mic104_aes5nJ_ecc20mJ_center');
-    card(s, 8.9, 1.5, 3.8, 4.9, { head: 'Expected', icon: 'FaLock', color: BLUE, size: 14,
-      body: `FND drops by about 9 % – 19 %.\n\nWith everything on: ${sc} rounds — still +${C.gain(sc, leach.F).toFixed(0)} % over LEACH and +${C.gain(sc, best.F).toFixed(0)} % over SH-LEACH+ without any security.\n\nPDR stays above 99 %.` });
-    band(s, 'Security is affordable: the lifetime saved by the protocol pays for the protection.', 6.5);
+    const s = base(); title(s, 'The hybrid scheme (thesis proposal)', 'Symmetric inside the cluster · public key only between the CH and the sink · the sink authenticates the CHs');
+    img(s, 's4_sec_scheme.png', 0.6, 1.45, 7.6, 3.4);
+    eqBox(s, 'eq_security.png', 0.6, 5.0, 7.6, 1.3);
+    const st = [['Members → CH', 'AES + 8-byte MIC (IEEE 802.15.4 security [17]): +104 bits, 5 nJ/bit', 'FaLock', BLUE],
+      ['CH and sink', 'public key (RSA or ECC) to authenticate; the sink replies with credentials / a session key', 'FaKey', ORANGE],
+      ['The sink', 'mains-powered, does the heavy private-key work (RSA decrypt / sign)', 'FaUserShield', NAVY]];
+    st.forEach(([h, b, ic, col], i) => card(s, 8.45, 1.45 + i * 1.65, 4.3, 1.5, { head: h, body: b, icon: ic, color: col, size: 12, headSize: 14 }));
+  }
+  {
+    const s = base(); title(s, 'Scenarios tested', 'Same codes; security switched on with compiler flags (-DSEC_…), all 0 by default');
+    tbl(s, [['Scenario', 'Every message', 'Public key', 'What a node pays'],
+      ['No security', '—', '—', 'nothing'],
+      ['AES + MIC only', 'AES + MIC', '— (keys pre-loaded)', '+104 bits, 5 nJ/bit'],
+      ['Hybrid — once per node', 'AES + MIC', 'once at deployment', '+ 15.4 mJ (RSA) / 22.3 mJ (ECC) once'],
+      ['Hybrid — per new CH', 'AES + MIC', 'every time a node becomes CH', '+ 15.4 / 22.3 mJ per election'],
+      ['Full ECC', 'ECIES', 'every packet', '22.3 mJ send + 22.3 mJ receive'],
+      ['Full RSA', 'RSA-1024 (3 blocks)', 'every packet', '35.7 mJ send + 912 mJ receive']],
+    0.6, 1.6, 12.1, [3.0, 2.4, 3.1, 3.6], { size: 14, rowH: 0.55 });
+    band(s, 'Compared on LEACH, PEGASIS and v8 (BS at the centre) and v8-Chain (BS far away), as planned in the proposal.', 6.1);
+  }
+  {
+    const s = base(); title(s, 'Results — FND with security, BS at the centre');
+    img(s, 's2_sec_center.png', 0.6, 1.3, 12.1, 4.85);
+    band(s, `Hybrid (public key once): v8 ${SG('v8', 'center', 's6_once_rsa').F} rounds = +${C.gain(SG('v8', 'center', 's6_once_rsa').F, leach.F).toFixed(0)} % over LEACH WITHOUT security, ×${(SG('v8', 'center', 's6_once_rsa').F / SG('leach', 'center', 's6_once_rsa').F).toFixed(1)} LEACH with the same security.`, 6.3);
+  }
+  {
+    const s = base(); title(s, 'Results — FND with security, BS far away');
+    img(s, 's2_sec_far.png', 0.6, 1.3, 12.1, 4.85);
+    band(s, `Far BS, same hybrid for all: v8-Chain ${SG('v8chain', 'far', 's6_once_rsa').F} vs PEGASIS ${SG('pegasis', 'far', 's6_once_rsa').F} (+${C.gain(SG('v8chain', 'far', 's6_once_rsa').F, SG('pegasis', 'far', 's6_once_rsa').F).toFixed(0)} %) and LEACH ${SG('leach', 'far', 's6_once_rsa').F} (+${C.gain(SG('v8chain', 'far', 's6_once_rsa').F, SG('leach', 'far', 's6_once_rsa').F).toFixed(0)} %).`, 6.3);
+  }
+  {
+    const s = base(); title(s, 'PDR — full public key breaks the network', 'BS at the centre · % of readings that reach the BS');
+    img(s, 's3_sec_pdr.png', 0.6, 1.5, 12.1, 4.6);
+    band(s, 'Full RSA: a CH cannot pay 912 mJ to decrypt one packet, so almost nothing arrives (PDR 3 – 6 %).  The hybrid keeps PDR ≈ 99 %.', 6.35);
+  }
+  {
+    const s = base(); title(s, 'What we learn about security');
+    const L = [['Full RSA / ECC is impossible', 'Every packet with public key: FND 1 – 203 rounds and PDR 3 – 24 %. The proposal was right: RSA is too heavy for the nodes.', 'FaExclamationTriangle', RED],
+      ['Public key once, not per CH', `Authenticating every new CH with RSA/ECC cuts FND by ${Math.round((1 - SG('v8', 'center', 's2_hybrid_rsa').F / 2501) * 100)} – ${Math.round((1 - SG('leach', 'center', 's2_hybrid_rsa').F / leach.F) * 100)} %. Once per node, then symmetric credentials from the sink: only −${Math.round((1 - SG('v8', 'center', 's6_once_rsa').F / 2501) * 100)} %.`, 'FaKey', ORANGE],
+      ['RSA vs ECC on the node', 'With the sink doing the private-key work, RSA costs the node 15.4 mJ vs 22.3 mJ for ECDH — ECC still gives smaller keys (160 vs 1024 bits).', 'FaBalanceScale', BLUE],
+      ['v8 protects best', `Fewer re-elections (setup every 5 rounds) = fewer authentications. With the recommended hybrid: v8 ${SG('v8', 'center', 's6_once_rsa').F}, PEGASIS ${SG('pegasis', 'center', 's6_once_rsa').F}, LEACH ${SG('leach', 'center', 's6_once_rsa').F}.`, 'FaTrophy', AQUA]];
+    L.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 2) * 6.15, 1.45 + Math.floor(i / 2) * 2.45, 5.95, 2.25, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 16 }));
+    band(s, 'Recommended: AES + MIC for every message, public key once per node, the sink authenticates CHs with symmetric credentials.', 6.45);
   }
 
   // ================= 08 CONCLUSION =================
@@ -768,7 +836,7 @@ async function build() {
     const L = [['Analytical energy model', 'Long runs use the first-order radio model: no collisions, retransmissions or fading (the demo shows packet level on a small scale).', 'FaMicrochip'],
       ['Static, equal nodes', '100 static nodes with equal energy; no mobility or heterogeneous hardware.', 'FaMapMarkedAlt'],
       ['One field size', '100 × 100 m and 100 nodes; larger networks not tested.', 'FaThLarge'],
-      ['Security only estimated', 'Crypto costs are assumed values; attacks and key management are not simulated.', 'FaLock'],
+      ['Security as energy cost only', 'Crypto energy from published MCU measurements [16] (AES assumed); attacks are not simulated.', 'FaLock'],
       ['Missing paper details', 'Some settings (packet size, sensor signal) had to be assumed and documented.', 'FaBook'],
       ['PEGASIS keeps a longer LND', `${peg.L} vs ${v8m.L}: v8 is designed for the first death, not the last.`, 'FaStream']];
     L.forEach(([h, b, ic], i) => card(s, 0.6 + (i % 2) * 6.15, 1.45 + Math.floor(i / 2) * 1.85, 5.95, 1.65, { head: h, body: b, icon: ic, color: i === 3 ? RED : GREY, size: 12.5, headSize: 15 }));
@@ -783,7 +851,7 @@ async function build() {
       'Flaws found and fixed in three hybrids: all of them had broken LEACH\'s rotation.',
       'v8 built step by step: single-pass election, cluster reuse, CH protection, direct-to-BS and energy gate — the main protocol.',
       'v8-Chain adds an energy-aware relay: same as v8 at the centre, +16 % when the BS is far.',
-      'Adding hybrid cryptography is expected to cost 9 – 19 % of lifetime — still longer than every unsecured baseline.'], 0.8, 3.6, 11.7, 3.4, 16, 'FFFFFF');
+      `Hybrid cryptography (AES + public key once) costs ${Math.round((1 - C.get('sec_v8_center_s6_once_rsa').F / v8m.F) * 100)} % of lifetime — v8 still beats LEACH without security; full RSA breaks the network.`], 0.8, 3.6, 11.7, 3.4, 16, 'FFFFFF');
   }
   for (const part of [[0, 9], [9, C.REFS.length]]) {
     const s = base(); title(s, 'References' + (part[0] ? ' (continued)' : ''));

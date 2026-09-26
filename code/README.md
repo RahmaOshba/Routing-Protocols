@@ -78,7 +78,7 @@ v8 improvements (switch one off with `-DI1=0` … `-DI5=0`):
 `v8_chain_*` also takes `-DCHAIN_MODE=0` (direct, which equals v8), `1` (ordered chain) or `2` (energy-aware relay, the default).
 `v5b` and all v8 files take `-DTOPO_SEED=<n>` for the 8-topology robustness runs.
 The EDITED and IMPROVED codes, v3 and v5b take `-DBS_Y=-100` for the far-BS runs (default 50 = centre). Results: `results/far_bs/`.
-`v8_chain_*` also take `-DSEC_BITS=<bits>`, `-DSEC_NJ_PER_BIT=<nJ>` and `-DSEC_SETUP_MJ=<mJ>` (all 0 by default) to estimate the energy cost of adding security (extra header/MIC bits, cipher energy per bit, one-time key setup). Results: `results/4_PROPOSED/extra/security/`.
+`v8_chain_*`, `2_EDITED/leach_EDITED.cc` and `2_EDITED/pegasis_EDITED.cc` take security switches (all 0 by default = thesis results): `-DSEC_BITS=<bits>` extra bits per frame, `-DSEC_NJ_PER_BIT=<nJ>` symmetric cipher per bit, `-DSEC_SETUP_MJ=<mJ>` one-time public-key setup per node, `-DSEC_AUTH_MJ=<mJ>` public-key authentication of every newly elected CH / chain leader with the sink, `-DSEC_PK_TX_MJ` / `-DSEC_PK_RX_MJ=<mJ>` public-key operation on every data packet (full RSA / ECC). Results: `results/4_PROPOSED/extra/security/` and `results/4_PROPOSED/extra/security_proposal/`.
 
 ### Fixes made in this revision
 

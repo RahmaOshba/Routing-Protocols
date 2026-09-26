@@ -122,6 +122,45 @@ Folders: `4_PROPOSED/extra/security/`.
 | + header/MIC + AES | Far | 1356 | 1591 | 1641 | 99.52% | −18.9% |
 | + header/MIC + AES + ECC setup | Far | 1361 | 1535 | 1576 | 99.30% | −18.5% |
 
+## Security as planned in the thesis proposal — LEACH, PEGASIS and v8 / v8-Chain
+
+Codes: `leach_EDITED.cc`, `pegasis_EDITED.cc`, `v8_chain_center.cc`, `v8_chain_farBS.cc` with
+`-DSEC_BITS -DSEC_NJ_PER_BIT -DSEC_SETUP_MJ -DSEC_AUTH_MJ -DSEC_PK_TX_MJ -DSEC_PK_RX_MJ` (all 0 by default).
+Proposal: symmetric keys inside the cluster, public-key cryptography only between the CH and the sink,
+the sink authenticates the CHs and gives them credentials; compare with no security and with full RSA.
+
+Energy of the public-key operations (Wander et al., PerCom 2005, ATmega128): RSA-1024 public-key op 11.9 mJ,
+private-key op 304 mJ, RSA key transport on the node side 15.4 mJ, ECDH-160 22.3 mJ. AES 5 nJ/bit (assumed),
+IEEE 802.15.4 security header + MIC-64 = 104 bits. Full RSA: a 2000-bit reading = 3 RSA-1024 blocks = 3072 bits,
+35.7 mJ to encrypt, 912 mJ to decrypt (more than the 0.5 J battery). Full ECC (ECIES): 22.3 mJ each side, +336 bits.
+Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
+
+**BS at the centre** — FND (PDR)
+
+| Scenario | LEACH | PEGASIS | v8 |
+|---|---:|---:|---:|
+| No security | 1383 (99.4%) | 1324 (99.4%) | 2501 (99.6%) |
+| Symmetric only (AES + MIC, pre-shared keys) | 1037 (99.1%) | 1196 (99.4%) | 2096 (99.7%) |
+| Hybrid, public key once (RSA-1024 at deployment) + AES | 1019 (99.2%) | 1158 (99.3%) | 2061 (99.6%) |
+| Hybrid, public key once (ECC-160 at deployment) + AES | 1017 (99.1%) | 1141 (99.3%) | 2001 (99.7%) |
+| Hybrid, RSA for every new CH + AES | 395 (99.1%) | 874 (97.7%) | 1336 (96.2%) |
+| Hybrid, ECC for every new CH + AES | 302 (98.1%) | 774 (97.7%) | 1121 (95.2%) |
+| Full ECC (every packet) | 1 (23.8%) | 11 (83.3%) | 7 (13.3%) |
+| Full RSA (every packet) | 182 (5.5%) | 1 (2.9%) | 49 (6.0%) |
+
+**BS far away (v8 column = v8-Chain)** — FND (PDR)
+
+| Scenario | LEACH | PEGASIS | v8 |
+|---|---:|---:|---:|
+| No security | 988 (99.4%) | 1374 (99.1%) | 1671 (99.4%) |
+| Symmetric only (AES + MIC, pre-shared keys) | 821 (98.8%) | 1237 (99.1%) | 1356 (99.5%) |
+| Hybrid, public key once (RSA-1024 at deployment) + AES | 798 (99.1%) | 1199 (99.0%) | 1331 (99.3%) |
+| Hybrid, public key once (ECC-160 at deployment) + AES | 786 (99.2%) | 1182 (99.1%) | 1336 (99.4%) |
+| Hybrid, RSA for every new CH + AES | 351 (98.8%) | 894 (97.3%) | 956 (96.5%) |
+| Hybrid, ECC for every new CH + AES | 281 (98.8%) | 796 (96.8%) | 866 (95.7%) |
+| Full ECC (every packet) | 1 (21.9%) | 11 (83.1%) | 6 (14.1%) |
+| Full RSA (every packet) | 161 (5.3%) | 1 (3.4%) | 203 (4.1%) |
+
 ## Far base station — every protocol with the BS at (50, −100)
 
 Same codes compiled with `-DBS_Y=-100` (folders `far_bs/`). v8 and v8-Chain use their own `*_farBS` files.
