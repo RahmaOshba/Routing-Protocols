@@ -99,10 +99,17 @@ static constexpr double E0 = 0.5;      // J/node
 #ifndef SEC_PK_RX_MJ
 #define SEC_PK_RX_MJ 0.0
 #endif
+//   SEC_PK_BS_MJ    public-key encryption (e.g. ECIES) of every data packet that
+//                   goes straight to the sink, paid by the sender, in mJ
+//                   ("asymmetric between CH and sink"; members still use AES)
+#ifndef SEC_PK_BS_MJ
+#define SEC_PK_BS_MJ 0.0
+#endif
 static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
 static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent
 static constexpr double E_PK_RX = SEC_PK_RX_MJ * 1e-3;   // J per data packet received
+static constexpr double E_PK_BS = SEC_PK_BS_MJ * 1e-3;   // J per data packet sent to the sink
 static constexpr uint32_t PACKET_BITS = 2000 + SEC_BITS;
 static constexpr double E_ELEC = 50e-9;   // J/bit
 static constexpr double E_FS = 10e-12;        // J/bit/m^2 (UNIFIED two-slope)
@@ -249,7 +256,7 @@ static RoundResult SimulateRound(vector<ChainNode>& nodes, vector<uint32_t>& cha
         if (nodes[r.leader].alive) {
             ++atLeader;                                   // leader's own reading
             const double dBS = DistBS(nodes[r.leader]);
-            const double tx = TxEnergy(PACKET_BITS, dBS);
+            const double tx = TxEnergy(PACKET_BITS, dBS) + E_PK_BS;
             if (tx > nodes[r.leader].energy) { nodes[r.leader].energy = 0.0; nodes[r.leader].alive = false; anyLost = true; }
             else {
                 nodes[r.leader].energy -= tx;

@@ -151,10 +151,17 @@ static constexpr uint32_t SETUP_INTERVAL = 5; // requested variant: interval=5, 
 #ifndef SEC_PK_RX_MJ
 #define SEC_PK_RX_MJ 0.0
 #endif
+//   SEC_PK_BS_MJ    public-key encryption (e.g. ECIES) of every data packet that
+//                   goes straight to the sink, paid by the sender, in mJ
+//                   ("asymmetric between CH and sink"; members still use AES)
+#ifndef SEC_PK_BS_MJ
+#define SEC_PK_BS_MJ 0.0
+#endif
 static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
 static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent
 static constexpr double E_PK_RX = SEC_PK_RX_MJ * 1e-3;   // J per data packet received
+static constexpr double E_PK_BS = SEC_PK_BS_MJ * 1e-3;   // J per data packet sent to the sink
 static constexpr uint32_t PACKET_BITS = 2000 + SEC_BITS;
 static constexpr uint32_t CONTROL_BITS = 200 + SEC_BITS;
 static constexpr double E_ELEC = 50e-9;
@@ -301,7 +308,7 @@ static uint32_t NearestAliveCH(const vector<SensorNode>& nodes, const SensorNode
 // Energy a CH will spend this round: receive + aggregate every member, then one packet to BS.
 static double ExpectedCHCost(const vector<SensorNode>& nodes, uint32_t ch, uint32_t members)
 {
-    return members * RxEnergy(PACKET_BITS) + (members + 1) * AggEnergy(PACKET_BITS) + TxEnergy(PACKET_BITS, DistBS(nodes[ch]));
+    return members * RxEnergy(PACKET_BITS) + (members + 1) * AggEnergy(PACKET_BITS) + TxEnergy(PACKET_BITS, DistBS(nodes[ch])) + E_PK_BS;
 }
 
 // ---- v8-Chain: next hop of every CH (-1 = BS). Recomputed every round from the CHs that
@@ -321,7 +328,7 @@ static vector<int32_t> ComputeNextHop(const vector<SensorNode>& nodes)
     }
     const double relayCost = RxEnergy(PACKET_BITS) + AggEnergy(PACKET_BITS);   // paid by the relay CH
     for (uint32_t c : chs) {
-        double best = TxEnergy(PACKET_BITS, DistBS(nodes[c]));                  // going direct
+        double best = TxEnergy(PACKET_BITS, DistBS(nodes[c])) + E_PK_BS;        // going direct (+ public key to the sink, 0 by default)
         for (uint32_t j : chs) {
             if (j == c || DistBS(nodes[j]) >= DistBS(nodes[c])) continue;        // strictly closer -> no loops
             const double viaJ = TxEnergy(PACKET_BITS, Dist(nodes[c], nodes[j])) + relayCost;
@@ -582,7 +589,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
             if (!nodes[c].alive || !nodes[c].finalCH) continue;
             double cost = ExpectedCHCost(nodes, c, members[c] + incoming[c]);
             if (hop[c] >= 0)   // replace the CH->BS term with the CH->next-hop term
-                cost += TxEnergy(PACKET_BITS, Dist(nodes[c], nodes[hop[c]])) - TxEnergy(PACKET_BITS, DistBS(nodes[c]));
+                cost += TxEnergy(PACKET_BITS, Dist(nodes[c], nodes[hop[c]])) - TxEnergy(PACKET_BITS, DistBS(nodes[c])) - E_PK_BS;
             if (nodes[c].energy < cost)
                 ProactiveHandover(nodes, c, r);
         }
@@ -605,9 +612,11 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
         // v8: if the BS is no farther than the CH (or there is no CH at all),
         // send straight to the BS: same/lower TX cost for the node, and the
         // CH is spared the RX + aggregation energy for this packet.
-        if (DIRECT_TO_BS && (!hasCH || DistBS(nodes[i]) <= Dist(nodes[i], nodes[c]))) {
+        // (energy form of the same rule: with no security it is exactly "BS no farther than the CH";
+        //  with public-key encryption towards the sink it also counts that cost)
+        if (DIRECT_TO_BS && (!hasCH || TxEnergy(PACKET_BITS, DistBS(nodes[i])) + E_PK_BS <= TxEnergy(PACKET_BITS, Dist(nodes[i], nodes[c])))) {
             const double dBS = DistBS(nodes[i]);
-            const double tx = TxEnergy(PACKET_BITS, dBS);
+            const double tx = TxEnergy(PACKET_BITS, dBS) + E_PK_BS;
             if (tx > nodes[i].energy) { ++r.lost; continue; }
             nodes[i].energy -= tx;
             ++r.dataTx; ++r.dataRx; ++r.directToBS;
@@ -650,7 +659,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
         nodes[c].energy -= agg;
         const int32_t dst = nextHop[c];
         const double d = dst < 0 ? DistBS(nodes[c]) : Dist(nodes[c], nodes[static_cast<uint32_t>(dst)]);
-        const double tx = TxEnergy(PACKET_BITS, d);
+        const double tx = TxEnergy(PACKET_BITS, d) + (dst < 0 ? E_PK_BS : 0.0);
         if (tx > nodes[c].energy) { nodes[c].energy = 0.0; nodes[c].alive = false; nodes[c].finalCH = false; TryFailover(nodes, c, r); ++r.lost; return; }
         nodes[c].energy -= tx;
         ++r.dataTx;

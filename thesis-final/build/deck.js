@@ -799,10 +799,11 @@ async function build() {
       ['AES + MIC only', 'AES + MIC', '— (keys pre-loaded)', '+104 bits, 5 nJ/bit'],
       ['Hybrid — once per node', 'AES + MIC', 'once at deployment', '+ 15.4 mJ (RSA) / 22.3 mJ (ECC) once'],
       ['Hybrid — per new CH', 'AES + MIC', 'every time a node becomes CH', '+ 15.4 / 22.3 mJ per election'],
+      ['ECC / RSA on CH → sink', 'AES + MIC', 'every packet to the sink', '+22.3 mJ (ECC) / 35.7 mJ (RSA) per packet'],
       ['Full ECC', 'ECIES', 'every packet', '22.3 mJ send + 22.3 mJ receive'],
       ['Full RSA', 'RSA-1024 (3 blocks)', 'every packet', '35.7 mJ send + 912 mJ receive']],
-    0.6, 1.6, 12.1, [3.0, 2.4, 3.1, 3.6], { size: 14, rowH: 0.55 });
-    band(s, 'Compared on LEACH, PEGASIS and v8 (BS at the centre) and v8-Chain (BS far away), as planned in the proposal.', 6.1);
+    0.6, 1.6, 12.1, [3.0, 2.4, 3.1, 3.6], { size: 14, rowH: 0.5 });
+    band(s, 'Compared on LEACH, PEGASIS and v8 (BS at the centre) and v8-Chain (BS far away), as planned in the proposal.', 6.4);
   }
   {
     const s = base(); title(s, 'Results — FND with security, BS at the centre');
@@ -813,6 +814,18 @@ async function build() {
     const s = base(); title(s, 'Results — FND with security, BS far away');
     img(s, 's2_sec_far.png', 0.6, 1.3, 12.1, 4.85);
     band(s, `Far BS, same hybrid for all: v8-Chain ${SG('v8chain', 'far', 's6_once_rsa').F} vs PEGASIS ${SG('pegasis', 'far', 's6_once_rsa').F} (+${C.gain(SG('v8chain', 'far', 's6_once_rsa').F, SG('pegasis', 'far', 's6_once_rsa').F).toFixed(0)} %) and LEACH ${SG('leach', 'far', 's6_once_rsa').F} (+${C.gain(SG('v8chain', 'far', 's6_once_rsa').F, SG('leach', 'far', 's6_once_rsa').F).toFixed(0)} %).`, 6.3);
+  }
+  {
+    const s = base(); title(s, 'Lighter than full RSA: ECC only on CH → sink', 'Members use AES · packets to the sink: ECC (≈ 22.3 mJ) or RSA (35.7 mJ) · the sink decrypts');
+    const rows = [['Scenario', 'LEACH', 'PEGASIS', 'v8', 'LEACH far', 'PEGASIS far', 'v8-Chain far']].concat(
+      [['No security', 's0_none'], ['ECC once per node', 's7_once_ecc'], ['ECC on CH → sink', 's8_bs_ecc'], ['RSA on CH → sink', 's9_bs_rsa'], ['Full ECC', 's4_full_ecc'], ['Full RSA', 's5_full_rsa']]
+        .map(([n, k]) => [n, ...[['leach', 'center'], ['pegasis', 'center'], ['v8', 'center'], ['leach', 'far'], ['pegasis', 'far'], ['v8chain', 'far']].map(([p, bs]) => { const x = SG(p, bs, k); return `${x.F} · ${C.pct(x.P)}`; })]));
+    tbl(s, rows, 0.6, 1.6, 12.1, [2.5, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6], { size: 13, rowH: 0.42 });
+    const K = [['Much lighter than full RSA', 'Only the sender encrypts; the sink does the decryption → the network works again (PDR ≈ 96 %).', 'FaCheckCircle', AQUA],
+      ['Still 70 % shorter life', `22.3 mJ on every packet to the sink: v8 ${SG('v8', 'center', 's8_bs_ecc').F} vs ${SG('v8', 'center', 's7_once_ecc').F} with ECC once.`, 'FaExclamationTriangle', ORANGE],
+      ['Fewer packets to the sink wins', `PEGASIS (1 leader) ${SG('pegasis', 'center', 's8_bs_ecc').F}; v8 relays CH → CH to save ECC operations; LEACH ${SG('leach', 'center', 's8_bs_ecc').F}.`, 'FaRoute', BLUE]];
+    K.forEach(([h, b, ic, col], i) => card(s, 0.6 + i * 4.1, 4.7, 3.85, 1.8, { head: h, body: b, icon: ic, color: col, size: 12, headSize: 14 }));
+    band(s, 'Best use of ECC: once per node for the key agreement — not on every packet.', 6.65);
   }
   {
     const s = base(); title(s, 'PDR — full public key breaks the network', 'BS at the centre · % of readings that reach the BS');

@@ -136,10 +136,17 @@ static constexpr uint32_t EPOCH = 20;   // 1 / P_CH
 #ifndef SEC_PK_RX_MJ
 #define SEC_PK_RX_MJ 0.0
 #endif
+//   SEC_PK_BS_MJ    public-key encryption (e.g. ECIES) of every data packet that
+//                   goes straight to the sink, paid by the sender, in mJ
+//                   ("asymmetric between CH and sink"; members still use AES)
+#ifndef SEC_PK_BS_MJ
+#define SEC_PK_BS_MJ 0.0
+#endif
 static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
 static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent
 static constexpr double E_PK_RX = SEC_PK_RX_MJ * 1e-3;   // J per data packet received
+static constexpr double E_PK_BS = SEC_PK_BS_MJ * 1e-3;   // J per data packet sent to the sink
 static constexpr uint32_t PACKET_BITS = 2000 + SEC_BITS;
 static constexpr uint32_t CONTROL_BITS = 200 + SEC_BITS;
 // PAPER Sec. 4: "these simulations do not account for the setup time to
@@ -552,7 +559,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
             // directly to the BS (direct transmission).
             ++r.unclustered;
             const double dBS = DistBS(nodes[i]);
-            const double txBS = TxEnergy(PACKET_BITS, dBS);
+            const double txBS = TxEnergy(PACKET_BITS, dBS) + E_PK_BS;
             if (txBS > nodes[i].energy) {
                 nodes[i].energy = 0.0;
                 nodes[i].alive = false;
@@ -606,7 +613,7 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
         nodes[c].energy -= agg;
 
         const double dBS = DistBS(nodes[c]);
-        const double txBS = TxEnergy(PACKET_BITS, dBS);
+        const double txBS = TxEnergy(PACKET_BITS, dBS) + E_PK_BS;
 
         if (txBS > nodes[c].energy) {
             nodes[c].energy = 0.0;

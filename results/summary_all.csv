@@ -115,6 +115,8 @@ security_proposal,sec_leach_center_s4_full_ecc,1,23,39,0.238200
 security_proposal,sec_leach_center_s5_full_rsa,182,194,201,0.054700
 security_proposal,sec_leach_center_s6_once_rsa,1019,1210,1410,0.992000
 security_proposal,sec_leach_center_s7_once_ecc,1017,1194,1365,0.991200
+security_proposal,sec_leach_center_s8_bs_ecc,284,314,321,0.969800
+security_proposal,sec_leach_center_s9_bs_rsa,201,209,220,0.953200
 security_proposal,sec_leach_far_s0_none,988,1230,1652,0.994300
 security_proposal,sec_leach_far_s1_aes_only,821,986,1334,0.988400
 security_proposal,sec_leach_far_s2_hybrid_rsa,351,390,434,0.988400
@@ -123,6 +125,8 @@ security_proposal,sec_leach_far_s4_full_ecc,1,20,47,0.218500
 security_proposal,sec_leach_far_s5_full_rsa,161,186,200,0.052800
 security_proposal,sec_leach_far_s6_once_rsa,798,954,1283,0.991000
 security_proposal,sec_leach_far_s7_once_ecc,786,930,1266,0.991600
+security_proposal,sec_leach_far_s8_bs_ecc,264,295,320,0.958400
+security_proposal,sec_leach_far_s9_bs_rsa,181,203,220,0.941500
 security_proposal,sec_pegasis_center_s0_none,1324,2352,3504,0.994200
 security_proposal,sec_pegasis_center_s1_aes_only,1196,2043,3077,0.994200
 security_proposal,sec_pegasis_center_s2_hybrid_rsa,874,1245,2008,0.977200
@@ -131,6 +135,8 @@ security_proposal,sec_pegasis_center_s4_full_ecc,11,12,23,0.832900
 security_proposal,sec_pegasis_center_s5_full_rsa,1,1,14,0.028800
 security_proposal,sec_pegasis_center_s6_once_rsa,1158,1980,2982,0.993500
 security_proposal,sec_pegasis_center_s7_once_ecc,1141,1953,2938,0.993200
+security_proposal,sec_pegasis_center_s8_bs_ecc,774,1047,1700,0.976800
+security_proposal,sec_pegasis_center_s9_bs_rsa,674,848,1229,0.944600
 security_proposal,sec_pegasis_far_s0_none,1374,2176,2713,0.990800
 security_proposal,sec_pegasis_far_s1_aes_only,1237,1900,2384,0.991100
 security_proposal,sec_pegasis_far_s2_hybrid_rsa,894,1195,1259,0.973500
@@ -139,6 +145,8 @@ security_proposal,sec_pegasis_far_s4_full_ecc,11,12,22,0.831400
 security_proposal,sec_pegasis_far_s5_full_rsa,1,1,13,0.033800
 security_proposal,sec_pegasis_far_s6_once_rsa,1199,1843,2302,0.989700
 security_proposal,sec_pegasis_far_s7_once_ecc,1182,1814,2272,0.991100
+security_proposal,sec_pegasis_far_s8_bs_ecc,796,1021,1075,0.968100
+security_proposal,sec_pegasis_far_s9_bs_rsa,674,806,855,0.959400
 security_proposal,sec_v8_center_s0_none,2501,2589,2631,0.996400
 security_proposal,sec_v8_center_s1_aes_only,2096,2176,2221,0.997200
 security_proposal,sec_v8_center_s2_hybrid_rsa,1336,1466,1561,0.962100
@@ -147,6 +155,8 @@ security_proposal,sec_v8_center_s4_full_ecc,7,101,216,0.133100
 security_proposal,sec_v8_center_s5_full_rsa,49,216,341,0.060100
 security_proposal,sec_v8_center_s6_once_rsa,2061,2131,2166,0.996200
 security_proposal,sec_v8_center_s7_once_ecc,2001,2086,2126,0.996900
+security_proposal,sec_v8_center_s8_bs_ecc,736,946,1026,0.962600
+security_proposal,sec_v8_center_s9_bs_rsa,371,756,836,0.962500
 security_proposal,sec_v8chain_far_s0_none,1671,1851,1906,0.993600
 security_proposal,sec_v8chain_far_s1_aes_only,1356,1591,1641,0.995200
 security_proposal,sec_v8chain_far_s2_hybrid_rsa,956,1151,1276,0.965500
@@ -155,3 +165,5 @@ security_proposal,sec_v8chain_far_s4_full_ecc,6,71,171,0.141400
 security_proposal,sec_v8chain_far_s5_full_rsa,203,291,376,0.040900
 security_proposal,sec_v8chain_far_s6_once_rsa,1331,1546,1591,0.993500
 security_proposal,sec_v8chain_far_s7_once_ecc,1336,1526,1581,0.993800
+security_proposal,sec_v8chain_far_s8_bs_ecc,716,926,1021,0.960100
+security_proposal,sec_v8chain_far_s9_bs_rsa,336,741,846,0.953400

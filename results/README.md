@@ -125,14 +125,16 @@ Folders: `4_PROPOSED/extra/security/`.
 ## Security as planned in the thesis proposal — LEACH, PEGASIS and v8 / v8-Chain
 
 Codes: `leach_EDITED.cc`, `pegasis_EDITED.cc`, `v8_chain_center.cc`, `v8_chain_farBS.cc` with
-`-DSEC_BITS -DSEC_NJ_PER_BIT -DSEC_SETUP_MJ -DSEC_AUTH_MJ -DSEC_PK_TX_MJ -DSEC_PK_RX_MJ` (all 0 by default).
+`-DSEC_BITS -DSEC_NJ_PER_BIT -DSEC_SETUP_MJ -DSEC_AUTH_MJ -DSEC_PK_TX_MJ -DSEC_PK_RX_MJ -DSEC_PK_BS_MJ` (all 0 by default).
 Proposal: symmetric keys inside the cluster, public-key cryptography only between the CH and the sink,
 the sink authenticates the CHs and gives them credentials; compare with no security and with full RSA.
 
 Energy of the public-key operations (Wander et al., PerCom 2005, ATmega128): RSA-1024 public-key op 11.9 mJ,
 private-key op 304 mJ, RSA key transport on the node side 15.4 mJ, ECDH-160 22.3 mJ. AES 5 nJ/bit (assumed),
 IEEE 802.15.4 security header + MIC-64 = 104 bits. Full RSA: a 2000-bit reading = 3 RSA-1024 blocks = 3072 bits,
-35.7 mJ to encrypt, 912 mJ to decrypt (more than the 0.5 J battery). Full ECC (ECIES): 22.3 mJ each side, +336 bits.
+35.7 mJ to encrypt, 912 mJ to decrypt (more than the 0.5 J battery). ECC per packet (ECIES) ≈ one ECDH = 22.3 mJ.
+The v8 column uses the v8-Chain code: at the centre it is identical to v8 unless the packets to the sink carry a
+public-key cost — then the energy-aware relay (and the direct-to-BS rule) count that cost and CHs relay to save it.
 Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
 
 **BS at the centre** — FND (PDR)
@@ -145,6 +147,8 @@ Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
 | Hybrid, public key once (ECC-160 at deployment) + AES | 1017 (99.1%) | 1141 (99.3%) | 2001 (99.7%) |
 | Hybrid, RSA for every new CH + AES | 395 (99.1%) | 874 (97.7%) | 1336 (96.2%) |
 | Hybrid, ECC for every new CH + AES | 302 (98.1%) | 774 (97.7%) | 1121 (95.2%) |
+| AES in the cluster + ECC (ECIES) on every packet to the sink | 284 (97.0%) | 774 (97.7%) | 736 (96.3%) |
+| AES in the cluster + RSA on every packet to the sink | 201 (95.3%) | 674 (94.5%) | 371 (96.2%) |
 | Full ECC (every packet) | 1 (23.8%) | 11 (83.3%) | 7 (13.3%) |
 | Full RSA (every packet) | 182 (5.5%) | 1 (2.9%) | 49 (6.0%) |
 
@@ -158,6 +162,8 @@ Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
 | Hybrid, public key once (ECC-160 at deployment) + AES | 786 (99.2%) | 1182 (99.1%) | 1336 (99.4%) |
 | Hybrid, RSA for every new CH + AES | 351 (98.8%) | 894 (97.3%) | 956 (96.5%) |
 | Hybrid, ECC for every new CH + AES | 281 (98.8%) | 796 (96.8%) | 866 (95.7%) |
+| AES in the cluster + ECC (ECIES) on every packet to the sink | 264 (95.8%) | 796 (96.8%) | 716 (96.0%) |
+| AES in the cluster + RSA on every packet to the sink | 181 (94.2%) | 674 (95.9%) | 336 (95.3%) |
 | Full ECC (every packet) | 1 (21.9%) | 11 (83.1%) | 6 (14.1%) |
 | Full RSA (every packet) | 161 (5.3%) | 1 (3.4%) | 203 (4.1%) |
 

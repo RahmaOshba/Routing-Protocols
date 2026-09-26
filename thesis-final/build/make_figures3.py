@@ -22,23 +22,23 @@ def arrow(ax,a,b,c=MUTED,lw=1.8,ls='-',ms=16):
     ax.add_patch(FancyArrowPatch(a,b,arrowstyle='-|>',mutation_scale=ms,color=c,lw=lw,linestyle=ls,shrinkA=4,shrinkB=4))
 
 SC=[('s0_none','No\nsecurity'),('s1_aes_only','AES + MIC\nonly'),('s6_once_rsa','Hybrid\nRSA once'),('s7_once_ecc','Hybrid\nECC once'),
-    ('s2_hybrid_rsa','Hybrid\nRSA per CH'),('s3_hybrid_ecc','Hybrid\nECC per CH'),('s4_full_ecc','Full\nECC'),('s5_full_rsa','Full\nRSA')]
+    ('s2_hybrid_rsa','Hybrid\nRSA per CH'),('s3_hybrid_ecc','Hybrid\nECC per CH'),('s8_bs_ecc','ECC on\nCH→sink'),('s9_bs_rsa','RSA on\nCH→sink'),('s4_full_ecc','Full\nECC'),('s5_full_rsa','Full\nRSA')]
 
 # ---------------- S2 FND per scheme (centre / far) ----------------
 for bs,v8k,v8lab,name in [('center','v8','v8','s2_sec_center.png'),('far','v8chain','v8-Chain','s2_sec_far.png')]:
-    fig,ax=plt.subplots(figsize=(11,4.4)); x=np.arange(len(SC)); w=0.27
+    fig,ax=plt.subplots(figsize=(12.5,4.4)); x=np.arange(len(SC)); w=0.27
     for j,(p,lab,c) in enumerate([('leach','LEACH',GREY),('pegasis','PEGASIS',AQUA),(v8k,v8lab,BLUE)]):
         vals=[sec(p,bs,s)[0] for s,_ in SC]
         ax.bar(x+(j-1)*w,vals,w-0.03,color=c,zorder=3,label=lab)
         for i,val in enumerate(vals): ax.text(x[i]+(j-1)*w,val+30,str(val),ha='center',fontsize=7.5,color=INK,rotation=90)
     ax.axvspan(1.5,3.5,color='#e8f6ef',zorder=0); ax.text(2.5,2950 if bs=='center' else 2000,'recommended',ha='center',color=AQUA,fontsize=10,fontweight='bold')
-    ax.axvspan(5.5,7.5,color='#fdeceb',zorder=0); ax.text(6.5,2950 if bs=='center' else 2000,'network breaks',ha='center',color=RED,fontsize=10,fontweight='bold')
+    ax.axvspan(7.5,9.5,color='#fdeceb',zorder=0); ax.text(8.5,2950 if bs=='center' else 2000,'network breaks',ha='center',color=RED,fontsize=10,fontweight='bold')
     ax.set_xticks(x); ax.set_xticklabels([l for _,l in SC],fontsize=9.5); ax.set_ylabel('FND (rounds)')
-    ax.set_ylim(0,3200 if bs=='center' else 2200); ax.legend(loc='upper right',ncol=3,fontsize=10,bbox_to_anchor=(1,0.93))
+    ax.set_ylim(0,3200 if bs=='center' else 2200); ax.legend(loc='upper center',ncol=3,fontsize=10,bbox_to_anchor=(0.6,0.97))
     save(fig,name)
 
 # ---------------- S3 PDR per scheme ----------------
-fig,ax=plt.subplots(figsize=(11,3.6)); x=np.arange(len(SC)); w=0.27
+fig,ax=plt.subplots(figsize=(12.5,3.6)); x=np.arange(len(SC)); w=0.27
 for j,(p,lab,c) in enumerate([('leach','LEACH',GREY),('pegasis','PEGASIS',AQUA),('v8','v8',BLUE)]):
     vals=[sec(p,'center',s)[1] for s,_ in SC]
     ax.bar(x+(j-1)*w,vals,w-0.03,color=c,zorder=3,label=lab)
