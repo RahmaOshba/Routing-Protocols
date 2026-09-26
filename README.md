@@ -1,8 +1,11 @@
-# Energy-Efficient Secure Clustering in WSNs Using Hybrid Cryptography
+# energy-efficient-wsn-clustering
 
-Master's thesis — Eng. Rahma Khaled Oshba. ns-3.41 simulations of LEACH, HEED,
-PEGASIS, two LEACH + HEED hybrids from the literature (SH-LEACH, H-LEACH),
-EECH-HEED, and the proposed protocol (v1 → v8-Chain).
+Energy-efficient clustering for Wireless Sensor Networks in ns-3.41: LEACH, HEED,
+PEGASIS and three LEACH + HEED hybrids (SH-LEACH, H-LEACH, EECH-HEED) reproduced
+and compared in one fair environment, and the proposed protocol **v8 / v8-Chain**.
+
+Master's thesis — Eng. Rahma Khaled Oshba: *Energy-Efficient Secure Clustering in
+Wireless Sensor Networks Using Hybrid Cryptography*.
 
 | Folder | Content |
 |---|---|
