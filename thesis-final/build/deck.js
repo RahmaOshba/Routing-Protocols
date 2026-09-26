@@ -241,18 +241,29 @@ async function build() {
     tbl(s, [['Symbol', 'Meaning', 'Value'], ['k', 'bits in the packet', '2000 data / 200 control'], ['E_elec', 'radio electronics', '50 nJ/bit'],
       ['ε_fs', 'amplifier, short range', '10 pJ/bit/m²'], ['ε_mp', 'amplifier, long range', '0.0013 pJ/bit/m⁴'], ['E_DA', 'fusion at the CH', '5 nJ/bit/signal']],
     0.6, 4.05, 5.4, [1.1, 2.3, 2.0], { size: 12, rowH: 0.36 });
-    img(s, 'e1_energy_distance.png', 6.3, 1.5, 6.5, 4.9);
-    band(s, 'Short links: the electronics dominate — receiving is not free.  Long links (> d0): the cost explodes.', 6.5);
+    img(s, 'e1_energy_distance.png', 6.3, 1.4, 6.5, 3.45);
+    tbl(s, [['One 2000-bit packet', 'How it is calculated', 'Energy'], ['Receive (any distance)', '2000 bit × 50 nJ', '100 µJ'],
+      ['Send 10 m', '2000 × (50 nJ + 10 pJ × 10²)', '102 µJ'], ['Send 50 m', '2000 × (50 nJ + 10 pJ × 50²)', '150 µJ'],
+      ['Send 100 m (> d0 → d⁴)', '2000 × (50 nJ + 0.0013 pJ × 100⁴)', '360 µJ']],
+    6.3, 4.95, 6.5, [2.1, 3.3, 1.1], { size: 10, rowH: 0.24 });
+    band(s, 'Energy is per bit (× k bits).  Short links: receiving is not free.  Long links (> d0): the cost explodes.', 6.62);
+    note(s, 'Energy is given per bit, so a 2000-bit packet costs 2000 times the per-bit value. Receiving: 2000 × 50 nJ = 100 µJ at any distance. Sending: electronics (50 nJ/bit) plus the amplifier, which grows with d² below d0 and with d⁴ above it. d0 = √(ε_fs/ε_mp) = √(10/0.0013) ≈ 87.7 m is where the two amplifier formulas give the same cost. Over 10 m sending (102 µJ) costs about the same as receiving (100 µJ); at 100 m it costs 360 µJ.');
   }
   {
     const s = base(); title(s, 'Worked example — why the CH is the one that dies', '100 nodes, 0.5 J each (50 J in total), one 2000-bit reading per node per round');
-    tbl(s, [['Role in one round', 'What it pays', 'Energy'], ['Member (15 m from its CH)', 'send one packet', '≈ 0.10 mJ'],
-      ['CH with 20 members', 'receive 20 + fuse 21 + send to BS', '≈ 2.6 mJ'], ['Receiving one control message', '200 bits × 50 nJ', '10 µJ']],
-    0.6, 1.6, 7.4, [2.8, 3.0, 1.6], { size: 14, rowH: 0.55 });
-    stat(s, 8.5, 1.55, 4.2, '≈ 26×', 'a CH spends about 26 times more than a member in the same round', RED);
-    stat(s, 8.5, 3.5, 4.2, '5000', 'rounds a node could live as a member only (0.5 J ÷ 0.1 mJ)', BLUE);
-    band(s, 'Every protocol competes on one question: how to rotate the CH role fairly and make it cheaper.', 5.2);
-    note(s, 'This is why rotation and CH protection matter. FND measures exactly this.');
+    tbl(s, [['Who', 'What it pays in one round', 'How it is calculated', 'Energy'],
+      ['Member (15 m from its CH)', 'send one 2000-bit packet', '2000 × (50 nJ + 10 pJ × 15²)', '≈ 0.10 mJ'],
+      ['CH with 20 members', 'receive 20 packets', '20 × 2000 bit × 50 nJ', '2.0 mJ'],
+      ['', 'fuse 21 readings (20 + its own)', '21 × 2000 bit × 5 nJ', '0.21 mJ'],
+      ['', 'send one packet to the BS (≈ 50 m)', '2000 × (50 nJ + 10 pJ × 50²)', '0.15 mJ'],
+      ['', 'control: advertise, 20 joins, TDMA', '200-bit messages', '≈ 0.25 mJ'],
+      ['CH total', '', '', '≈ 2.6 mJ'],
+      ['One control message received', 'a 200-bit message (no reading)', '200 bit × 50 nJ', '10 µJ']],
+    0.6, 1.55, 8.2, [2.1, 2.5, 2.5, 1.1], { size: 11, rowH: 0.44 });
+    stat(s, 9.2, 1.55, 3.6, '≈ 26×', 'a CH spends about 26 times more than a member in the same round (2.6 ÷ 0.1)', RED);
+    stat(s, 9.2, 3.55, 3.6, '5000 vs 190', 'rounds a 0.5 J battery lasts as a member only (500 ÷ 0.1 mJ) vs as a CH only (500 ÷ 2.6 mJ)', BLUE);
+    band(s, 'Every protocol competes on one question: how to rotate the CH role fairly and make it cheaper.', 5.9);
+    note(s, 'Energy is per bit, so each cost = number of bits × cost per bit (2000 bits for data, 200 bits for control). Member: 2000 × (50 nJ + 10 pJ × 15²) ≈ 0.10 mJ. CH: receive 20 × 2000 × 50 nJ = 2 mJ, fuse 21 × 2000 × 5 nJ = 0.21 mJ (20 members + its own reading), send to the BS ≈ 0.15 mJ, control messages ≈ 0.25 mJ → ≈ 2.6 mJ, about 26 times a member. A 0.5 J (500 mJ) battery lasts 5000 rounds as a member only but about 190 rounds as a CH only — so the CH role must rotate.');
   }
   {
     const s = base(); title(s, 'Tools', 'Ubuntu (VMware) · ns-3.41 (C++) · NetAnim · Wireshark · Python');
