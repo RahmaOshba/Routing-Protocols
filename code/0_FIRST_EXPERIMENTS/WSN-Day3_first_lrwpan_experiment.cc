@@ -194,7 +194,9 @@ main(int argc, char* argv[])
     }
 
     // Optional: packet captures (open with Wireshark)
-    lrWpanHelper.EnablePcapAll("wsn-day3", false);
+    // promiscuous = true: every node records all frames it hears, so the sink
+    // file (wsn-day3-3-0.pcap) shows the 15 data frames and their 15 ACKs
+    lrWpanHelper.EnablePcapAll("wsn-day3", true);
 
     double stopTime = 1.0 + sensorDevices.GetN() * 0.2 + numPackets * interval + 1.0;
     Simulator::Stop(Seconds(stopTime));
