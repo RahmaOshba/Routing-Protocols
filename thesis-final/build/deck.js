@@ -397,17 +397,6 @@ async function build() {
     lifeChart(s, ['LEACH', 'HEED', 'HEED + fairness', 'PEGASIS'], ['leach_EDITED', 'heed_EDITED', 'heed_fairness_EDITED', 'pegasis_EDITED'], 0.6, 1.4, 12.1, 5.5);
   }
   {
-    const s = base(); title(s, 'Comparison — ORIGINAL vs EDITED', 'The same code in two environments');
-    const rows = [['Protocol', 'Metric', 'ORIGINAL (paper settings)', 'EDITED (unified)', 'Change']];
-    CL.forEach(([n, k]) => { const o = C.get(k + '_ORIGINAL'), e = C.get(k + '_EDITED');
-      [['FND', 'F'], ['HND', 'H'], ['LND', 'L']].forEach(([m, f]) => rows.push([n, m, o[f], e[f], chg(e[f], o[f])])); });
-    tbl(s, rows, 0.6, 1.45, 12.1, [2.2, 1.6, 3.2, 2.9, 2.2], { size: 13, rowH: 0.47, center: true, boldFirst: true });
-  }
-  {
-    const s = base(); title(s, 'Comparison — chart', 'Paper vs our ORIGINAL vs our EDITED');
-    img(s, 'p1_baselines.png', 0.6, 1.45, 12.1, 5.4);
-  }
-  {
     const s = base(); title(s, 'Why did the numbers change so much?');
     const r = [['LEACH  ↑ (FND ' + F('leach_ORIGINAL') + ' → ' + leach.F + ')', ['Amplifier 10× cheaper: 10 pJ instead of 100 pJ.', 'BS at the centre (≤ 70 m) instead of 100 – 150 m away.', 'These savings are bigger than the setup messages we added.'], BLUE],
       ['HEED  ↓ (FND ' + F('heed_ORIGINAL') + ' → ' + heed.F + ')', ['Paper: 1 election then 5 data packets; unified: 1 election for 1 packet.', 'Election messages every round, each heard by ~20 neighbours.', '0.5 J instead of 2 J per node.'], ORANGE],
@@ -418,14 +407,15 @@ async function build() {
     band(s, 'The algorithms did not change — only the environment. That is why a fair comparison needs one environment.', 6.45);
   }
   {
-    const s = base(); title(s, 'Classic protocols — base station far away', 'Same codes with the BS at (50, −100)');
-    tbl(s, [['Protocol', 'FND centre', 'FND far', 'HND far', 'LND far', 'PDR far', 'Change of FND']].concat(CL.map(([n, k]) => { const c = C.get(k + '_EDITED'), f = C.get(k + '_EDITED_farBS');
-      return [n, c.F, f.F, f.H, f.L, C.pct(f.P), chg(f.F, c.F)]; })), 0.6, 1.5, 12.1, [2.0, 1.6, 1.6, 1.6, 1.6, 1.7, 2.0], { size: 15, rowH: 0.6, center: true, boldFirst: true });
-    const lab = ['LEACH', 'HEED', 'PEGASIS'];
-    s.addChart(pres.charts.BAR, [{ name: 'BS at the centre', labels: lab, values: CL.map(([, k]) => F(k + '_EDITED')) }, { name: 'BS far away', labels: lab, values: CL.map(([, k]) => FF(k + '_EDITED')) }],
-      Object.assign(chartBase(), { x: 0.6, y: 3.9, w: 7.4, h: 3.0, barDir: 'col', barGrouping: 'clustered', chartColors: ['C9C8C2', ORANGE], showLegend: true, legendPos: 'r', showValue: true, dataLabelPosition: 'outEnd' }));
-    card(s, 8.3, 3.95, 4.4, 2.95, { head: 'Far BS', icon: 'FaMapMarkedAlt', color: ORANGE, size: 13,
-      body: `LEACH and HEED lose 29 % and 48 %: every CH sends far (d⁴).\nPEGASIS keeps its FND (${FF('pegasis_EDITED')}): only one leader talks to the BS.` });
+    const s = base(); title(s, 'Comparison — ORIGINAL vs EDITED', 'The same code in two environments');
+    const rows = [['Protocol', 'Metric', 'ORIGINAL (paper settings)', 'EDITED (unified)', 'Change']];
+    CL.forEach(([n, k]) => { const o = C.get(k + '_ORIGINAL'), e = C.get(k + '_EDITED');
+      [['FND', 'F'], ['HND', 'H'], ['LND', 'L']].forEach(([m, f]) => rows.push([n, m, o[f], e[f], chg(e[f], o[f])])); });
+    tbl(s, rows, 0.6, 1.45, 12.1, [2.2, 1.6, 3.2, 2.9, 2.2], { size: 13, rowH: 0.47, center: true, boldFirst: true });
+  }
+  {
+    const s = base(); title(s, 'Comparison — chart', 'Paper vs our ORIGINAL vs our EDITED');
+    img(s, 'p1_baselines.png', 0.6, 1.45, 12.1, 5.4);
   }
   {
     const s = base(); title(s, 'Classic protocols — summary');
@@ -504,6 +494,16 @@ async function build() {
     lifeChart(s, ['SH-LEACH', 'H-LEACH', 'EECH-HEED', 'LEACH'], ['shleach_EDITED', 'hleach_EDITED', 'eechheed_EDITED', 'leach_EDITED'], 0.6, 1.4, 12.1, 5.5);
   }
   {
+    const s = base(); title(s, 'Why did the numbers change so much?');
+    const r = [['SH-LEACH', [`ORIG → EDIT (${F('shleach_ORIGINAL')} → ${F('shleach_EDITED')}): cheaper radio (10 vs 100 pJ).`, `EDIT → IMPR (→ ${F('shleach_IMPROVED')}, ×${(F('shleach_IMPROVED') / F('shleach_EDITED')).toFixed(1)}): the counter restarts, so CHs stay few instead of reaching 100.`], BLUE],
+      ['H-LEACH', [`ORIG → EDIT (${F('hleach_ORIGINAL')} → ${F('hleach_EDITED')}): packet 2000 instead of 4000 bits (half the energy per message).`, `EDIT → IMPR (→ ${F('hleach_IMPROVED')}): no deadlock, no CH bursts (8.6 → 5.3 CHs per round).`], ORANGE],
+      ['EECH-HEED', [`ORIG → EDIT: LND ${C.get('eechheed_ORIGINAL').L} → ${C.get('eechheed_EDITED').L} because sensing is OFF (every node sends every round) and 50 J instead of 56 J.`, `EDIT → IMPR (${F('eechheed_EDITED')} → ${F('eechheed_IMPROVED')}): fixed rotation in zone 2 (7.6 → 2.9 CHs per round).`], AQUA]];
+    r.forEach(([h, pts, col], i) => { const x = 0.6 + i * 4.1;
+      card(s, x, 1.5, 3.85, 4.75, { head: h, color: col, headSize: 17, body: '' });
+      bullets(s, pts, x + 0.25, 2.3, 3.4, 3.9, 14); });
+    band(s, 'ORIGINAL → EDITED = environment only.  EDITED → IMPROVED = our one-line fix only.', 6.45);
+  }
+  {
     const s = base(); title(s, 'EDITED — what went wrong', 'In the unified environment each hybrid shows a design flaw');
     const c = [['SH-LEACH', `FND ${F('shleach_EDITED')}`, 'r is never reset → the probability keeps growing → up to 100 CHs per round: every node sends alone to the BS.'],
       ['H-LEACH', `FND ${F('hleach_EDITED')}`, '"E > average" with equal energy → no CH in round 1 (deadlock); no G-set → bursts of up to 59 CHs.'],
@@ -517,16 +517,6 @@ async function build() {
     });
     band(s, 'All three add energy to LEACH but break its rotation.', 6.45);
   }
-  {
-    const s = base(); title(s, 'Why did the numbers change so much?');
-    const r = [['SH-LEACH', [`ORIG → EDIT (${F('shleach_ORIGINAL')} → ${F('shleach_EDITED')}): cheaper radio (10 vs 100 pJ).`, `EDIT → IMPR (→ ${F('shleach_IMPROVED')}, ×${(F('shleach_IMPROVED') / F('shleach_EDITED')).toFixed(1)}): the counter restarts, so CHs stay few instead of reaching 100.`], BLUE],
-      ['H-LEACH', [`ORIG → EDIT (${F('hleach_ORIGINAL')} → ${F('hleach_EDITED')}): packet 2000 instead of 4000 bits (half the energy per message).`, `EDIT → IMPR (→ ${F('hleach_IMPROVED')}): no deadlock, no CH bursts (8.6 → 5.3 CHs per round).`], ORANGE],
-      ['EECH-HEED', [`ORIG → EDIT: LND ${C.get('eechheed_ORIGINAL').L} → ${C.get('eechheed_EDITED').L} because sensing is OFF (every node sends every round) and 50 J instead of 56 J.`, `EDIT → IMPR (${F('eechheed_EDITED')} → ${F('eechheed_IMPROVED')}): fixed rotation in zone 2 (7.6 → 2.9 CHs per round).`], AQUA]];
-    r.forEach(([h, pts, col], i) => { const x = 0.6 + i * 4.1;
-      card(s, x, 1.5, 3.85, 4.75, { head: h, color: col, headSize: 17, body: '' });
-      bullets(s, pts, x + 0.25, 2.3, 3.4, 3.9, 14); });
-    band(s, 'ORIGINAL → EDITED = environment only.  EDITED → IMPROVED = our one-line fix only.', 6.45);
-  }
 
   {
     const s = base(); title(s, 'IMPROVED — our fixes', 'One or two lines of code per protocol; nothing else changed');
@@ -536,6 +526,24 @@ async function build() {
     fx.forEach(([h, b], i) => card(s, 0.6, 1.5 + i * 1.65, 6.4, 1.45, { head: h, body: b, icon: 'FaWrench', color: BLUE, size: 13, headSize: 16 }));
     ['eq_fix1.png', 'eq_fix2.png', 'eq_fix3.png'].forEach((f, i) => eqBox(s, f, 7.2, 1.5 + i * 1.65, 5.5, 1.45));
     lesson(s, 'energy alone is not enough — the rotation (epoch / G-set) must be kept.');
+  }
+  {
+    const HS = [['SH-LEACH', 'shleach', BLUE, ['LEACH + residual energy + round number'],
+        ['the round counter r never resets', 'CHs grow to 100 per round: every node sends alone to the BS'], ['r restarts every 1/C_prob = 10 rounds (one line of code)']],
+      ['H-LEACH', 'hleach', ORANGE, ['LEACH threshold with an energy-based probability', 'CH only if E > network average'],
+        ['equal energy → nobody is above average → no CH (deadlock)', 'no G-set → bursts of up to 59 CHs'], ['E ≥ average', 'LEACH G-set restored']],
+      ['EECH-HEED', 'eechheed', AQUA, ['two zones: HEED near the BS, energy × degree far away', 'relays between CHs, adaptive sensing'],
+        ['zone 2: P ≈ 1 → rotation period of 1 round', 'the same border nodes are CH every other round (219 times)'], ['zone 2 rotation fixed at the paper\'s 10 % (10 rounds)', 'energy × degree kept as a weight']]];
+    for (const [n, k, col, idea, prob, fix] of HS) {
+      const s = base(); title(s, `${n} — idea, problems, fix and results`);
+      const o = C.get(k + '_ORIGINAL'), e = C.get(k + '_EDITED'), m = C.get(k + '_IMPROVED');
+      const col3 = [['Idea', idea, col], ['Problems found', prob, RED], ['Our fix', fix, BLUE]];
+      col3.forEach(([h, pts, c], i) => { card(s, 0.6 + i * 4.1, 1.45, 3.85, 2.55, { head: h, color: c, headSize: 16, body: '' });
+        bullets(s, pts, 0.85 + i * 4.1, 2.1, 3.4, 1.85, 15); });
+      tbl(s, [['Version', 'FND', 'HND', 'LND', 'PDR', 'FND far BS'], ['ORIGINAL (paper settings)', o.F, o.H, o.L, C.pct(o.P), '—'], ['EDITED (unified)', e.F, e.H, e.L, C.pct(e.P), FF(k + '_EDITED')],
+        ['IMPROVED (our fix)', m.F, m.H, m.L, C.pct(m.P), FF(k + '_IMPROVED')]], 0.6, 4.2, 12.1, [3.4, 1.6, 1.6, 1.6, 1.8, 2.1], { size: 14, rowH: 0.5, center: true, boldFirst: true, hlLast: true });
+      band(s, `Fix: FND ${e.F} → ${m.F} (${chg(m.F, e.F)}) with the BS at the centre, ${FF(k + '_EDITED')} → ${FF(k + '_IMPROVED')} (${chg(FF(k + '_IMPROVED'), FF(k + '_EDITED'))}) with the BS far away.`, 6.35);
+    }
   }
   {
     const s = base(); title(s, 'IMPROVED results', 'Unified environment + our fix');
@@ -560,24 +568,6 @@ async function build() {
   {
     const s = base(); title(s, 'Comparison — chart', 'ORIGINAL (grey) · EDITED (orange) · IMPROVED (blue)');
     img(s, 'h2_hybrids_all.png', 0.6, 1.45, 12.1, 5.4);
-  }
-  {
-    const HS = [['SH-LEACH', 'shleach', BLUE, ['LEACH + residual energy + round number'],
-        ['the round counter r never resets', 'CHs grow to 100 per round: every node sends alone to the BS'], ['r restarts every 1/C_prob = 10 rounds (one line of code)']],
-      ['H-LEACH', 'hleach', ORANGE, ['LEACH threshold with an energy-based probability', 'CH only if E > network average'],
-        ['equal energy → nobody is above average → no CH (deadlock)', 'no G-set → bursts of up to 59 CHs'], ['E ≥ average', 'LEACH G-set restored']],
-      ['EECH-HEED', 'eechheed', AQUA, ['two zones: HEED near the BS, energy × degree far away', 'relays between CHs, adaptive sensing'],
-        ['zone 2: P ≈ 1 → rotation period of 1 round', 'the same border nodes are CH every other round (219 times)'], ['zone 2 rotation fixed at the paper\'s 10 % (10 rounds)', 'energy × degree kept as a weight']]];
-    for (const [n, k, col, idea, prob, fix] of HS) {
-      const s = base(); title(s, `${n} — idea, problems, fix and results`);
-      const o = C.get(k + '_ORIGINAL'), e = C.get(k + '_EDITED'), m = C.get(k + '_IMPROVED');
-      const col3 = [['Idea', idea, col], ['Problems found', prob, RED], ['Our fix', fix, BLUE]];
-      col3.forEach(([h, pts, c], i) => { card(s, 0.6 + i * 4.1, 1.45, 3.85, 2.55, { head: h, color: c, headSize: 16, body: '' });
-        bullets(s, pts, 0.85 + i * 4.1, 2.1, 3.4, 1.85, 15); });
-      tbl(s, [['Version', 'FND', 'HND', 'LND', 'PDR', 'FND far BS'], ['ORIGINAL (paper settings)', o.F, o.H, o.L, C.pct(o.P), '—'], ['EDITED (unified)', e.F, e.H, e.L, C.pct(e.P), FF(k + '_EDITED')],
-        ['IMPROVED (our fix)', m.F, m.H, m.L, C.pct(m.P), FF(k + '_IMPROVED')]], 0.6, 4.2, 12.1, [3.4, 1.6, 1.6, 1.6, 1.8, 2.1], { size: 14, rowH: 0.5, center: true, boldFirst: true, hlLast: true });
-      band(s, `Fix: FND ${e.F} → ${m.F} (${chg(m.F, e.F)}) with the BS at the centre, ${FF(k + '_EDITED')} → ${FF(k + '_IMPROVED')} (${chg(FF(k + '_IMPROVED'), FF(k + '_EDITED'))}) with the BS far away.`, 6.35);
-    }
   }
   {
     const s = base(); title(s, 'The three hybrids compared', 'After our fixes · centre and far BS');
@@ -625,11 +615,6 @@ async function build() {
 
   // ================= 06 PROPOSED =================
   section('06', 'Proposed protocol', 'v1 → v8-Chain — one change per version');
-  {
-    const s = base();
-    imgAbs(s, path.join(FIG, 'v8_concept.png'), 0.4, 0.3, 12.5, 6.85);
-    note(s, 'Concept of the proposed protocol: sensors form clusters, the node with the most energy and neighbours (in its LEACH turn) leads, members send short hops, the CH fuses and sends one packet — directly, or through a nearer CH only if that is cheaper (v8-Chain).');
-  }
   {
     const s = base(); title(s, 'How the protocol was built', 'Each version changes one thing, so its effect can be measured alone');
     const v = [['v1', 'HEED election', F('v1_heed_election_leach_join')], ['v2', 'fairness', F('v2_fairness_penalty')], ['v3', 'single pass + reuse', F('v3_single_pass_reuse_int5')],
@@ -789,6 +774,11 @@ async function build() {
     w.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 3) * 4.1, 1.5 + Math.floor(i / 3) * 2.7, 3.85, 2.45, { head: h, body: b, icon: ic, color: col, size: 16, headSize: 16 }));
   }
 
+  {
+    const s = base();
+    imgAbs(s, path.join(FIG, 'v8_concept.png'), 0.4, 0.3, 12.5, 6.85);
+    note(s, 'Concept of the proposed protocol: sensors form clusters, the node with the most energy and neighbours (in its LEACH turn) leads, members send short hops, the CH fuses and sends one packet — directly, or through a nearer CH only if that is cheaper (v8-Chain).');
+  }
   // ================= 07 CONCLUSION =================
   section('07', 'Conclusion', 'Limitations, summary and references');
   {
