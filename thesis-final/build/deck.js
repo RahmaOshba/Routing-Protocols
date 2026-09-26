@@ -200,7 +200,7 @@ async function build() {
   }
   {
     const s = base(); title(s, 'The main problem: energy', 'Network lifetime = how long the sensors keep working');
-    bullets(s, ['Sending one bit costs more the farther it goes: cost grows with d² and, beyond ≈ 88 m, with d⁴.',
+    bullets(s, ['Sending one bit costs more the farther it goes: cost grows with d² and, beyond a crossover distance d0, with d⁴.',
       'If every sensor sends directly to a far BS, the far sensors die very early.',
       'When sensors die, parts of the field are no longer monitored.'], 0.6, 1.6, 6.6, 3.0, 16);
     const m = [['FND', 'First Node Dies — round of the first death (stability period). Main metric.', BLUE], ['HND', 'Half Nodes Die — average lifetime.', ORANGE],
