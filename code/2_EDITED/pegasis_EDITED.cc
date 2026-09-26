@@ -59,7 +59,10 @@ struct RoundResult {
 static constexpr uint32_t N = 100;
 static constexpr double AREA = 100.0;   // ORIGINAL: paper's 50x50m field (Table 1)
 static constexpr double BSX = 50.0;    // ORIGINAL: paper's stated BS position for this field
-static constexpr double BSY = 50.0;   // ("at least 100m from the nearest node")
+#ifndef BS_Y
+#define BS_Y 50.0
+#endif
+static constexpr double BSY = BS_Y;   // 50 = field centre; compile with -DBS_Y=-100 for the far-BS runs
 static constexpr double E0 = 0.5;      // J/node
 
 // --------------------------- Radio / traffic -------------------------------

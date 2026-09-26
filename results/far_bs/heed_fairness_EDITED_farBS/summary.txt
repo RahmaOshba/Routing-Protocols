@@ -1,0 +1,18 @@
+             FINAL RESULTS
+========================================
+FND = 422 rounds
+HND = 757 rounds
+LND = 1389 rounds
+Initial Network Energy = 50.000000 J
+Total Energy Used      = 50.000000 J
+Final Residual Energy  = 0.000000 J
+Generated Packets      = 80890
+Delivered Packets      = 80465
+Overall PDR            = 0.994746
+
+CSV outputs:
+  heed-results.csv
+  heed-node-energy.csv
+  heed-node-lifetime.csv
+  heed-clustering.xml
+========================================

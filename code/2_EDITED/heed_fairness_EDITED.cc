@@ -132,7 +132,10 @@ struct RoundResult {
 static constexpr uint32_t N = HEED_N;   // ORIGINAL: paper's Fig. 8 uses 300-700 nodes (500 in Fig. 8d)
 static constexpr double AREA = 100.0;
 static constexpr double BSX = 50.0;
-static constexpr double BSY = 50.0;  // ORIGINAL: paper's own Table 2, "Sink at (50,175)"
+#ifndef BS_Y
+#define BS_Y 50.0
+#endif
+static constexpr double BSY = BS_Y;   // 50 = field centre; compile with -DBS_Y=-100 for the far-BS runs
 static constexpr double E0 = 0.5;       // J/node -- ORIGINAL: paper's Table 2, "Initial energy: 2 J/battery"
 static constexpr double RANGE = 25.0;   // m
 

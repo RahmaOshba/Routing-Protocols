@@ -104,7 +104,10 @@ static constexpr uint32_t N = 100;
 static constexpr double AREA = 100.0;
 static const double ADV_RANGE = AREA * std::sqrt(2.0); // CH advertisement heard by the whole field (unified env)
 static constexpr double BSX = 50.0;
-static constexpr double BSY = 50.0;
+#ifndef BS_Y
+#define BS_Y 50.0
+#endif
+static constexpr double BSY = BS_Y;   // 50 = field centre; compile with -DBS_Y=-100 for the far-BS runs
 static constexpr double E0 = 0.5;
 static constexpr double RANGE = 25.0;
 

@@ -21,7 +21,7 @@ function robust(prefix) {
 const FAMILY = [
   ['LEACH', 'leach_EDITED', 'Baseline'], ['HEED', 'heed_EDITED', 'Baseline'], ['PEGASIS', 'pegasis_EDITED', 'Baseline'],
   ['SH-LEACH+', 'shleach_IMPROVED', 'Literature hybrid (improved)'], ['H-LEACH+', 'hleach_IMPROVED', 'Literature hybrid (improved)'],
-  ['EECH-HEED+', 'eechheed_IMPROVED', 'Recent hybrid (improved)'], ['v8-Chain', 'v8_chain_center', 'Proposed'],
+  ['EECH-HEED+', 'eechheed_IMPROVED', 'Recent hybrid (improved)'], ['v8', 'v8_center', 'Proposed'],
 ];
 const EVOLUTION = [
   ['v1', 'v1_heed_election_leach_join', 'HEED election + LEACH nearest join'],

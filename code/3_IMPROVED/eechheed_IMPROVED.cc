@@ -96,7 +96,10 @@ static constexpr uint32_t N_ZONE1 = 30;
 static constexpr uint32_t N_ZONE2 = 70;
 static constexpr double AREA = 100.0;
 static constexpr double BSX = 50.0;
-static constexpr double BSY = 50.0;
+#ifndef BS_Y
+#define BS_Y 50.0
+#endif
+static constexpr double BSY = BS_Y;   // 50 = field centre; compile with -DBS_Y=-100 for the far-BS runs
 static constexpr double ZONE1_RADIUS = 30.0;
 static constexpr double E_ZONE1 = 0.5;
 static constexpr double E_ZONE2_MIN = 0.3;
@@ -124,7 +127,7 @@ static constexpr double E0_SENSE = 1.0;
 static constexpr double R_NEIGH = 30.0;          // m, neighbourhood for E_avg and node degree
 static constexpr uint32_t CONTROL_BITS = 200;
 static const double ADV_RANGE = AREA * std::sqrt(2.0);
-static const double D_MAX_BS = std::sqrt(2.0) * AREA / 2.0; // max possible distance to the central BS
+static const double D_MAX_BS = std::max(std::hypot(std::max(BSX, AREA - BSX), std::max(BSY, AREA - BSY)), 1.0); // farthest field corner from the BS (= √2·AREA/2 for the central BS)
 static constexpr double SOIL_MEAN = 27.5;        // C
 static constexpr double SOIL_AMP = 7.5;          // C  -> 20..35 C daily swing
 static constexpr double SOIL_PERIOD = 240.0;     // rounds per "day"

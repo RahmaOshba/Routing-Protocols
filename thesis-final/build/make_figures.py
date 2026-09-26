@@ -19,7 +19,7 @@ def rounds_csv(path):
 
 FAM=[('LEACH','leach_EDITED','2_EDITED'),('HEED','heed_EDITED','2_EDITED'),('PEGASIS','pegasis_EDITED','2_EDITED'),
      ('SH-LEACH+','shleach_IMPROVED','3_IMPROVED'),('H-LEACH+','hleach_IMPROVED','3_IMPROVED'),('EECH-HEED+','eechheed_IMPROVED','3_IMPROVED'),
-     ('v8-Chain','v8_chain_center','4_PROPOSED')]
+     ('v8','v8_center','4_PROPOSED')]
 
 def grouped(ax,labels,data,hl=None,ymax=None,valfont=8):
     x=np.arange(len(labels)); w=0.26
@@ -42,12 +42,12 @@ cols=[GREY]*6+[BLUE]; b=ax.bar([f for f,_,_ in FAM],p,0.55,color=cols,zorder=3)
 for i,val in enumerate(p): ax.text(i,val+0.02,f'{val:.2f}%',ha='center',va='bottom',fontsize=10,color=INK)
 ax.set_ylim(98.5,100.0); ax.set_ylabel('PDR (%)'); ax.set_title('Packet delivery ratio',loc='left',fontweight='bold',color=INK)
 save(fig,'f2_pdr_families.png')
-# F3 alive nodes + F10 residual energy (highlight v8-Chain)
+# F3 alive nodes + F10 residual energy (highlight v8)
 for key,idx,ylabel,name,title in [('alive',1,'Alive nodes','f3_alive_curves.png','Alive nodes per round'),('energy',2,'Residual energy (J)','f10_energy_curves.png','Residual network energy per round')]:
     fig,ax=plt.subplots(figsize=(10,4.6)); labels=[]
     for fam,run,grp in FAM:
         rr,al,en=rounds_csv(os.path.join(R,grp,run,'results.csv')); y=al if idx==1 else en
-        hl=fam=='v8-Chain'
+        hl=fam=='v8'
         ax.plot(rr,y,color=BLUE if hl else GREY,lw=2.6 if hl else 1.4,zorder=4 if hl else 2)
         labels.append((rr[-1],fam,hl))
     top=(100 if idx==1 else 50)
@@ -55,7 +55,7 @@ for key,idx,ylabel,name,title in [('alive',1,'Alive nodes','f3_alive_curves.png'
         ye=top*(0.12+0.11*k)
         ax.annotate(fam,(xe,0),xytext=(xe+40,ye),fontsize=9,color=BLUE if hl else MUTED,fontweight='bold' if hl else 'normal',
                     arrowprops=dict(arrowstyle='-',color=BLUE if hl else '#c9c8c2',lw=0.8))
-    ax.set_xlabel('Round'); ax.set_ylabel(ylabel); ax.set_xlim(0,3900); ax.set_title(title+' (v8-Chain in blue)',loc='left',fontweight='bold',color=INK)
+    ax.set_xlabel('Round'); ax.set_ylabel(ylabel); ax.set_xlim(0,3900); ax.set_title(title+' (v8 in blue)',loc='left',fontweight='bold',color=INK)
     save(fig,name)
 # F4 evolution FND
 EV=[('v1','v1_heed_election_leach_join'),('v2','v2_fairness_penalty'),('v3','v3_single_pass_reuse_int5'),('v4','v4_reuse_int15'),('v5','v5_backup_int15'),

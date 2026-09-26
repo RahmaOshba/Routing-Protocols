@@ -75,7 +75,10 @@ struct RoundResult {
 static constexpr uint32_t N = 100;
 static constexpr double AREA = 100.0;
 static constexpr double BSX = 50.0;
-static constexpr double BSY = 50.0;
+#ifndef BS_Y
+#define BS_Y 50.0
+#endif
+static constexpr double BSY = BS_Y;   // 50 = field centre; compile with -DBS_Y=-100 for the far-BS runs
 static constexpr double E0 = 0.5;
 
 // ------------------------------- Protocol params ----------------------------

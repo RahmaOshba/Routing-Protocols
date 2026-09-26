@@ -95,3 +95,15 @@ security,v8_chain_mic104_ecc20mJ_center,2181,2278,2326,0.997045
 security,v8_chain_mic104_ecc20mJ_far,1441,1651,1696,0.993964
 security,v8_chain_mic104_aes5nJ_ecc20mJ_center,2031,2108,2146,0.996917
 security,v8_chain_mic104_aes5nJ_ecc20mJ_far,1361,1535,1576,0.993044
+far_bs,eechheed_EDITED_farBS,932,1381,1407,0.995805
+far_bs,eechheed_IMPROVED_farBS,1412,1437,1456,0.991243
+far_bs,heed_EDITED_farBS,330,774,1374,0.995153
+far_bs,heed_fairness_EDITED_farBS,422,757,1389,0.994746
+far_bs,hleach_EDITED_farBS,1121,1156,1174,0.980272
+far_bs,hleach_IMPROVED_farBS,1219,1262,1278,0.991184
+far_bs,leach_EDITED_farBS,988,1230,1652,0.994295
+far_bs,pegasis_EDITED_farBS,1374,2176,2713,0.990811
+far_bs,shleach_EDITED_farBS,390,601,861,0.996734
+far_bs,shleach_IMPROVED_farBS,1388,1435,1455,0.988878
+far_bs,v3_single_pass_reuse_int5_farBS,1166,1576,2001,0.987635
+far_bs,v5b_energy_aware_repair_farBS,1166,1561,1796,0.989356

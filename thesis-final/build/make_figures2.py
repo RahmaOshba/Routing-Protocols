@@ -129,11 +129,11 @@ h=[plt.Rectangle((0,0),1,1,color=c) for c in (GREY,ORANGE,BLUE)]; fig.legend(h,[
 fig.tight_layout(); save(fig,'h2_hybrids_all.png')
 
 # ---------------- C1 final FND ranking ----------------
-fam=[('HEED','heed_EDITED'),('PEGASIS','pegasis_EDITED'),('EECH-HEED+','eechheed_IMPROVED'),('LEACH','leach_EDITED'),('H-LEACH+','hleach_IMPROVED'),('SH-LEACH+','shleach_IMPROVED'),('v8-Chain','v8_chain_center')]
+fam=[('HEED','heed_EDITED'),('PEGASIS','pegasis_EDITED'),('EECH-HEED+','eechheed_IMPROVED'),('LEACH','leach_EDITED'),('H-LEACH+','hleach_IMPROVED'),('SH-LEACH+','shleach_IMPROVED'),('v8','v8_center')]
 fig,ax=plt.subplots(figsize=(9,4)); ax.grid(axis='x'); ax.grid(axis='y',visible=False)
 vals=[v(r)[0] for _,r in fam]; ax.barh([n for n,_ in fam],vals,color=[GREY]*6+[BLUE],zorder=3)
-base=v('v8_chain_center')[0]
-for i,val in enumerate(vals): ax.text(val+25,i,f'{val}'+('' if i==6 else f'   (v8-Chain +{(base/val-1)*100:.0f}%)'),va='center',fontsize=10,color=INK)
+base=v('v8_center')[0]
+for i,val in enumerate(vals): ax.text(val+25,i,f'{val}'+('' if i==6 else f'   (v8 +{(base/val-1)*100:.0f}%)'),va='center',fontsize=10,color=INK)
 ax.set_xlabel('FND — first node death (rounds)'); ax.set_xlim(0,3300)
 save(fig,'c1_fnd_rank.png')
 
@@ -187,3 +187,52 @@ EV=[('v1','v1_heed_election_leach_join'),('v2','v2_fairness_penalty'),('v3','v3_
     ('v5b','v5b_energy_aware_repair'),('v6','v6_chain_center'),('v7','v7_chain_backup_center'),('v7.1','v7_1_multihop_int5'),('v8','v8_center'),('v8-Chain','v8_chain_center')]
 pdr_bars([a for a,_ in EV],[b for _,b in EV],'pdr_versions.png',colors=[AQUA]*10+[BLUE]*2,lo=95,title='PDR — every version of the proposed protocol')
 print('pdr done')
+
+
+# ---------------- Far-BS figures ----------------
+FARS=[('LEACH','leach_EDITED'),('HEED','heed_EDITED'),('PEGASIS','pegasis_EDITED'),('SH-LEACH+','shleach_IMPROVED'),('H-LEACH+','hleach_IMPROVED'),('EECH-HEED+','eechheed_IMPROVED')]
+fig,ax=plt.subplots(figsize=(11,4.2)); labs=[n for n,_ in FARS]+['v8','v8-Chain']
+cen=[v(r)[0] for _,r in FARS]+[v('v8_center')[0],v('v8_chain_center')[0]]
+far=[v(r+'_farBS')[0] for _,r in FARS]+[v('v8_farBS')[0],v('v8_chain_farBS')[0]]
+x=np.arange(len(labs)); w=0.38
+ax.bar(x-w/2,cen,w-0.03,color='#c9c8c2',zorder=3,label='BS at the centre (50, 50)')
+ax.bar(x+w/2,far,w-0.03,color=[ORANGE]*6+[BLUE,BLUE],zorder=3,label='BS far away (50, −100)')
+for i,(a,b) in enumerate(zip(cen,far)):
+    ax.text(x[i]-w/2,a+25,str(a),ha='center',fontsize=8.5,color=MUTED); ax.text(x[i]+w/2,b+25,str(b),ha='center',fontsize=8.5,color=INK,fontweight='bold')
+ax.set_xticks(x); ax.set_xticklabels(labs); ax.set_ylabel('FND (rounds)'); ax.set_ylim(0,2800); ax.legend(loc='upper left')
+save(fig,'far_fnd.png')
+fig,ax=plt.subplots(figsize=(9,4)); ax.grid(axis='x'); ax.grid(axis='y',visible=False)
+rank=sorted([(n,v(r+'_farBS')[0]) for n,r in FARS]+[('v8',v('v8_farBS')[0]),('v8-Chain',v('v8_chain_farBS')[0])],key=lambda t:t[1])
+ax.barh([n for n,_ in rank],[f for _,f in rank],color=[BLUE if n=='v8-Chain' else ('#8fb3e8' if n=='v8' else GREY) for n,_ in rank],zorder=3)
+top=v('v8_chain_farBS')[0]
+for i,(n,f) in enumerate(rank): ax.text(f+20,i,f'{f}'+('' if n=='v8-Chain' else f'   (v8-Chain +{(top/f-1)*100:.0f}%)'),va='center',fontsize=10,color=INK)
+ax.set_xlabel('FND with the BS far away (rounds)'); ax.set_xlim(0,2300)
+save(fig,'far_rank.png')
+
+# ---------------- Equations (math style) ----------------
+def eqimg(lines,name,fs=20,w=9):
+    h=0.62*len(lines)+0.15
+    fig=plt.figure(figsize=(w,h)); fig.patch.set_alpha(0)
+    for i,l in enumerate(lines):
+        fig.text(0.01,1-(i+0.55)/len(lines),l,fontsize=fs,color=INK,va='center',ha='left')
+    fig.savefig(os.path.join(OUT,name),dpi=220,transparent=True,bbox_inches='tight',pad_inches=0.05); plt.close(fig)
+plt.rcParams['mathtext.fontset']='cm'
+eqimg([r'$E_{Tx}(k,d)=k\,E_{elec}+k\,\varepsilon_{fs}\,d^{2}\quad (d<d_{0})$',
+       r'$E_{Tx}(k,d)=k\,E_{elec}+k\,\varepsilon_{mp}\,d^{4}\quad (d\geq d_{0})$',
+       r'$E_{Rx}(k)=k\,E_{elec}$',
+       r'$d_{0}=\sqrt{\varepsilon_{fs}/\varepsilon_{mp}}\approx 87.7\ \mathrm{m}$'],'eq_energy.png',fs=22,w=6.5)
+eqimg([r'$T(n)=\dfrac{P}{1-P\,\left(r\ \mathrm{mod}\ \frac{1}{P}\right)}\quad \mathrm{if}\ n\in G,\qquad T(n)=0\ \ \mathrm{otherwise}$'],'eq_leach.png',w=10)
+eqimg([r'$CH_{prob}=\max\!\left(C_{prob}\,\dfrac{E_{res}}{E_{max}},\ p_{min}\right),\qquad CH_{prob}\leftarrow\min(2\,CH_{prob},\,1)$'],'eq_heed.png',w=10)
+eqimg([r'$\mathrm{leader}(i)=i\ \mathrm{mod}\ N$'],'eq_pegasis.png',w=5)
+eqimg([r'$CH_{prob}=C_{prob}\,\dfrac{E_{res}}{E_{max}}\cdot\dfrac{C_{prob}\,r}{1+\left(CH_{cho}\ \mathrm{mod}\ \frac{1}{C_{prob}}\right)}$'],'eq_shleach.png',w=8)
+eqimg([r'$e_{0}(i)=P\,\dfrac{E_{i}}{E_{max}},\qquad t(n)=\dfrac{e_{0}(i)}{1-e_{0}(i)\,\left(r\ \mathrm{mod}\ \mathrm{round}\!\left(\frac{1}{e_{0}(i)}\right)\right)},\qquad E_{i}>\bar{E}$'],'eq_hleach.png',w=12)
+eqimg([r'$P_{z1}=C_{prob}\,\dfrac{E_{res}}{E_{avg}},\qquad P_{z2}=\dfrac{E}{E_{max}}\cdot\dfrac{D}{D_{max}},\qquad T=\dfrac{P}{1-P\,(r\ \mathrm{mod}\ \frac{1}{P})}\ \alpha\,\beta$'],'eq_eech.png',w=12)
+eqimg([r'$\mathrm{score}(n)=T(r)\cdot\dfrac{E_{n}}{E_{0}}\cdot\left(1+\dfrac{deg_{n}}{deg_{max}}\right)$'],'eq_score.png',w=8)
+eqimg([r'$\mathrm{relay\ via\ }j\ \ \Leftrightarrow\ \ E_{Tx}(c\to j)+E_{Rx}(j)+E_{DA}(j)\ <\ E_{Tx}(c\to BS)$'],'eq_relay.png',w=10)
+eqimg([r'$\mathrm{SH\text{-}LEACH:}\quad r\ \longrightarrow\ \left((r-1)\ \mathrm{mod}\ \frac{1}{C_{prob}}\right)+1$',
+       r'$\mathrm{H\text{-}LEACH:}\quad E_{i}>\bar{E}\ \longrightarrow\ E_{i}\geq\bar{E}\quad +\ G\text{-}\mathrm{set}$',
+       r'$\mathrm{EECH\text{-}HEED\ (zone\ 2):}\quad \frac{1}{P}\ \longrightarrow\ \frac{1}{0.10}=10\ \mathrm{rounds}$'],'eq_fixes.png',w=9)
+eqimg([r'$r\ \longrightarrow\ \left((r-1)\ \mathrm{mod}\ \frac{1}{C_{prob}}\right)+1$'],'eq_fix1.png',fs=24,w=6)
+eqimg([r'$E_{i}>\bar{E}\ \longrightarrow\ E_{i}\geq\bar{E}\ \ +\ G\text{-}\mathrm{set}$'],'eq_fix2.png',fs=24,w=6)
+eqimg([r'$\frac{1}{P_{z2}}\approx 1\ \longrightarrow\ \frac{1}{0.10}=10\ \mathrm{rounds}$'],'eq_fix3.png',fs=24,w=6)
+print('far + eq done')

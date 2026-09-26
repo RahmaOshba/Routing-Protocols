@@ -122,4 +122,25 @@ Folders: `4_PROPOSED/extra/security/`.
 | + header/MIC + AES | Far | 1356 | 1591 | 1641 | 99.52% | −18.9% |
 | + header/MIC + AES + ECC setup | Far | 1361 | 1535 | 1576 | 99.30% | −18.5% |
 
+## Far base station — every protocol with the BS at (50, −100)
+
+Same codes compiled with `-DBS_Y=-100` (folders `far_bs/`). v8 and v8-Chain use their own `*_farBS` files.
+
+| Protocol | FND centre | FND far | HND far | LND far | PDR far |
+|---|---:|---:|---:|---:|---:|
+| LEACH | 1383 | 988 | 1230 | 1652 | 99.43% |
+| HEED | 634 | 330 | 774 | 1374 | 99.52% |
+| HEED + fairness | 743 | 422 | 757 | 1389 | 99.47% |
+| PEGASIS | 1324 | 1374 | 2176 | 2713 | 99.08% |
+| SH-LEACH (EDITED) | 647 | 390 | 601 | 861 | 99.67% |
+| SH-LEACH+ (IMPROVED) | 1480 | 1388 | 1435 | 1455 | 98.89% |
+| H-LEACH (EDITED) | 1384 | 1121 | 1156 | 1174 | 98.03% |
+| H-LEACH+ (IMPROVED) | 1473 | 1219 | 1262 | 1278 | 99.12% |
+| EECH-HEED (EDITED) | 1311 | 932 | 1381 | 1407 | 99.58% |
+| EECH-HEED+ (IMPROVED) | 1368 | 1412 | 1437 | 1456 | 99.12% |
+| v3 | 1645 | 1166 | 1576 | 2001 | 98.76% |
+| v5b | 1645 | 1166 | 1561 | 1796 | 98.94% |
+| v8 | 2501 | 1441 | 1596 | 1646 | 99.46% |
+| v8-Chain | 2501 | 1671 | 1851 | 1906 | 99.36% |
+
 `summary_all.csv` has every run in one table.

@@ -103,7 +103,10 @@ struct RoundResult {
 static constexpr uint32_t N = 100;
 static constexpr double AREA = 100.0;
 static constexpr double BSX = 50.0;   // NOT stated in paper -- assumed center
-static constexpr double BSY = 50.0;   // NOT stated in paper -- assumed center
+#ifndef BS_Y
+#define BS_Y 50.0
+#endif
+static constexpr double BSY = BS_Y;   // 50 = field centre; compile with -DBS_Y=-100 for the far-BS runs
 static constexpr double EMAX = 0.5;   // J/node (paper's Emax)
 static constexpr double CPROB = 0.10; // paper's Cprob
 // UNIFIED ENVIRONMENT: radio model matches LEACH/HEED/EECH-HEED exactly

@@ -89,7 +89,10 @@ struct RoundResult {
 static constexpr uint32_t N = 100;
 static constexpr double AREA = 100.0;   // FIXED: paper's Figure 3 network spans -25 to 25 (50x50m), NOT 100x100m
 static constexpr double BSX = 50.0;    // FIXED: paper states BS "100m from the closest sensor node"
-static constexpr double BSY = 50.0;  // for the 50x50m field (0-50 range), placing BS below the
+#ifndef BS_Y
+#define BS_Y 50.0
+#endif
+static constexpr double BSY = BS_Y;   // 50 = field centre; compile with -DBS_Y=-100 for the far-BS runs
                                         // field at y=-100 keeps the nearest node (~y=0) at ~100m,
                                         // matching the paper's own stated distance.
 static constexpr double E0 = 0.5;       // J/node
