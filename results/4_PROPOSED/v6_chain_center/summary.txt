@@ -1,10 +1,10 @@
              FINAL RESULTS
 ========================================
-FND = 1415 rounds
-HND = 1916 rounds
-LND = 2016 rounds
-Total Energy Used = 50.000000 J
-Overall PDR = 0.987496
+FND = 1521 rounds
+HND = 1913 rounds
+LND = 2025 rounds
+Total Energy Used = 49.984975 J
+Overall PDR = 0.985123
 
 CSV outputs: v6_chain_center-results.csv, v6_chain_center-node-energy.csv,
              v6_chain_center-node-lifetime.csv, v6_chain_center-clustering.xml

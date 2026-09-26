@@ -138,6 +138,7 @@ const body = [
   B('The same parameters for every protocol.'),
   B('The same node positions (same seed; the node_positions.csv files are identical).'),
   B('The same rules: CH advertisement reaches every node, join and TDMA are charged, fusion is members + 1, a node without a CH sends directly, and every run lasts until the last node dies.'),
+  B('Neighbour discovery is charged too: every protocol that uses neighbour information (HEED, EECH-HEED, v1 → v8) pays one HELLO per node at deployment. v8 also pays a 16-bit residual-energy field in every data packet and a BS beacon with the average energy at every set-up, because its energy gate needs the network average.'),
   B('Unchanged algorithms: each EDITED code is the ORIGINAL code, validated against its paper, with only the environment changed.'),
   H3('Would the results change with another topology?'),
   P('v8-Chain was run on 8 different topologies: FND ranged from 2471 to 2531 (mean 2500), so the result does not depend on one lucky layout.'),

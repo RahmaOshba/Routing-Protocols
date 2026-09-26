@@ -28,7 +28,7 @@ using namespace std;
 //     member) are now charged at every setup round;
 //   - the v8 handover announcement must reach the farthest member;
 //   - the CH fuses members + its own signal (members + 1).
-// RESULT of this exact file (seed 12345): FND 2501 / HND 2589 / LND 2631 / PDR 99.64%
+// RESULT of this exact file (seed 12345): FND 2446 / HND 2536 / LND 2566 / PDR 99.72%
 // (Any other numbers quoted further down this header are from older
 //  versions or Python pre-checks and are kept only as history.)
 //
@@ -168,7 +168,23 @@ static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
 static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent
 static constexpr double E_PK_RX = SEC_PK_RX_MJ * 1e-3;   // J per data packet received
 static constexpr double E_PK_BS = SEC_PK_BS_MJ * 1e-3;   // J per data packet sent to the sink
-static constexpr uint32_t PACKET_BITS = 2000 + SEC_BITS;
+// The energy gate (I5) and the backup check need the network's average residual
+// energy. Every data packet carries a 16-bit residual-energy field (ENERGY_FIELD_BITS),
+// the BS computes the average and broadcasts it once per set-up (one control frame
+// received by every node; the BS is mains-powered). -DCHARGE_AVG_BEACON=0 switches
+// both costs off.
+#ifndef CHARGE_AVG_BEACON
+#define CHARGE_AVG_BEACON 1
+#endif
+static constexpr uint32_t ENERGY_FIELD_BITS = CHARGE_AVG_BEACON ? 16 : 0;
+static constexpr uint32_t PACKET_BITS = 2000 + ENERGY_FIELD_BITS + SEC_BITS;
+// Neighbour discovery is charged once, at deployment: every node broadcasts one
+// HELLO control frame over the neighbour range and receives its neighbours' HELLOs
+// (-DCHARGE_HELLO=0 switches it off). The nodes are static, so the list is reused;
+// a neighbour that dies is noticed from its silence (no extra message).
+#ifndef CHARGE_HELLO
+#define CHARGE_HELLO 1
+#endif
 static constexpr uint32_t CONTROL_BITS = 200 + SEC_BITS;
 static constexpr double E_ELEC = 50e-9;
 static constexpr double E_FS = 10e-12;
@@ -272,7 +288,7 @@ static vector<bool> g_failedOver(N, false); // whether chId's backup has already
 // failover never fired. Comparing against the live average ("weak relative to
 // its neighbours right now") keeps the mechanism working until the end.
 static constexpr double LOW_ENERGY_FRAC = 0.05;
-static double g_avgEnergy = E0;     // refreshed at the start of every round
+static double g_avgEnergy = E0;     // refreshed by the BS beacon at every set-up
 static bool LowEnergy(double energy) { return energy < LOW_ENERGY_FRAC * g_avgEnergy; }
 
 // ---- NEW: Chain/Cluster Repair -- promote backup, reconnect orphaned members, same round ----
@@ -534,11 +550,13 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
 
     const double before = [&]() { double s = 0.0; for (const auto& n : nodes) s += n.energy; return s; }();
 
-    {   // v8: live average residual energy used by LowEnergy()
+    if (isSetupRound) {   // v8: the BS broadcasts the average residual energy once per set-up
         double sum = 0.0;
         uint32_t alive = 0;
         for (const auto& n : nodes) if (n.alive) { sum += n.energy; ++alive; }
         g_avgEnergy = alive ? sum / alive : E0;
+        if (CHARGE_AVG_BEACON)
+            for (auto& n : nodes) if (n.alive) n.energy = max(0.0, n.energy - RxEnergy(CONTROL_BITS));
     }
 
     // ---- Control overhead ONLY on setup rounds (the key saving) ----
@@ -824,6 +842,14 @@ int main(int argc, char* argv[])
     uint64_t totalRelayed = 0;                       // v8-Chain
 
     cout << "\nSimulation starts...\n";
+
+    if (CHARGE_HELLO) {   // neighbour discovery, once at deployment (see CHARGE_HELLO)
+        for (uint32_t i = 0; i < N; ++i) {
+            nodes[i].energy -= TxEnergy(CONTROL_BITS, RANGE);
+            for (uint32_t j = 0; j < N; ++j)
+                if (j != i && Dist(nodes[i], nodes[j]) <= RANGE) nodes[j].energy -= RxEnergy(CONTROL_BITS);
+        }
+    }
 
     for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
         const bool isSetupRound = ((round - 1) % SETUP_INTERVAL == 0);

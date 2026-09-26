@@ -23,7 +23,7 @@ using namespace std;
 //   - join request (member -> CH) and TDMA schedule (CH -> farthest member)
 //     are now charged every round, as in the HEED/LEACH baselines;
 //   - the CH fuses members + its own signal (members + 1).
-// RESULT of this exact file (seed 12345): FND 322 / HND 530 / LND 1217 / PDR 99.75%
+// RESULT of this exact file (seed 12345): FND 320 / HND 529 / LND 1218 / PDR 99.76%
 // (Any other numbers quoted further down this header are from older
 //  versions or Python pre-checks and are kept only as history.)
 //
@@ -97,6 +97,13 @@ static constexpr double PMIN = 0.05;
 
 // --------------------------- Radio / traffic -------------------------------
 static constexpr uint32_t PACKET_BITS = 2000;
+// Neighbour discovery is charged once, at deployment: every node broadcasts one
+// HELLO control frame over the neighbour range and receives its neighbours' HELLOs
+// (-DCHARGE_HELLO=0 switches it off). The nodes are static, so the list is reused;
+// a neighbour that dies is noticed from its silence (no extra message).
+#ifndef CHARGE_HELLO
+#define CHARGE_HELLO 1
+#endif
 static constexpr uint32_t CONTROL_BITS = 200;
 static constexpr double E_ELEC = 50e-9;
 static constexpr double E_FS = 10e-12;
@@ -505,6 +512,14 @@ int main(int argc, char* argv[])
     double totalUsed = 0.0;
 
     cout << "\nSimulation starts...\n";
+
+    if (CHARGE_HELLO) {   // neighbour discovery, once at deployment (see CHARGE_HELLO)
+        for (uint32_t i = 0; i < N; ++i) {
+            nodes[i].energy -= TxEnergy(CONTROL_BITS, RANGE);
+            for (uint32_t j = 0; j < N; ++j)
+                if (j != i && Dist(nodes[i], nodes[j]) <= RANGE) nodes[j].energy -= RxEnergy(CONTROL_BITS);
+        }
+    }
 
     for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
         auto nb = BuildNeighbors(nodes);

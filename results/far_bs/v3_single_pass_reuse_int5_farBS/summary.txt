@@ -1,10 +1,10 @@
              FINAL RESULTS
 ========================================
-FND = 1166 rounds
-HND = 1576 rounds
-LND = 2001 rounds
-Total Energy Used = 50.000000 J
-Overall PDR = 0.987635
+FND = 1161 rounds
+HND = 1546 rounds
+LND = 2902 rounds
+Total Energy Used = 49.984975 J
+Overall PDR = 0.980928
 
 CSV outputs: v3_single_pass_reuse_int5-results.csv, v3_single_pass_reuse_int5-node-energy.csv,
              v3_single_pass_reuse_int5-node-lifetime.csv, v3_single_pass_reuse_int5-clustering.xml

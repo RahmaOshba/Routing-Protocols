@@ -496,7 +496,7 @@ async function build() {
     const s = base(); title(s, 'EDITED — what went wrong', 'In the unified environment each hybrid shows a design flaw');
     const c = [['SH-LEACH', `FND ${F('shleach_EDITED')}`, 'r is never reset → the probability keeps growing → up to 100 CHs per round: every node sends alone to the BS.'],
       ['H-LEACH', `FND ${F('hleach_EDITED')}`, '"E > average" with equal energy → no CH in round 1 (deadlock); no G-set → bursts of up to 59 CHs.'],
-      ['EECH-HEED', `FND ${F('eechheed_EDITED')}`, 'Zone 2: P ≈ 1 → rotation period 1/P ≈ 1 round → the same border nodes are CH every other round (221 times).']];
+      ['EECH-HEED', `FND ${F('eechheed_EDITED')}`, 'Zone 2: P ≈ 1 → rotation period 1/P ≈ 1 round → the same border nodes are CH every other round (219 times).']];
     c.forEach(([h, r, flaw], i) => {
       const y = 1.5 + i * 1.6;
       s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x: 0.6, y, w: 12.1, h: 1.45, rectRadius: 0.1, fill: { color: 'FFFFFF' }, line: { color: LINE } });
@@ -510,7 +510,7 @@ async function build() {
     const s = base(); title(s, 'Why did the numbers change so much?');
     const r = [['SH-LEACH', [`ORIG → EDIT (${F('shleach_ORIGINAL')} → ${F('shleach_EDITED')}): cheaper radio (10 vs 100 pJ).`, `EDIT → IMPR (→ ${F('shleach_IMPROVED')}, ×${(F('shleach_IMPROVED') / F('shleach_EDITED')).toFixed(1)}): the counter restarts, so CHs stay few instead of reaching 100.`], BLUE],
       ['H-LEACH', [`ORIG → EDIT (${F('hleach_ORIGINAL')} → ${F('hleach_EDITED')}): packet 2000 instead of 4000 bits (half the energy per message).`, `EDIT → IMPR (→ ${F('hleach_IMPROVED')}): no deadlock, no CH bursts (8.6 → 5.3 CHs per round).`], ORANGE],
-      ['EECH-HEED', [`ORIG → EDIT: LND ${C.get('eechheed_ORIGINAL').L} → ${C.get('eechheed_EDITED').L} because sensing is OFF (every node sends every round) and 50 J instead of 56 J.`, `EDIT → IMPR (${F('eechheed_EDITED')} → ${F('eechheed_IMPROVED')}): fixed rotation in zone 2 (7.5 → 2.9 CHs per round).`], AQUA]];
+      ['EECH-HEED', [`ORIG → EDIT: LND ${C.get('eechheed_ORIGINAL').L} → ${C.get('eechheed_EDITED').L} because sensing is OFF (every node sends every round) and 50 J instead of 56 J.`, `EDIT → IMPR (${F('eechheed_EDITED')} → ${F('eechheed_IMPROVED')}): fixed rotation in zone 2 (7.6 → 2.9 CHs per round).`], AQUA]];
     r.forEach(([h, pts, col], i) => { const x = 0.6 + i * 4.1;
       card(s, x, 1.5, 3.85, 4.75, { head: h, color: col, headSize: 17, body: '' });
       bullets(s, pts, x + 0.25, 2.3, 3.4, 3.9, 14); });
@@ -556,7 +556,7 @@ async function build() {
       ['H-LEACH', 'hleach', ORANGE, ['LEACH threshold with an energy-based probability', 'CH only if E > network average'],
         ['equal energy → nobody is above average → no CH (deadlock)', 'no G-set → bursts of up to 59 CHs'], ['E ≥ average', 'LEACH G-set restored']],
       ['EECH-HEED', 'eechheed', AQUA, ['two zones: HEED near the BS, energy × degree far away', 'relays between CHs, adaptive sensing'],
-        ['zone 2: P ≈ 1 → rotation period of 1 round', 'the same border nodes are CH every other round (221 times)'], ['zone 2 rotation fixed at the paper\'s 10 % (10 rounds)', 'energy × degree kept as a weight']]];
+        ['zone 2: P ≈ 1 → rotation period of 1 round', 'the same border nodes are CH every other round (219 times)'], ['zone 2 rotation fixed at the paper\'s 10 % (10 rounds)', 'energy × degree kept as a weight']]];
     for (const [n, k, col, idea, prob, fix] of HS) {
       const s = base(); title(s, `${n} — idea, problems, fix and results`);
       const o = C.get(k + '_ORIGINAL'), e = C.get(k + '_EDITED'), m = C.get(k + '_IMPROVED');
@@ -634,7 +634,7 @@ async function build() {
       for (let i = a; i < b; i++) { const [n, r, d] = EV[i]; const x = C.get(r); rows.push([n, d, x.F, x.H, x.L, C.pct(x.P), i ? chg(x.F, C.get(EV[i - 1][1]).F) : '—']); }
       tbl(s, rows, 0.6, 1.5, 12.1, [1.3, 4.3, 1.2, 1.2, 1.2, 1.4, 1.5], { size: 14, rowH: 0.62, center: true, centerFrom: 2, boldFirst: true,
         hl: i => ['v3', 'v8', 'v8-Chain'].includes(rows[i] && rows[i][0]) });
-      band(s, part === 1 ? 'v3 is the first big jump: ×4.9 over v2 (no negotiation + cluster reuse).' : 'v8 is the second big jump: +52 % over v5b (I1 – I5).  v8-Chain keeps it and adds the far-BS gain.', 6.4);
+      band(s, part === 1 ? 'v3 is the first big jump: ×4.9 over v2 (no negotiation + cluster reuse).' : `v8 is the second big jump: +${C.gain(C.get('v8_center').F, C.get('v5b_energy_aware_repair').F).toFixed(0)} % over v5b (I1 – I5).  v8-Chain keeps it and adds the far-BS gain.`, 6.4);
     }
   }
   {
@@ -749,7 +749,7 @@ async function build() {
     list.forEach(([n, run, fam]) => { const r = C.get(run); const far = run === 'v8_center' ? v8f.F : run === 'v8_chain_center' ? v8cf.F : FF(run);
       rows.push([n, fam, r.F, r.H, r.L, C.pct(r.P), run.startsWith('v8') ? '—' : '+' + C.gain(v8m.F, r.F).toFixed(0) + '%', far]); });
     tbl(s, rows, 0.6, 1.45, 12.1, [1.7, 2.6, 1.1, 1.1, 1.1, 1.3, 1.5, 1.7], { size: 13, rowH: 0.52, center: true, centerFrom: 2, hl: i => i >= 7 });
-    band(s, 'Centre: v8 has the latest first death (+69 % to +294 %).  Far BS: v8-Chain is the best (1671).', 6.35);
+    band(s, `Centre: v8 has the latest first death (+${C.gain(v8m.F, best.F).toFixed(0)} % to +${C.gain(v8m.F, heed.F).toFixed(0)} %).  Far BS: v8-Chain is the best (${v8cf.F}).`, 6.35);
   }
   {
     const s = base(); title(s, 'When the BS is far away — all protocols', 'BS at (50, −100): grey = centre, orange / blue = far');
@@ -794,7 +794,7 @@ async function build() {
     bullets(s, ['Six protocols reproduced and validated against their papers, then compared in one fair environment.',
       'Flaws found and fixed in three hybrids: all of them had broken LEACH\'s rotation.',
       'v8 built step by step: single-pass election, cluster reuse, CH protection, direct-to-BS and energy gate — the main protocol.',
-      'v8-Chain adds an energy-aware relay: same as v8 at the centre, +16 % when the BS is far.',
+      `v8-Chain adds an energy-aware relay: same as v8 at the centre, +${C.gain(v8cf.F, v8f.F).toFixed(0)} % when the BS is far.`,
       `Stable on 8 random topologies (v8 FND ${C.robust('v8_center').Fmin} – ${C.robust('v8_center').Fmax}) and better than every other protocol with the BS far away.`], 0.8, 3.6, 11.7, 3.4, 16, 'FFFFFF');
   }
   for (const part of [[0, 9], [9, C.REFS.length]]) {

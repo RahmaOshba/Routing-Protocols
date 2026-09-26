@@ -148,6 +148,13 @@ static constexpr double ROTATION_LAMBDA = 0.1;   // fairness penalty weight  // 
 // --------------------------- Radio / traffic -------------------------------
 static constexpr uint32_t PACKET_BITS = 2000;   // UNIFIED // ORIGINAL: Table 2, 100-byte data + 25-byte header
 static constexpr uint32_t FRAMES_PER_ROUND = 1; // UNIFIED: one data packet per node per round   // ORIGINAL: Table 2, "Round (T_NO): 5 TDM frames"
+// Neighbour discovery is charged once, at deployment: every node broadcasts one
+// HELLO control frame over the neighbour range and receives its neighbours' HELLOs
+// (-DCHARGE_HELLO=0 switches it off). The nodes are static, so the list is reused;
+// a neighbour that dies is noticed from its silence (no extra message).
+#ifndef CHARGE_HELLO
+#define CHARGE_HELLO 1
+#endif
 static constexpr uint32_t CONTROL_BITS = 200;   // matches paper's Table 2, "Broadcast packet size: 25 bytes"
 static constexpr double E_ELEC = 50e-9;       // J/bit
 static constexpr double E_FS = 10e-12;         // J/bit/m^2
@@ -753,6 +760,14 @@ int main(int argc, char* argv[])
     double totalUsed = 0.0;
 
     cout << "\nSimulation starts...\n";
+
+    if (CHARGE_HELLO) {   // neighbour discovery, once at deployment (see CHARGE_HELLO)
+        for (uint32_t i = 0; i < N; ++i) {
+            nodes[i].energy -= TxEnergy(CONTROL_BITS, RANGE);
+            for (uint32_t j = 0; j < N; ++j)
+                if (j != i && Dist(nodes[i], nodes[j]) <= RANGE) nodes[j].energy -= RxEnergy(CONTROL_BITS);
+        }
+    }
 
     for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
         auto nb = BuildNeighbors(nodes);

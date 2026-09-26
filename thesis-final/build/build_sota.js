@@ -131,7 +131,7 @@ const body = [
     ['With equal starting energy nobody is above the average → no CH in round 1 (deadlock).', 'No G-set → bursts of up to 59 CHs; the same node can repeat.'],
     ['"E > average" → "E ≥ average".', 'LEACH G-set restored.']),
   ...hybrid('EECH-HEED', 'eechheed', 'Two zones: HEED near the BS, energy × node degree far away; relays between CHs; adaptive sensing.',
-    ['Zone 2: P ≈ 1 → rotation period 1/P ≈ 1 round → the G-set blocks nobody.', 'The same border nodes are CH every other round (221 times in 1000 rounds) and die first.', 'Its advantage in the paper comes from sensing less and ≈ 56 J of energy.'],
+    ['Zone 2: P ≈ 1 → rotation period 1/P ≈ 1 round → the G-set blocks nobody.', 'The same border nodes are CH every other round (219 times in 1000 rounds) and die first.', 'Its advantage in the paper comes from sensing less and ≈ 56 J of energy.'],
     ['Zone-2 rotation fixed at the paper\'s 10 % (10 rounds); energy × degree kept as a weight.']),
   ...fg('h1_hybrid_ch.png', 6.5, 'Cluster heads per round: paper algorithm (grey) vs our fix (blue).'),
   ...eqn('eq_fixes.png', 4.4),

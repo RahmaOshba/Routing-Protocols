@@ -13,6 +13,6 @@ EECH-HEED, and the proposed protocol (v1 → v8-Chain).
 | `thesis-final/` | Defense deck, State-of-the-Art report, Literature Review (Word + Excel comparison) and Results Comparison workbook — all built from `results/` (see `thesis-final/build/README.md`) |
 | `thesis-v8/` | Older thesis files (history) |
 
-Headline result (unified environment, BS at the centre): **v8-Chain FND 2501 /
-HND 2589 / LND 2631 rounds, PDR 99.64%**. The best reproduced protocol, SH-LEACH
-Improved, reaches FND 1480.
+Headline result (unified environment, BS at the centre): **v8 FND 2446 /
+HND 2536 / LND 2566 rounds, PDR 99.72%**; with the BS far away **v8-Chain FND 1626**.
+The best reproduced protocol, SH-LEACH Improved, reaches FND 1480.

@@ -9,6 +9,8 @@ Every folder here matches a code file in `code/` with the same name. Each one ho
 
 All numbers come from the analytical ns-3.41 model, seed 12345, run until the last node dies (LND is only reported if it really happened).
 
+Overheads charged in the unified environment (EDITED, IMPROVED, PROPOSED): CH advertisement, join and TDMA messages; neighbour discovery (one HELLO per node at deployment) for every protocol that uses neighbour information (HEED, EECH-HEED, v1 → v8); for v8 / v8-Chain the 16-bit residual-energy field in every data packet and the BS beacon with the average energy at every set-up.
+
 ## 1 · ORIGINAL — each paper in its own settings
 
 | Code | FND | HND | LND | PDR |
@@ -24,9 +26,9 @@ All numbers come from the analytical ns-3.41 model, seed 12345, run until the la
 
 | Code | FND | HND | LND | PDR |
 |---|---:|---:|---:|---:|
-| `eechheed_EDITED` | 1311 | 1382 | 1545 | 99.74% |
-| `heed_EDITED` | 634 | 1216 | 1883 | 99.68% |
-| `heed_fairness_EDITED` | 743 | 1154 | 1960 | 99.74% |
+| `eechheed_EDITED` | 1277 | 1384 | 1543 | 99.49% |
+| `heed_EDITED` | 658 | 1197 | 1875 | 99.65% |
+| `heed_fairness_EDITED` | 738 | 1157 | 1969 | 99.67% |
 | `hleach_EDITED` | 1384 | 1419 | 1434 | 99.30% |
 | `leach_EDITED` | 1383 | 1586 | 1842 | 99.40% |
 | `pegasis_EDITED` | 1324 | 2352 | 3504 | 99.42% |
@@ -36,7 +38,7 @@ All numbers come from the analytical ns-3.41 model, seed 12345, run until the la
 
 | Code | FND | HND | LND | PDR |
 |---|---:|---:|---:|---:|
-| `eechheed_IMPROVED` | 1368 | 1385 | 1767 | 99.51% |
+| `eechheed_IMPROVED` | 1335 | 1384 | 1766 | 99.62% |
 | `hleach_IMPROVED` | 1473 | 1509 | 1525 | 99.36% |
 | `shleach_IMPROVED` | 1480 | 1542 | 1558 | 99.21% |
 
@@ -44,24 +46,24 @@ All numbers come from the analytical ns-3.41 model, seed 12345, run until the la
 
 | Code | FND | HND | LND | PDR |
 |---|---:|---:|---:|---:|
-| `v1_heed_election_leach_join` | 322 | 530 | 1217 | 99.75% |
-| `v2_fairness_penalty` | 338 | 528 | 1276 | 99.64% |
-| `v3_single_pass_reuse_int5` | 1645 | 2011 | 2205 | 98.21% |
-| `v4_reuse_int15` | 1438 | 2206 | 2476 | 95.91% |
-| `v5_backup_int15` | 1438 | 2131 | 2401 | 98.44% |
-| `v5x_backup_repair_int5` | 1645 | 2006 | 2101 | 98.82% |
-| `v5x_backup_repair_int10` | 1540 | 2091 | 2251 | 98.66% |
-| `v5b_energy_aware_repair` | 1645 | 2011 | 2106 | 98.56% |
-| `v6_chain_center` | 1415 | 1916 | 2016 | 98.75% |
-| `v6_chain_farBS` | 1409 | 1824 | 1936 | 97.77% |
-| `v7_chain_backup_center` | 1415 | 1911 | 2001 | 99.10% |
-| `v7_chain_backup_farBS` | 1409 | 1801 | 1906 | 98.97% |
-| `v7_1_multihop_int5` | 1471 | 1916 | 2006 | 99.07% |
-| `v7_2_multihop_int10` | 1421 | 1991 | 2193 | 98.27% |
-| `v8_center` | 2501 | 2589 | 2636 | 99.65% |
-| `v8_farBS` | 1441 | 1596 | 1646 | 99.46% |
-| `v8_chain_center` | 2501 | 2589 | 2631 | 99.64% |
-| `v8_chain_farBS` | 1671 | 1851 | 1906 | 99.36% |
+| `v1_heed_election_leach_join` | 320 | 529 | 1218 | 99.76% |
+| `v2_fairness_penalty` | 334 | 528 | 1285 | 99.77% |
+| `v3_single_pass_reuse_int5` | 1645 | 2001 | 2203 | 98.35% |
+| `v4_reuse_int15` | 1513 | 2158 | 2416 | 97.07% |
+| `v5_backup_int15` | 1513 | 2116 | 2356 | 98.44% |
+| `v5x_backup_repair_int5` | 1645 | 1996 | 2081 | 98.95% |
+| `v5x_backup_repair_int10` | 1540 | 2090 | 2259 | 98.70% |
+| `v5b_energy_aware_repair` | 1645 | 1996 | 2116 | 98.62% |
+| `v6_chain_center` | 1521 | 1913 | 2025 | 98.51% |
+| `v6_chain_farBS` | 1481 | 1816 | 1961 | 97.95% |
+| `v7_chain_backup_center` | 1521 | 1906 | 2011 | 98.91% |
+| `v7_chain_backup_farBS` | 1481 | 1796 | 1911 | 98.80% |
+| `v7_1_multihop_int5` | 1466 | 1896 | 2011 | 99.08% |
+| `v7_2_multihop_int10` | 1431 | 1996 | 2181 | 98.43% |
+| `v8_center` | 2446 | 2536 | 2566 | 99.72% |
+| `v8_farBS` | 1406 | 1551 | 1606 | 99.38% |
+| `v8_chain_center` | 2446 | 2536 | 2566 | 99.72% |
+| `v8_chain_farBS` | 1626 | 1821 | 1881 | 99.56% |
 
 Side experiment (not part of the main line):
 
@@ -73,54 +75,52 @@ Side experiment (not part of the main line):
 
 | Run | Removed mechanism | FND | HND | LND | PDR |
 |---|---|---:|---:|---:|---:|
-| v8 (full) | — | 2501 | 2589 | 2636 | 99.65% |
-| v8 − I1 | I1 epoch-exhaustion fix | 2501 | 2589 | 2636 | 99.65% |
-| v8 − I2 | I2 proactive CH handover | 2496 | 2581 | 2641 | 99.66% |
-| v8 − I3 | I3 orphan re-join | 2501 | 2586 | 2626 | 99.71% |
-| v8 − I4 | I4 direct-to-BS | 1766 | 1946 | 2021 | 99.41% |
-| v8 − I5 | I5 energy-gated election | 2106 | 2516 | 2616 | 99.71% |
+| v8 (full) | — | 2446 | 2536 | 2566 | 99.72% |
+| v8 − I1 | I1 epoch-exhaustion fix | 2451 | 2541 | 2581 | 99.74% |
+| v8 − I2 | I2 proactive CH handover | 2430 | 2535 | 2581 | 99.63% |
+| v8 − I3 | I3 orphan re-join | 2446 | 2536 | 2566 | 99.71% |
+| v8 − I4 | I4 direct-to-BS | 1766 | 1916 | 1981 | 99.54% |
+| v8 − I5 | I5 energy-gated election | 2171 | 2481 | 2551 | 99.77% |
 
 ## CH→BS routing mode — `v8_chain_center.cc` with `-DCHAIN_MODE=0/1/2`
 
 | Mode | BS | FND | HND | LND | PDR |
 |---|---|---:|---:|---:|---:|
-| 0 · direct CH→BS (= v8) | Center (50,50) | 2501 | 2589 | 2636 | 99.65% |
-| 1 · ordered CH chain | Center (50,50) | 2436 | 2531 | 2561 | 99.64% |
-| 2 · energy-aware relay (= v8-Chain) | Center (50,50) | 2501 | 2589 | 2631 | 99.64% |
-| 0 · direct CH→BS (= v8) | Far (50,−100) | 1441 | 1596 | 1646 | 99.46% |
-| 1 · ordered CH chain | Far (50,−100) | 1636 | 1846 | 1891 | 99.45% |
-| 2 · energy-aware relay (= v8-Chain) | Far (50,−100) | 1671 | 1851 | 1906 | 99.36% |
+| 0 · direct CH→BS (= v8) | Center (50,50) | 2446 | 2536 | 2566 | 99.72% |
+| 1 · ordered CH chain | Center (50,50) | 2381 | 2486 | 2521 | 99.68% |
+| 2 · energy-aware relay (= v8-Chain) | Center (50,50) | 2446 | 2536 | 2566 | 99.72% |
+| 0 · direct CH→BS (= v8) | Far (50,−100) | 1406 | 1551 | 1606 | 99.38% |
+| 1 · ordered CH chain | Far (50,−100) | 1586 | 1801 | 1866 | 99.58% |
+| 2 · energy-aware relay (= v8-Chain) | Far (50,−100) | 1626 | 1821 | 1881 | 99.56% |
 
 ## Robustness — 8 random topologies (seeds 12345, 1, 7, 42, 99, 2024, 31337, 555)
 
 | Code | Mean FND | Mean HND | Mean LND | Mean PDR | FND min–max |
 |---|---:|---:|---:|---:|---|
-| v5b_center | 1618 | 2041 | 2239 | 98.11% | 1431–1725 |
-| v8_center | 2500 | 2595 | 2636 | 99.65% | 2471–2531 |
-| v8_chain_center | 2500 | 2595 | 2638 | 99.63% | 2471–2531 |
-| v8_farBS | 1443 | 1627 | 1679 | 99.36% | 1391–1481 |
-| v8_chain_farBS | 1682 | 1872 | 1934 | 99.41% | 1641–1721 |
+| v5b_center | 1606 | 2036 | 2238 | 98.37% | 1410–1743 |
+| v8_center | 2448 | 2544 | 2581 | 99.71% | 2401–2481 |
+| v8_chain_center | 2448 | 2544 | 2582 | 99.71% | 2401–2481 |
+| v8_farBS | 1412 | 1604 | 1650 | 99.37% | 1346–1476 |
+| v8_chain_farBS | 1652 | 1850 | 1898 | 99.46% | 1596–1681 |
 
 ## Expected cost of security — `v8_chain_*.cc` with `-DSEC_BITS / -DSEC_NJ_PER_BIT / -DSEC_SETUP_MJ`
 
-What adding hybrid cryptography (ECC key establishment + AES data protection) is expected to cost.
-Assumptions: 104 extra bits per frame (IEEE 802.15.4 security: 5-byte auxiliary header + 8-byte MIC);
-AES energy 5 nJ/bit for the sender and for the receiver (same order as E_DA; assumed);
-one ECC key establishment per node at deployment, 20 mJ (order of magnitude reported for ECC on 8-bit sensor MCUs).
+First estimate (superseded by the next section). Assumptions: 104 extra bits per frame (IEEE 802.15.4 security: 5-byte auxiliary header + 8-byte MIC);
+AES energy 5 nJ/bit for the sender and for the receiver (assumed); one ECC key establishment per node at deployment, 20 mJ.
 Folders: `4_PROPOSED/extra/security/`.
 
 | Scenario | BS | FND | HND | LND | PDR | FND change |
 |---|---|---:|---:|---:|---:|---:|
-| No security (= v8-Chain) | Center | 2501 | 2589 | 2631 | 99.64% | — |
-| + 104-bit header/MIC | Center | 2286 | 2376 | 2411 | 99.74% | −8.6% |
-| + header/MIC + ECC setup | Center | 2181 | 2278 | 2326 | 99.70% | −12.8% |
-| + header/MIC + AES | Center | 2096 | 2176 | 2221 | 99.72% | −16.2% |
-| + header/MIC + AES + ECC setup | Center | 2031 | 2108 | 2146 | 99.69% | −18.8% |
-| No security (= v8-Chain) | Far | 1671 | 1851 | 1906 | 99.36% | — |
-| + 104-bit header/MIC | Far | 1526 | 1716 | 1766 | 99.40% | −8.7% |
-| + header/MIC + ECC setup | Far | 1441 | 1651 | 1696 | 99.40% | −13.8% |
-| + header/MIC + AES | Far | 1356 | 1591 | 1641 | 99.52% | −18.9% |
-| + header/MIC + AES + ECC setup | Far | 1361 | 1535 | 1576 | 99.30% | −18.5% |
+| No security (= v8-Chain) | Center | 2446 | 2536 | 2566 | 99.72% | — |
+| + 104-bit header/MIC | Center | 2246 | 2321 | 2351 | 99.76% | −8.2% |
+| + header/MIC + ECC setup | Center | 2156 | 2231 | 2261 | 99.72% | −11.9% |
+| + header/MIC + AES | Center | 2061 | 2141 | 2176 | 99.79% | −15.7% |
+| + header/MIC + AES + ECC setup | Center | 1971 | 2062 | 2091 | 99.70% | −19.4% |
+| No security (= v8-Chain) | Far | 1626 | 1821 | 1881 | 99.56% | — |
+| + 104-bit header/MIC | Far | 1491 | 1686 | 1721 | 99.56% | −8.3% |
+| + header/MIC + ECC setup | Far | 1426 | 1611 | 1661 | 99.58% | −12.3% |
+| + header/MIC + AES | Far | 1361 | 1566 | 1616 | 99.39% | −16.3% |
+| + header/MIC + AES + ECC setup | Far | 1336 | 1506 | 1546 | 99.50% | −17.8% |
 
 ## Security as planned in the thesis proposal — LEACH, PEGASIS and v8 / v8-Chain
 
@@ -148,45 +148,45 @@ Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
 
 | Scenario | LEACH | PEGASIS | v8 |
 |---|---:|---:|---:|
-| No security | 1383 (99.4%) | 1324 (99.4%) | 2501 (99.6%) |
-| AES-128-CCM* + MIC only (pre-loaded keys) | 1037 (99.1%) | 1196 (99.4%) | 2096 (99.7%) |
-| **ECC + AES scheme: X25519 once + AES-128-CCM* + key distribution (recommended)** | 932 (99.0%) | 1081 (99.4%) | 1856 (99.7%) |
-| ECC + AES scheme: P-256 once + AES-128-CCM* + key distribution | 845 (98.9%) | 981 (99.2%) | 1686 (99.7%) |
-| Same scheme with RSA-3072 key transport (128-bit, ≈ 139 mJ once) | 728 (98.8%) | 863 (99.3%) | 1491 (99.6%) |
-| ECC + AES scheme: secp160r1 once (80-bit) + AES-128-CCM* + key distribution | 971 (99.3%) | 1141 (99.3%) | 1981 (99.7%) |
-| Same scheme with RSA-1024 key transport (80-bit, 15.4 mJ once) | 990 (99.4%) | 1158 (99.3%) | 1996 (99.7%) |
-| ECC + AES scheme + ECDSA signature by every new CH | 281 (98.9%) | 760 (98.0%) | 991 (98.9%) |
-| ECC + AES scheme, software AES (50 nJ/bit, sensitivity) | 557 (98.7%) | 785 (99.2%) | 1126 (99.5%) |
-| ECC-160 once + AES (no key distribution) | 1017 (99.1%) | 1141 (99.3%) | 2001 (99.7%) |
-| RSA-1024 once + AES | 1019 (99.2%) | 1158 (99.3%) | 2061 (99.6%) |
-| ECC for every new CH + AES | 302 (98.1%) | 774 (97.7%) | 1121 (95.2%) |
-| RSA for every new CH + AES | 395 (99.1%) | 874 (97.7%) | 1336 (96.2%) |
-| AES in the cluster + ECC (ECIES) on every packet to the sink | 284 (97.0%) | 774 (97.7%) | 736 (96.3%) |
-| AES in the cluster + RSA on every packet to the sink | 201 (95.3%) | 674 (94.5%) | 371 (96.2%) |
-| Full ECC (every packet) | 1 (23.8%) | 11 (83.3%) | 7 (13.3%) |
-| Full RSA (every packet) | 182 (5.5%) | 1 (2.9%) | 49 (6.0%) |
+| No security | 1383 (99.4%) | 1324 (99.4%) | 2446 (99.7%) |
+| AES-128-CCM* + MIC only (pre-loaded keys) | 1037 (99.1%) | 1196 (99.4%) | 2061 (99.8%) |
+| **ECC + AES scheme: X25519 once + AES-128-CCM* + key distribution (recommended)** | 932 (99.0%) | 1081 (99.4%) | 1831 (99.7%) |
+| ECC + AES scheme: P-256 once + AES-128-CCM* + key distribution | 845 (98.9%) | 981 (99.2%) | 1651 (99.7%) |
+| Same scheme with RSA-3072 key transport (128-bit, ≈ 139 mJ once) | 728 (98.8%) | 863 (99.3%) | 1481 (99.7%) |
+| ECC + AES scheme: secp160r1 once (80-bit) + AES-128-CCM* + key distribution | 971 (99.3%) | 1141 (99.3%) | 1931 (99.8%) |
+| Same scheme with RSA-1024 key transport (80-bit, 15.4 mJ once) | 990 (99.4%) | 1158 (99.3%) | 1961 (99.8%) |
+| ECC + AES scheme + ECDSA signature by every new CH | 281 (98.9%) | 760 (98.0%) | 991 (99.4%) |
+| ECC + AES scheme, software AES (50 nJ/bit, sensitivity) | 557 (98.7%) | 785 (99.2%) | 1061 (99.6%) |
+| ECC-160 once + AES (no key distribution) | 1017 (99.1%) | 1141 (99.3%) | 1966 (99.7%) |
+| RSA-1024 once + AES | 1019 (99.2%) | 1158 (99.3%) | 2016 (99.8%) |
+| ECC for every new CH + AES | 302 (98.1%) | 774 (97.7%) | 1101 (99.0%) |
+| RSA for every new CH + AES | 395 (99.1%) | 874 (97.7%) | 1286 (99.1%) |
+| AES in the cluster + ECC (ECIES) on every packet to the sink | 284 (97.0%) | 774 (97.7%) | 706 (96.7%) |
+| AES in the cluster + RSA on every packet to the sink | 201 (95.3%) | 674 (94.5%) | 411 (95.3%) |
+| Full ECC (every packet) | 1 (23.8%) | 11 (83.3%) | 2 (16.9%) |
+| Full RSA (every packet) | 182 (5.5%) | 1 (2.9%) | 44 (5.9%) |
 
 **BS far away (v8 column = v8-Chain)** — FND (PDR)
 
 | Scenario | LEACH | PEGASIS | v8 |
 |---|---:|---:|---:|
-| No security | 988 (99.4%) | 1374 (99.1%) | 1671 (99.4%) |
-| AES-128-CCM* + MIC only (pre-loaded keys) | 821 (98.8%) | 1237 (99.1%) | 1356 (99.5%) |
-| **ECC + AES scheme: X25519 once + AES-128-CCM* + key distribution (recommended)** | 720 (99.0%) | 1118 (98.9%) | 1231 (99.4%) |
-| ECC + AES scheme: P-256 once + AES-128-CCM* + key distribution | 648 (98.9%) | 1014 (98.8%) | 1096 (99.2%) |
-| Same scheme with RSA-3072 key transport (128-bit, ≈ 139 mJ once) | 572 (99.0%) | 893 (98.9%) | 1016 (99.5%) |
-| ECC + AES scheme: secp160r1 once (80-bit) + AES-128-CCM* + key distribution | 764 (99.2%) | 1182 (99.1%) | 1336 (99.5%) |
-| Same scheme with RSA-1024 key transport (80-bit, 15.4 mJ once) | 765 (99.0%) | 1199 (99.0%) | 1336 (99.6%) |
-| ECC + AES scheme + ECDSA signature by every new CH | 262 (99.3%) | 774 (96.5%) | 781 (97.0%) |
-| ECC + AES scheme, software AES (50 nJ/bit, sensitivity) | 504 (98.4%) | 804 (98.6%) | 756 (99.2%) |
-| ECC-160 once + AES (no key distribution) | 786 (99.2%) | 1182 (99.1%) | 1336 (99.4%) |
-| RSA-1024 once + AES | 798 (99.1%) | 1199 (99.0%) | 1331 (99.3%) |
-| ECC for every new CH + AES | 281 (98.8%) | 796 (96.8%) | 866 (95.7%) |
-| RSA for every new CH + AES | 351 (98.8%) | 894 (97.3%) | 956 (96.5%) |
-| AES in the cluster + ECC (ECIES) on every packet to the sink | 264 (95.8%) | 796 (96.8%) | 716 (96.0%) |
-| AES in the cluster + RSA on every packet to the sink | 181 (94.2%) | 674 (95.9%) | 336 (95.3%) |
-| Full ECC (every packet) | 1 (21.9%) | 11 (83.1%) | 6 (14.1%) |
-| Full RSA (every packet) | 161 (5.3%) | 1 (3.4%) | 203 (4.1%) |
+| No security | 988 (99.4%) | 1374 (99.1%) | 1626 (99.6%) |
+| AES-128-CCM* + MIC only (pre-loaded keys) | 821 (98.8%) | 1237 (99.1%) | 1361 (99.4%) |
+| **ECC + AES scheme: X25519 once + AES-128-CCM* + key distribution (recommended)** | 720 (99.0%) | 1118 (98.9%) | 1226 (99.6%) |
+| ECC + AES scheme: P-256 once + AES-128-CCM* + key distribution | 648 (98.9%) | 1014 (98.8%) | 1051 (99.5%) |
+| Same scheme with RSA-3072 key transport (128-bit, ≈ 139 mJ once) | 572 (99.0%) | 893 (98.9%) | 911 (99.3%) |
+| ECC + AES scheme: secp160r1 once (80-bit) + AES-128-CCM* + key distribution | 764 (99.2%) | 1182 (99.1%) | 1281 (99.4%) |
+| Same scheme with RSA-1024 key transport (80-bit, 15.4 mJ once) | 765 (99.0%) | 1199 (99.0%) | 1336 (99.5%) |
+| ECC + AES scheme + ECDSA signature by every new CH | 262 (99.3%) | 774 (96.5%) | 796 (97.2%) |
+| ECC + AES scheme, software AES (50 nJ/bit, sensitivity) | 504 (98.4%) | 804 (98.6%) | 661 (99.3%) |
+| ECC-160 once + AES (no key distribution) | 786 (99.2%) | 1182 (99.1%) | 1286 (99.6%) |
+| RSA-1024 once + AES | 798 (99.1%) | 1199 (99.0%) | 1316 (99.5%) |
+| ECC for every new CH + AES | 281 (98.8%) | 796 (96.8%) | 841 (96.1%) |
+| RSA for every new CH + AES | 351 (98.8%) | 894 (97.3%) | 946 (98.0%) |
+| AES in the cluster + ECC (ECIES) on every packet to the sink | 264 (95.8%) | 796 (96.8%) | 661 (96.1%) |
+| AES in the cluster + RSA on every packet to the sink | 181 (94.2%) | 674 (95.9%) | 346 (94.9%) |
+| Full ECC (every packet) | 1 (21.9%) | 11 (83.1%) | 1 (14.9%) |
+| Full RSA (every packet) | 161 (5.3%) | 1 (3.4%) | 199 (4.0%) |
 
 ## Far base station — every protocol with the BS at (50, −100)
 
@@ -195,18 +195,18 @@ Same codes compiled with `-DBS_Y=-100` (folders `far_bs/`). v8 and v8-Chain use 
 | Protocol | FND centre | FND far | HND far | LND far | PDR far |
 |---|---:|---:|---:|---:|---:|
 | LEACH | 1383 | 988 | 1230 | 1652 | 99.43% |
-| HEED | 634 | 330 | 774 | 1374 | 99.52% |
-| HEED + fairness | 743 | 422 | 757 | 1389 | 99.47% |
+| HEED | 658 | 350 | 765 | 1375 | 99.53% |
+| HEED + fairness | 738 | 407 | 756 | 1386 | 99.49% |
 | PEGASIS | 1324 | 1374 | 2176 | 2713 | 99.08% |
 | SH-LEACH (EDITED) | 647 | 390 | 601 | 861 | 99.67% |
 | SH-LEACH+ (IMPROVED) | 1480 | 1388 | 1435 | 1455 | 98.89% |
 | H-LEACH (EDITED) | 1384 | 1121 | 1156 | 1174 | 98.03% |
 | H-LEACH+ (IMPROVED) | 1473 | 1219 | 1262 | 1278 | 99.12% |
-| EECH-HEED (EDITED) | 1311 | 932 | 1381 | 1407 | 99.58% |
-| EECH-HEED+ (IMPROVED) | 1368 | 1412 | 1437 | 1456 | 99.12% |
-| v3 | 1645 | 1166 | 1576 | 2001 | 98.76% |
-| v5b | 1645 | 1166 | 1561 | 1796 | 98.94% |
-| v8 | 2501 | 1441 | 1596 | 1646 | 99.46% |
-| v8-Chain | 2501 | 1671 | 1851 | 1906 | 99.36% |
+| EECH-HEED (EDITED) | 1277 | 970 | 1377 | 1400 | 99.52% |
+| EECH-HEED+ (IMPROVED) | 1335 | 1410 | 1437 | 1457 | 99.18% |
+| v3 | 1645 | 1161 | 1546 | 2902 | 98.09% |
+| v5b | 1645 | 1161 | 1536 | 1905 | 98.80% |
+| v8 | 2446 | 1406 | 1551 | 1606 | 99.38% |
+| v8-Chain | 2446 | 1626 | 1821 | 1881 | 99.56% |
 
 `summary_all.csv` has every run in one table.

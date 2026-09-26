@@ -106,3 +106,5 @@ The EDITED and IMPROVED codes, v3 and v5b take `-DBS_Y=-100` for the far-BS runs
 | `0_FIRST_EXPERIMENTS/WSN-Day3_first_lrwpan_experiment` | First experiment: 3 sensors + sink over IEEE 802.15.4 (lr-wpan) |
 | `0_FIRST_EXPERIMENTS/wsn_first_packet` | First WSN run with energy models and packet statistics (fixed: it crashed at exit because the energy-source container was a global object) |
 | `0_FIRST_EXPERIMENTS/scratch_simulator_template` | The empty ns-3 scratch template |
+
+Overheads charged in the unified environment: every protocol that uses neighbour information (HEED, EECH-HEED, v1 → v8) pays one HELLO per node at deployment (`-DCHARGE_HELLO=0` switches it off); v8 / v8-Chain also pay a 16-bit residual-energy field in every data packet and the BS beacon with the average energy at every set-up, which the energy gate (I5) and the backup check need (`-DCHARGE_AVG_BEACON=0` switches it off).

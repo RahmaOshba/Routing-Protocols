@@ -125,6 +125,13 @@ static constexpr double E0_SENSE = 1.0;
 
 // --------------------- Documented assumptions -------------------------------
 static constexpr double R_NEIGH = 30.0;          // m, neighbourhood for E_avg and node degree
+// Neighbour discovery is charged once, at deployment: every node broadcasts one
+// HELLO control frame over the neighbour range and receives its neighbours' HELLOs
+// (-DCHARGE_HELLO=0 switches it off). The nodes are static, so the list is reused;
+// a neighbour that dies is noticed from its silence (no extra message).
+#ifndef CHARGE_HELLO
+#define CHARGE_HELLO 1
+#endif
 static constexpr uint32_t CONTROL_BITS = 200;
 static const double ADV_RANGE = AREA * std::sqrt(2.0);
 static const double D_MAX_BS = std::max(std::hypot(std::max(BSX, AREA - BSX), std::max(BSY, AREA - BSY)), 1.0); // farthest field corner from the BS (= √2·AREA/2 for the central BS)
@@ -557,6 +564,14 @@ int main(int argc, char* argv[])
     uint32_t roundsRun = 0;
 
     cout << "\nSimulation starts...\n";
+    if (CHARGE_HELLO) {   // neighbour discovery, once at deployment (see CHARGE_HELLO)
+        for (uint32_t i = 0; i < N; ++i) {
+            nodes[i].energy -= TxEnergy(CONTROL_BITS, R_NEIGH);
+            for (uint32_t j = 0; j < N; ++j)
+                if (j != i && Dist(nodes[i], nodes[j]) <= R_NEIGH) nodes[j].energy -= RxEnergy(CONTROL_BITS);
+        }
+    }
+
     for (uint32_t round = 1; round <= MAX_ROUNDS; ++round) {
         RunEECHHEED(nodes, round, electionRng);
         RoundResult r = SimulateRound(nodes, round, sensorRng);

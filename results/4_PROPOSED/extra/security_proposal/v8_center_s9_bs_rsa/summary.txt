@@ -1,15 +1,15 @@
              FINAL RESULTS
 ========================================
-FND = 371 rounds
-HND = 756 rounds
-LND = 836 rounds
-Total Energy Used = 50.000000 J
-Overall PDR = 0.962486
-Total Delivered Packets = 70427
-Backup Promotions = 19 successful / 19 rejected
-Proactive Handovers = 61
-Direct-to-BS Packets = 1
-CH-to-CH Relays = 1595
+FND = 411 rounds
+HND = 746 rounds
+LND = 851 rounds
+Total Energy Used = 49.974897 J
+Overall PDR = 0.953464
+Total Delivered Packets = 69641
+Backup Promotions = 22 successful / 24 rejected
+Proactive Handovers = 67
+Direct-to-BS Packets = 3
+CH-to-CH Relays = 1975
 BS = (50.000000, 50.000000), routing mode = 2
 
 CSV outputs: v8_chain_center-results.csv, v8_chain_center-node-energy.csv,

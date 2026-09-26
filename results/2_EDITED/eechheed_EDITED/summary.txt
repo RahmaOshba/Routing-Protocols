@@ -1,12 +1,12 @@
              FINAL RESULTS
 ========================================
-FND = 1311 rounds
-HND = 1382 rounds
-LND = 1545 rounds
-Total Energy Used = 50.000000 J
-Packets generated = 142318, delivered = 141948
-Overall PDR = 0.997400
-Average CHs per round = 6.55
+FND = 1277 rounds
+HND = 1384 rounds
+LND = 1543 rounds
+Total Energy Used = 49.979620 J
+Packets generated = 142194, delivered = 141474
+Overall PDR = 0.994936
+Average CHs per round = 6.54
 
 CSV outputs: eechheed_EDITED-results.csv, -node-energy.csv, -node-lifetime.csv
 ========================================

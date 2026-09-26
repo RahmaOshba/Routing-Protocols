@@ -1,14 +1,14 @@
              FINAL RESULTS
 ========================================
-FND = 2511 rounds
-HND = 2601 rounds
-LND = 2646 rounds
-Total Energy Used = 50.000000 J
-Overall PDR = 0.996431
-Total Delivered Packets = 258839
-Backup Promotions = 13 successful / 10 rejected
-Proactive Handovers = 23
-Direct-to-BS Packets = 111301
+FND = 2481 rounds
+HND = 2551 rounds
+LND = 2596 rounds
+Total Energy Used = 49.983355 J
+Overall PDR = 0.997520
+Total Delivered Packets = 254236
+Backup Promotions = 8 successful / 6 rejected
+Proactive Handovers = 26
+Direct-to-BS Packets = 109433
 
 CSV outputs: v8_center-results.csv, v8_center-node-energy.csv,
              v8_center-node-lifetime.csv, v8_center-clustering.xml

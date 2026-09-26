@@ -1,14 +1,14 @@
              FINAL RESULTS
 ========================================
-FND = 1446 rounds
-HND = 1641 rounds
-LND = 1691 rounds
-Total Energy Used = 50.000000 J
-Overall PDR = 0.994139
-Total Delivered Packets = 161141
-Backup Promotions = 6 successful / 7 rejected
-Proactive Handovers = 40
-Direct-to-BS Packets = 37
+FND = 1436 rounds
+HND = 1626 rounds
+LND = 1676 rounds
+Total Energy Used = 49.982395 J
+Overall PDR = 0.992915
+Total Delivered Packets = 159766
+Backup Promotions = 9 successful / 10 rejected
+Proactive Handovers = 41
+Direct-to-BS Packets = 86
 
 CSV outputs: v8_farBS-results.csv, v8_farBS-node-energy.csv,
              v8_farBS-node-lifetime.csv, v8_farBS-clustering.xml

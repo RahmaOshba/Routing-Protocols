@@ -2,10 +2,10 @@
 ========================================
 FND = 1725 rounds
 HND = 2066 rounds
-LND = 2701 rounds
-Total Energy Used = 50.000000 J
-Overall PDR = 0.973292
-Backup Promotions = 12 successful / 9 rejected
+LND = 2303 rounds
+Total Energy Used = 49.982095 J
+Overall PDR = 0.976919
+Backup Promotions = 11 successful / 12 rejected
 
 CSV outputs: v5b_energy_aware_repair-results.csv, v5b_energy_aware_repair-node-energy.csv,
              v5b_energy_aware_repair-node-lifetime.csv, v5b_energy_aware_repair-clustering.xml

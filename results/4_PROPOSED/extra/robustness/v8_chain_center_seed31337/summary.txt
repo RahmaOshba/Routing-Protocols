@@ -1,14 +1,14 @@
              FINAL RESULTS
 ========================================
-FND = 2506 rounds
-HND = 2603 rounds
-LND = 2646 rounds
-Total Energy Used = 50.000000 J
-Overall PDR = 0.997105
-Total Delivered Packets = 258673
-Backup Promotions = 11 successful / 4 rejected
-Proactive Handovers = 26
-Direct-to-BS Packets = 109898
+FND = 2466 rounds
+HND = 2567 rounds
+LND = 2611 rounds
+Total Energy Used = 49.982395 J
+Overall PDR = 0.997048
+Total Delivered Packets = 255305
+Backup Promotions = 11 successful / 7 rejected
+Proactive Handovers = 24
+Direct-to-BS Packets = 111227
 CH-to-CH Relays = 0
 BS = (50.000000, 50.000000), routing mode = 2
 
