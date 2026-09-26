@@ -308,6 +308,9 @@ main(int argc, char* argv[])
     cmd.AddValue("rounds", "Number of rounds (10 s each)", rounds);
     cmd.AddValue("pcap", "Write one Wireshark .pcap file per node", pcap);
     cmd.Parse(argc, argv);
+    // Compute the 802.15.4 frame checksum (FCS); otherwise it is left at 0 and
+    // Wireshark marks every frame "Bad FCS"
+    GlobalValue::Bind("ChecksumEnabled", BooleanValue(true));
 
     // ---- nodes and positions: 3 clusters of 4 sensors + sink on top ----
     NodeContainer nodes;

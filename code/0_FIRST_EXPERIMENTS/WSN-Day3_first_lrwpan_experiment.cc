@@ -99,6 +99,9 @@ main(int argc, char* argv[])
     cmd.AddValue("interval", "Seconds between packets of one sensor", interval);
     cmd.AddValue("packetSize", "Payload size in bytes", g_packetSize);
     cmd.Parse(argc, argv);
+    // Compute the 802.15.4 frame checksum (FCS); otherwise it is left at 0 and
+    // Wireshark marks every frame "Bad FCS"
+    GlobalValue::Bind("ChecksumEnabled", BooleanValue(true));
 
     // =====================================
     // Create Nodes
