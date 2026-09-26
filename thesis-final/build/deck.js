@@ -34,7 +34,7 @@ async function loadIcons() {
   const names = ['FaBatteryQuarter', 'FaProjectDiagram', 'FaBroadcastTower', 'FaSearch', 'FaFlask', 'FaCogs', 'FaCheckCircle',
     'FaChartBar', 'FaShieldAlt', 'FaExclamationTriangle', 'FaSyncAlt', 'FaRoute', 'FaBolt', 'FaLayerGroup', 'FaUserShield',
     'FaSitemap', 'FaBook', 'FaLightbulb', 'FaCodeBranch', 'FaLock', 'FaBalanceScale', 'FaRandom', 'FaMicrochip', 'FaClock',
-    'FaHandshake', 'FaDatabase', 'FaWrench', 'FaBullseye', 'FaStream', 'FaMapMarkedAlt', 'FaFlagCheckered', 'FaRobot', 'FaThLarge', 'FaLeaf',
+    'FaHandshake', 'FaDatabase', 'FaWrench', 'FaBullseye', 'FaStream', 'FaMapMarkedAlt', 'FaChartLine', 'FaBatteryHalf', 'FaFlagCheckered', 'FaRobot', 'FaThLarge', 'FaLeaf',
     'FaSeedling', 'FaHeartbeat', 'FaIndustry', 'FaCity', 'FaTree', 'FaKey', 'FaThermometerHalf', 'FaWifi', 'FaUsers', 'FaTools', 'FaArrowRight', 'FaTrophy', 'FaBug'];
   for (const n of names) ICONS[n] = await icon(n);
 }
@@ -441,6 +441,19 @@ async function build() {
     s.addText('=', { x: 9.15, y: 3.2, w: 0.6, h: 0.9, fontSize: 48, bold: true, color: MUTED, align: 'center', fontFace: HEAD, margin: 0, isTextBox: true });
     card(s, 9.8, 1.5, 2.9, 4.7, { head: 'Hybrid', icon: 'FaLayerGroup', color: AQUA, size: 15, body: 'LEACH speed and rotation with HEED\'s energy awareness — without HEED\'s negotiation.' });
     band(s, 'SH-LEACH (2015), H-LEACH (2016) and EECH-HEED (2025) follow this idea — and so does our protocol.', 6.45);
+  }
+  {
+    const s = base(); title(s, 'The three hybrid papers — idea and weakness');
+    const c = [['SH-LEACH (2015) [5]', 'FaChartLine', BLUE, 'LEACH election weighted by residual energy, the round number and a network CH counter.', 'The round number is never reset, so the probability keeps growing and almost every node ends up CH.'],
+      ['H-LEACH (2016) [6]', 'FaBatteryHalf', ORANGE, 'Each node gets its own probability from its energy; only nodes above the average energy may lead.', 'Needs the network average energy; strict "above average" blocks everyone when energies are equal; no G-set.'],
+      ['EECH-HEED (2025) [7]', 'FaMapMarkedAlt', AQUA, 'Two zones: HEED-style near the BS, energy + node degree far away; CHs relay for each other; adaptive sensing.', 'Complex; far-zone probability near 1 makes the same border nodes CH again and again.']];
+    c.forEach(([h, ic, col, idea, flaw], i) => {
+      const x = 0.6 + i * 4.1;
+      card(s, x, 1.5, 3.85, 5.35, { head: h, icon: ic, color: col, headSize: 16, size: 14, body: '' });
+      s.addText([{ text: 'Idea', options: { bold: true, color: col, breakLine: true } }, { text: idea, options: { breakLine: true } }, { text: ' ', options: { breakLine: true } },
+        { text: 'Weakness', options: { bold: true, color: RED, breakLine: true } }, { text: flaw }],
+      { x: x + 0.25, y: 2.5, w: 3.35, h: 4.2, fontSize: 16, color: INK, fontFace: BODY, valign: 'top', margin: 0, isTextBox: true });
+    });
   }
   {
     const s = base(); title(s, 'The three hybrid papers', 'Each adds energy (HEED idea) to LEACH-style rotation');
