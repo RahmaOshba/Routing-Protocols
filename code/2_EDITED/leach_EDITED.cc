@@ -142,6 +142,12 @@ static constexpr uint32_t EPOCH = 20;   // 1 / P_CH
 #ifndef SEC_PK_BS_MJ
 #define SEC_PK_BS_MJ 0.0
 #endif
+//   SEC_KEYDIST     1 = at every cluster set-up the sink sends each node the new
+//                   cluster key, wrapped with the node's own AES key (one extra
+//                   control frame received per node; the sink pays its own TX)
+#ifndef SEC_KEYDIST
+#define SEC_KEYDIST 0
+#endif
 static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
 static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent
@@ -343,6 +349,10 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes,
     if (E_AUTH > 0.0)
         for (auto& n : nodes)
             if (n.alive && n.finalCH) n.energy = max(0.0, n.energy - E_AUTH);
+    // Key distribution (0 by default): every node receives the new cluster key from the sink.
+    if (SEC_KEYDIST)
+        for (auto& n : nodes)
+            if (n.alive) n.energy = max(0.0, n.energy - RxEnergy(CONTROL_BITS));
 
     // ---------------- SETUP: ADVERTISEMENT + JOIN + TDMA ----------------
     // Phase 1: CH advertisement.

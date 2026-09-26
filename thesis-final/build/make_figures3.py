@@ -21,8 +21,8 @@ def box(ax,x,y,w,h,text,fc,ec=None,fs=11,tc=INK,bold=False):
 def arrow(ax,a,b,c=MUTED,lw=1.8,ls='-',ms=16):
     ax.add_patch(FancyArrowPatch(a,b,arrowstyle='-|>',mutation_scale=ms,color=c,lw=lw,linestyle=ls,shrinkA=4,shrinkB=4))
 
-SC=[('s0_none','No\nsecurity'),('s1_aes_only','AES + MIC\nonly'),('s6_once_rsa','Hybrid\nRSA once'),('s7_once_ecc','Hybrid\nECC once'),
-    ('s2_hybrid_rsa','Hybrid\nRSA per CH'),('s3_hybrid_ecc','Hybrid\nECC per CH'),('s8_bs_ecc','ECC on\nCH→sink'),('s9_bs_rsa','RSA on\nCH→sink'),('s4_full_ecc','Full\nECC'),('s5_full_rsa','Full\nRSA')]
+SC=[('s0_none','No\nsecurity'),('s1_aes_only','AES only'),('s14_x25519_aes','ECC + AES\n(proposed)'),('s15_rsa3072_aes','RSA-3072\n+ AES'),
+    ('s3_hybrid_ecc','ECC per CH\n+ AES'),('s2_hybrid_rsa','RSA per CH\n+ AES'),('s8_bs_ecc','ECC on\nCH→sink'),('s9_bs_rsa','RSA on\nCH→sink'),('s4_full_ecc','Full\nECC'),('s5_full_rsa','Full\nRSA')]
 
 # ---------------- S2 FND per scheme (centre / far) ----------------
 for bs,v8k,v8lab,name in [('center','v8','v8','s2_sec_center.png'),('far','v8chain','v8-Chain','s2_sec_far.png')]:
@@ -31,7 +31,7 @@ for bs,v8k,v8lab,name in [('center','v8','v8','s2_sec_center.png'),('far','v8cha
         vals=[sec(p,bs,s)[0] for s,_ in SC]
         ax.bar(x+(j-1)*w,vals,w-0.03,color=c,zorder=3,label=lab)
         for i,val in enumerate(vals): ax.text(x[i]+(j-1)*w,val+30,str(val),ha='center',fontsize=7.5,color=INK,rotation=90)
-    ax.axvspan(1.5,3.5,color='#e8f6ef',zorder=0); ax.text(2.5,2950 if bs=='center' else 2000,'recommended',ha='center',color=AQUA,fontsize=10,fontweight='bold')
+    ax.axvspan(1.5,2.5,color='#e8f6ef',zorder=0); ax.text(2.0,2950 if bs=='center' else 2000,'proposed',ha='center',color=AQUA,fontsize=10,fontweight='bold')
     ax.axvspan(7.5,9.5,color='#fdeceb',zorder=0); ax.text(8.5,2950 if bs=='center' else 2000,'network breaks',ha='center',color=RED,fontsize=10,fontweight='bold')
     ax.set_xticks(x); ax.set_xticklabels([l for _,l in SC],fontsize=9.5); ax.set_ylabel('FND (rounds)')
     ax.set_ylim(0,3200 if bs=='center' else 2200); ax.legend(loc='upper center',ncol=3,fontsize=10,bbox_to_anchor=(0.6,0.97))
@@ -46,26 +46,41 @@ for j,(p,lab,c) in enumerate([('leach','LEACH',GREY),('pegasis','PEGASIS',AQUA),
 ax.set_xticks(x); ax.set_xticklabels([l for _,l in SC],fontsize=9.5); ax.set_ylabel('PDR (%)'); ax.set_ylim(0,112)
 ax.legend(loc='upper right',ncol=3,fontsize=10,bbox_to_anchor=(1,1.12)); save(fig,'s3_sec_pdr.png')
 
+# ---------------- S6 the ECC + AES scheme variants ----------------
+EV=[('s0_none','No\nsecurity'),('s14_x25519_aes','X25519\n+ AES'),('s11_p256_aes','P-256\n+ AES'),('s15_rsa3072_aes','RSA-3072\n+ AES'),
+    ('s10_ecc160_aes','secp160r1\n+ AES'),('s12_ecc160_ecdsa','+ ECDSA\nper CH'),('s13_ecc160_swaes','SW AES\n50 nJ/bit')]
+fig,axs=plt.subplots(1,2,figsize=(14,4.3),sharey=True)
+for ax,(bs,v8k,v8lab,tt) in zip(axs,[('center','v8','v8','BS at the centre'),('far','v8chain','v8-Chain','BS far away')]):
+    x=np.arange(len(EV)); w=0.27
+    for j,(p,lab,c) in enumerate([('leach','LEACH',GREY),('pegasis','PEGASIS',AQUA),(v8k,v8lab,BLUE)]):
+        vals=[sec(p,bs,k)[0] for k,_ in EV]
+        ax.bar(x+(j-1)*w,vals,w-0.03,color=c,zorder=3,label=lab)
+        for i,val in enumerate(vals): ax.text(x[i]+(j-1)*w,val+30,str(val),ha='center',fontsize=7.5,rotation=90)
+    ax.axvspan(0.5,1.5,color='#e8f6ef',zorder=0)
+    ax.set_xticks(x); ax.set_xticklabels([l for _,l in EV],fontsize=8.5); ax.set_title(tt,fontsize=12,color=INK); ax.legend(loc='upper right',fontsize=9)
+axs[0].set_ylabel('FND (rounds)'); axs[0].set_ylim(0,3000)
+save(fig,'s6_ecc_aes.png')
+
 # ---------------- S4 the proposed hybrid scheme ----------------
 fig,ax=blank(12,5.2)
 ax.add_patch(FancyBboxPatch((0.3,0.4),5.6,4.3,boxstyle='round,pad=0.02,rounding_size=0.2',fc='#eef4fc',ec='#c9d4e8',lw=1.5))
-ax.text(3.1,4.4,'Inside the cluster: AES + MIC',ha='center',fontsize=12,color=BLUE,fontweight='bold')
+ax.text(3.1,4.4,'Inside the cluster: AES-128-CCM*',ha='center',fontsize=12,color=BLUE,fontweight='bold')
 ch=(4.6,2.5); ax.add_patch(Circle(ch,0.38,color=RED,zorder=3)); ax.text(ch[0],ch[1],'CH',ha='center',va='center',color='white',fontweight='bold',zorder=4)
 for p in [(1.1,3.6),(1.0,1.2),(2.2,2.4),(2.6,3.9),(2.7,0.9),(1.6,2.0)]:
     ax.add_patch(Circle(p,0.17,color=BLUE,zorder=3)); arrow(ax,p,ch,c=BLUE,lw=1.4,ms=12)
-ax.text(3.1,0.6,'members: AES reading + 8-byte MIC (+104 bits)',ha='center',fontsize=9.5,color=MUTED)
+ax.text(3.1,0.6,'members: AES-CCM* with the cluster key, MIC-64',ha='center',fontsize=9.5,color=MUTED)
 sink=(10.6,2.5); ax.add_patch(FancyBboxPatch((9.6,1.6),2.0,1.8,boxstyle='round,pad=0.02,rounding_size=0.15',fc=GOLD,ec=GOLD))
 ax.text(sink[0],2.75,'SINK',ha='center',fontsize=14,fontweight='bold',color=INK); ax.text(sink[0],2.2,'mains-powered\nheavy key ops here',ha='center',fontsize=8.5,color=INK)
-arrow(ax,(5.05,2.95),(9.55,2.95),c=ORANGE,lw=2.2); ax.text(7.3,3.2,'1  authenticate (public key, once)',ha='center',fontsize=10,color=ORANGE,fontweight='bold')
-arrow(ax,(9.55,2.5),(5.05,2.5),c=NAVY,lw=2.0,ls='--'); ax.text(7.3,2.15,'2  credentials / session key',ha='center',fontsize=10,color=NAVY)
-arrow(ax,(5.05,1.95),(9.55,1.95),c=AQUA,lw=2.2); ax.text(7.3,1.55,'3  fused data (AES + MIC)',ha='center',fontsize=10,color=AQUA,fontweight='bold')
-ax.text(8.6,4.3,'CH ↔ sink: public key only\nfor authentication',ha='center',va='center',fontsize=12,color=ORANGE,fontweight='bold')
+arrow(ax,(5.05,2.95),(9.55,2.95),c=ORANGE,lw=2.2); ax.text(7.3,3.2,'1  CH request + AES-CMAC',ha='center',fontsize=10,color=ORANGE,fontweight='bold')
+arrow(ax,(9.55,2.5),(5.05,2.5),c=NAVY,lw=2.0,ls='--'); ax.text(7.3,2.15,'2  cluster key (AES Key Wrap)',ha='center',fontsize=10,color=NAVY)
+arrow(ax,(5.05,1.95),(9.55,1.95),c=AQUA,lw=2.2); ax.text(7.3,1.55,'3  fused data (AES-CCM*)',ha='center',fontsize=10,color=AQUA,fontweight='bold')
+ax.text(8.6,4.3,'ECDH (X25519 / P-256) once per node\n→ node key K_i (HKDF)',ha='center',va='center',fontsize=12,color=ORANGE,fontweight='bold')
 save(fig,'s4_sec_scheme.png')
 
 # ---------------- S5 cost of one operation (log scale) ----------------
-ops=[('AES, one 2000-bit packet',10e-3),('RSA-1024 encrypt\n(public key)',11.9),('RSA key transport,\nnode side',15.4),('ECDH-160\nkey agreement',22.3),('RSA-1024 decrypt\n(private key)',304),('RSA: decrypt one\n2000-bit reading (3 blocks)',912)]
-fig,ax=plt.subplots(figsize=(11,3.9)); y=np.arange(len(ops))
-cols=[AQUA,ORANGE,ORANGE,ORANGE,RED,RED]
+ops=[('AES-128, one 2000-bit packet',10e-3),('RSA-1024 encrypt\n(public key)',11.9),('ECDH secp160r1\n(80-bit, comparison)',22.3),('ECDH X25519\n(128-bit)',48),('ECDH P-256\n(128-bit)',90),('RSA-3072 key transport\n(128-bit, node side)',139),('RSA-1024 decrypt\n(private key)',304),('RSA: decrypt one\n2000-bit reading (3 blocks)',912)]
+fig,ax=plt.subplots(figsize=(11,4.4)); y=np.arange(len(ops))
+cols=[AQUA,ORANGE,BLUE,BLUE,BLUE,ORANGE,RED,RED]
 ax.barh(y,[v for _,v in ops],color=cols,zorder=3); ax.set_xscale('log'); ax.set_yticks(y); ax.set_yticklabels([l for l,_ in ops],fontsize=9.5); ax.invert_yaxis()
 ax.axvline(500,color=NAVY,ls='--',lw=1.4); ax.text(520,-0.35,'whole battery\n0.5 J = 500 mJ',color=NAVY,fontsize=9,va='top')
 for i,(_,v) in enumerate(ops): ax.text(v*1.15,i,(f'{v*1000:.0f} µJ' if v<1 else f'{v:g} mJ'),va='center',fontsize=9.5)

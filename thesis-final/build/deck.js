@@ -168,7 +168,7 @@ async function build() {
     const items = [['01', 'Background', 'WSNs and clustering', 'FaWifi'], ['02', 'Energy & first experiments', 'energy model, ns-3, demo', 'FaBolt'],
       ['03', 'Classic protocols', 'LEACH · HEED · PEGASIS', 'FaBook'], ['04', 'Hybrid protocols', 'SH-LEACH · H-LEACH · EECH-HEED', 'FaLayerGroup'],
       ['05', 'Recent work', 'and literature review', 'FaSearch'], ['06', 'Proposed protocol', 'v1 → v8-Chain', 'FaCogs'],
-      ['07', 'Adding security', 'AES · RSA · ECC — the proposal scheme', 'FaLock'], ['08', 'Conclusion', 'limitations · summary', 'FaFlagCheckered']];
+      ['07', 'Conclusion', 'limitations · summary', 'FaFlagCheckered']];
     items.forEach(([n, h, b, ic], i) => {
       const x = 0.6 + (i % 4) * 3.07, y = 1.55 + Math.floor(i / 4) * 2.7;
       card(s, x, y, 2.85, 2.4, { head: h, body: b, icon: ic, color: [BLUE, ORANGE, AQUA, NAVY][i % 4], size: 14, headSize: 15 });
@@ -609,7 +609,7 @@ async function build() {
     card(s, 0.6, 1.5, 6.1, 4.8, { head: 'No existing protocol combines', icon: 'FaBullseye', color: ORANGE, size: 16,
       body: '• a cheap single-pass CH election (energy + connectivity)\n• cluster reuse to cut setup overhead\n• protection of the CH before and after it fails\n• relaying between CHs only when it saves energy\n\n…and they are never compared in the same environment.' });
     card(s, 6.9, 1.5, 5.8, 4.8, { head: 'Our answer', icon: 'FaLightbulb', color: BLUE, size: 16,
-      body: '1. Reproduce all protocols fairly (ORIGINAL → EDITED).\n2. Fix the flaws of the hybrids (IMPROVED).\n3. Build a new protocol step by step (v1 → v8-Chain).\n4. Test the hybrid cryptography of the proposal (vs no security and full RSA).' });
+      body: '1. Reproduce all protocols fairly (ORIGINAL → EDITED).\n2. Fix the flaws of the hybrids (IMPROVED).\n3. Build a new protocol step by step (v1 → v8-Chain).' });
   }
 
   // ================= 06 PROPOSED =================
@@ -773,86 +773,17 @@ async function build() {
     w.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 3) * 4.1, 1.5 + Math.floor(i / 3) * 2.7, 3.85, 2.45, { head: h, body: b, icon: ic, color: col, size: 16, headSize: 16 }));
   }
 
-  // ================= 07 SECURITY =================
-  section('07', 'Adding security', 'The hybrid cryptography of the thesis proposal, tested on LEACH, PEGASIS and v8 / v8-Chain');
-  const SG = (p, bs, k) => C.get(`sec_${p}_${bs}_${k}`);
-  {
-    const s = base(); title(s, 'Why not RSA for everything?', 'Energy of one operation on an 8-bit sensor MCU (ATmega128, Wander et al. [16]) — log scale');
-    img(s, 's5_sec_ops.png', 0.6, 1.45, 8.3, 4.9);
-    stat(s, 9.2, 1.5, 3.5, '912 mJ', 'to RSA-decrypt ONE 2000-bit reading — the whole battery is 500 mJ', RED);
-    stat(s, 9.2, 3.55, 3.5, '10 µJ', 'to AES-encrypt the same reading (≈ 90 000× cheaper)', AQUA);
-    band(s, 'Proposal idea: symmetric crypto for every message; public-key crypto only where it is really needed.', 6.5);
-  }
-  {
-    const s = base(); title(s, 'The hybrid scheme (thesis proposal)', 'Symmetric inside the cluster · public key only between the CH and the sink · the sink authenticates the CHs');
-    img(s, 's4_sec_scheme.png', 0.6, 1.45, 7.6, 3.4);
-    eqBox(s, 'eq_security.png', 0.6, 5.0, 7.6, 1.3);
-    const st = [['Members → CH', 'AES + 8-byte MIC (IEEE 802.15.4 security [17]): +104 bits, 5 nJ/bit', 'FaLock', BLUE],
-      ['CH and sink', 'public key (RSA or ECC) to authenticate; the sink replies with credentials / a session key', 'FaKey', ORANGE],
-      ['The sink', 'mains-powered, does the heavy private-key work (RSA decrypt / sign)', 'FaUserShield', NAVY]];
-    st.forEach(([h, b, ic, col], i) => card(s, 8.45, 1.45 + i * 1.65, 4.3, 1.5, { head: h, body: b, icon: ic, color: col, size: 12, headSize: 14 }));
-  }
-  {
-    const s = base(); title(s, 'Scenarios tested', 'Same codes; security switched on with compiler flags (-DSEC_…), all 0 by default');
-    tbl(s, [['Scenario', 'Every message', 'Public key', 'What a node pays'],
-      ['No security', '—', '—', 'nothing'],
-      ['AES + MIC only', 'AES + MIC', '— (keys pre-loaded)', '+104 bits, 5 nJ/bit'],
-      ['Hybrid — once per node', 'AES + MIC', 'once at deployment', '+ 15.4 mJ (RSA) / 22.3 mJ (ECC) once'],
-      ['Hybrid — per new CH', 'AES + MIC', 'every time a node becomes CH', '+ 15.4 / 22.3 mJ per election'],
-      ['ECC / RSA on CH → sink', 'AES + MIC', 'every packet to the sink', '+22.3 mJ (ECC) / 35.7 mJ (RSA) per packet'],
-      ['Full ECC', 'ECIES', 'every packet', '22.3 mJ send + 22.3 mJ receive'],
-      ['Full RSA', 'RSA-1024 (3 blocks)', 'every packet', '35.7 mJ send + 912 mJ receive']],
-    0.6, 1.6, 12.1, [3.0, 2.4, 3.1, 3.6], { size: 14, rowH: 0.5 });
-    band(s, 'Compared on LEACH, PEGASIS and v8 (BS at the centre) and v8-Chain (BS far away), as planned in the proposal.', 6.4);
-  }
-  {
-    const s = base(); title(s, 'Results — FND with security, BS at the centre');
-    img(s, 's2_sec_center.png', 0.6, 1.3, 12.1, 4.85);
-    band(s, `Hybrid (public key once): v8 ${SG('v8', 'center', 's6_once_rsa').F} rounds = +${C.gain(SG('v8', 'center', 's6_once_rsa').F, leach.F).toFixed(0)} % over LEACH WITHOUT security, ×${(SG('v8', 'center', 's6_once_rsa').F / SG('leach', 'center', 's6_once_rsa').F).toFixed(1)} LEACH with the same security.`, 6.3);
-  }
-  {
-    const s = base(); title(s, 'Results — FND with security, BS far away');
-    img(s, 's2_sec_far.png', 0.6, 1.3, 12.1, 4.85);
-    band(s, `Far BS, same hybrid for all: v8-Chain ${SG('v8chain', 'far', 's6_once_rsa').F} vs PEGASIS ${SG('pegasis', 'far', 's6_once_rsa').F} (+${C.gain(SG('v8chain', 'far', 's6_once_rsa').F, SG('pegasis', 'far', 's6_once_rsa').F).toFixed(0)} %) and LEACH ${SG('leach', 'far', 's6_once_rsa').F} (+${C.gain(SG('v8chain', 'far', 's6_once_rsa').F, SG('leach', 'far', 's6_once_rsa').F).toFixed(0)} %).`, 6.3);
-  }
-  {
-    const s = base(); title(s, 'Lighter than full RSA: ECC only on CH → sink', 'Members use AES · packets to the sink: ECC (≈ 22.3 mJ) or RSA (35.7 mJ) · the sink decrypts');
-    const rows = [['Scenario', 'LEACH', 'PEGASIS', 'v8', 'LEACH far', 'PEGASIS far', 'v8-Chain far']].concat(
-      [['No security', 's0_none'], ['ECC once per node', 's7_once_ecc'], ['ECC on CH → sink', 's8_bs_ecc'], ['RSA on CH → sink', 's9_bs_rsa'], ['Full ECC', 's4_full_ecc'], ['Full RSA', 's5_full_rsa']]
-        .map(([n, k]) => [n, ...[['leach', 'center'], ['pegasis', 'center'], ['v8', 'center'], ['leach', 'far'], ['pegasis', 'far'], ['v8chain', 'far']].map(([p, bs]) => { const x = SG(p, bs, k); return `${x.F} · ${C.pct(x.P)}`; })]));
-    tbl(s, rows, 0.6, 1.6, 12.1, [2.5, 1.6, 1.6, 1.6, 1.6, 1.6, 1.6], { size: 13, rowH: 0.42 });
-    const K = [['Much lighter than full RSA', 'Only the sender encrypts; the sink does the decryption → the network works again (PDR ≈ 96 %).', 'FaCheckCircle', AQUA],
-      ['Still 70 % shorter life', `22.3 mJ on every packet to the sink: v8 ${SG('v8', 'center', 's8_bs_ecc').F} vs ${SG('v8', 'center', 's7_once_ecc').F} with ECC once.`, 'FaExclamationTriangle', ORANGE],
-      ['Fewer packets to the sink wins', `PEGASIS (1 leader) ${SG('pegasis', 'center', 's8_bs_ecc').F}; v8 relays CH → CH to save ECC operations; LEACH ${SG('leach', 'center', 's8_bs_ecc').F}.`, 'FaRoute', BLUE]];
-    K.forEach(([h, b, ic, col], i) => card(s, 0.6 + i * 4.1, 4.7, 3.85, 1.8, { head: h, body: b, icon: ic, color: col, size: 12, headSize: 14 }));
-    band(s, 'Best use of ECC: once per node for the key agreement — not on every packet.', 6.65);
-  }
-  {
-    const s = base(); title(s, 'PDR — full public key breaks the network', 'BS at the centre · % of readings that reach the BS');
-    img(s, 's3_sec_pdr.png', 0.6, 1.5, 12.1, 4.6);
-    band(s, 'Full RSA: a CH cannot pay 912 mJ to decrypt one packet, so almost nothing arrives (PDR 3 – 6 %).  The hybrid keeps PDR ≈ 99 %.', 6.35);
-  }
-  {
-    const s = base(); title(s, 'What we learn about security');
-    const L = [['Full RSA / ECC is impossible', 'Every packet with public key: FND 1 – 203 rounds and PDR 3 – 24 %. The proposal was right: RSA is too heavy for the nodes.', 'FaExclamationTriangle', RED],
-      ['Public key once, not per CH', `Authenticating every new CH with RSA/ECC cuts FND by ${Math.round((1 - SG('v8', 'center', 's2_hybrid_rsa').F / 2501) * 100)} – ${Math.round((1 - SG('leach', 'center', 's2_hybrid_rsa').F / leach.F) * 100)} %. Once per node, then symmetric credentials from the sink: only −${Math.round((1 - SG('v8', 'center', 's6_once_rsa').F / 2501) * 100)} %.`, 'FaKey', ORANGE],
-      ['RSA vs ECC on the node', 'With the sink doing the private-key work, RSA costs the node 15.4 mJ vs 22.3 mJ for ECDH — ECC still gives smaller keys (160 vs 1024 bits).', 'FaBalanceScale', BLUE],
-      ['v8 protects best', `Fewer re-elections (setup every 5 rounds) = fewer authentications. With the recommended hybrid: v8 ${SG('v8', 'center', 's6_once_rsa').F}, PEGASIS ${SG('pegasis', 'center', 's6_once_rsa').F}, LEACH ${SG('leach', 'center', 's6_once_rsa').F}.`, 'FaTrophy', AQUA]];
-    L.forEach(([h, b, ic, col], i) => card(s, 0.6 + (i % 2) * 6.15, 1.45 + Math.floor(i / 2) * 2.45, 5.95, 2.25, { head: h, body: b, icon: ic, color: col, size: 14, headSize: 16 }));
-    band(s, 'Recommended: AES + MIC for every message, public key once per node, the sink authenticates CHs with symmetric credentials.', 6.45);
-  }
-
-  // ================= 08 CONCLUSION =================
-  section('08', 'Conclusion', 'Limitations, summary and references');
+  // ================= 07 CONCLUSION =================
+  section('07', 'Conclusion', 'Limitations, summary and references');
   {
     const s = base(); title(s, 'Limitations');
     const L = [['Analytical energy model', 'Long runs use the first-order radio model: no collisions, retransmissions or fading (the demo shows packet level on a small scale).', 'FaMicrochip'],
       ['Static, equal nodes', '100 static nodes with equal energy; no mobility or heterogeneous hardware.', 'FaMapMarkedAlt'],
       ['One field size', '100 × 100 m and 100 nodes; larger networks not tested.', 'FaThLarge'],
-      ['Security as energy cost only', 'Crypto energy from published MCU measurements [16] (AES assumed); attacks are not simulated.', 'FaLock'],
+      ['Uniform random deployment only', `8 random topologies tested (v8 FND ${C.robust('v8_center').Fmin} – ${C.robust('v8_center').Fmax}); uneven or clustered layouts not tested.`, 'FaRandom'],
       ['Missing paper details', 'Some settings (packet size, sensor signal) had to be assumed and documented.', 'FaBook'],
       ['PEGASIS keeps a longer LND', `${peg.L} vs ${v8m.L}: v8 is designed for the first death, not the last.`, 'FaStream']];
-    L.forEach(([h, b, ic], i) => card(s, 0.6 + (i % 2) * 6.15, 1.45 + Math.floor(i / 2) * 1.85, 5.95, 1.65, { head: h, body: b, icon: ic, color: i === 3 ? RED : GREY, size: 12.5, headSize: 15 }));
+    L.forEach(([h, b, ic], i) => card(s, 0.6 + (i % 2) * 6.15, 1.45 + Math.floor(i / 2) * 1.85, 5.95, 1.65, { head: h, body: b, icon: ic, color: GREY, size: 12.5, headSize: 15 }));
   }
   {
     const s = base(NAVY);
@@ -864,7 +795,7 @@ async function build() {
       'Flaws found and fixed in three hybrids: all of them had broken LEACH\'s rotation.',
       'v8 built step by step: single-pass election, cluster reuse, CH protection, direct-to-BS and energy gate — the main protocol.',
       'v8-Chain adds an energy-aware relay: same as v8 at the centre, +16 % when the BS is far.',
-      `Hybrid cryptography (AES + public key once) costs ${Math.round((1 - C.get('sec_v8_center_s6_once_rsa').F / v8m.F) * 100)} % of lifetime — v8 still beats LEACH without security; full RSA breaks the network.`], 0.8, 3.6, 11.7, 3.4, 16, 'FFFFFF');
+      `Stable on 8 random topologies (v8 FND ${C.robust('v8_center').Fmin} – ${C.robust('v8_center').Fmax}) and better than every other protocol with the BS far away.`], 0.8, 3.6, 11.7, 3.4, 16, 'FFFFFF');
   }
   for (const part of [[0, 9], [9, C.REFS.length]]) {
     const s = base(); title(s, 'References' + (part[0] ? ' (continued)' : ''));

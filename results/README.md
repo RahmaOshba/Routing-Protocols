@@ -125,14 +125,21 @@ Folders: `4_PROPOSED/extra/security/`.
 ## Security as planned in the thesis proposal — LEACH, PEGASIS and v8 / v8-Chain
 
 Codes: `leach_EDITED.cc`, `pegasis_EDITED.cc`, `v8_chain_center.cc`, `v8_chain_farBS.cc` with
-`-DSEC_BITS -DSEC_NJ_PER_BIT -DSEC_SETUP_MJ -DSEC_AUTH_MJ -DSEC_PK_TX_MJ -DSEC_PK_RX_MJ -DSEC_PK_BS_MJ` (all 0 by default).
+`-DSEC_BITS -DSEC_NJ_PER_BIT -DSEC_SETUP_MJ -DSEC_AUTH_MJ -DSEC_PK_TX_MJ -DSEC_PK_RX_MJ -DSEC_PK_BS_MJ -DSEC_KEYDIST` (all 0 by default).
 Proposal: symmetric keys inside the cluster, public-key cryptography only between the CH and the sink,
 the sink authenticates the CHs and gives them credentials; compare with no security and with full RSA.
 
-Energy of the public-key operations (Wander et al., PerCom 2005, ATmega128): RSA-1024 public-key op 11.9 mJ,
-private-key op 304 mJ, RSA key transport on the node side 15.4 mJ, ECDH-160 22.3 mJ. AES 5 nJ/bit (assumed),
-IEEE 802.15.4 security header + MIC-64 = 104 bits. Full RSA: a 2000-bit reading = 3 RSA-1024 blocks = 3072 bits,
-35.7 mJ to encrypt, 912 mJ to decrypt (more than the 0.5 J battery). ECC per packet (ECIES) ≈ one ECDH = 22.3 mJ.
+Proposed ECC + AES scheme (standard algorithms only): ECDH once per node with the sink (X25519 RFC 7748, or P-256
+NIST SP 800-56A / SP 800-186) → HKDF (RFC 5869) → per-node AES-128 key; every frame AES-128-CCM* with MIC-64 and frame
+counter (IEEE 802.15.4-2020, NIST SP 800-38C); a new CH authenticates with AES-CMAC (SP 800-38B); the sink sends each node
+the new cluster key with AES Key Wrap (SP 800-38F) = one extra control frame per node per set-up (`-DSEC_KEYDIST=1`).
+
+Energy (ATmega128, 8 MHz): ECDH secp160r1 22.3 mJ, ECDSA-160 sign 22.82 mJ, RSA-1024 public op 11.9 mJ, private op 304 mJ,
+RSA key transport node side 15.4 mJ (Wander et al., PerCom 2005). X25519 ≈ 48 mJ (13.9 M cycles, Düll et al. 2015, at
+≈ 27.5 mW); P-256 ≈ 90 mJ (extrapolated from the P-224 timing of Gura et al., CHES 2004); RSA-3072 key transport
+on the node ≈ 139 mJ (RSA-1024 15.4 mJ × 9, public-key cost grows with the square of the key size). AES-128 5 nJ/bit = hardware
+AES of the 802.15.4 radio (assumed); 50 nJ/bit as a software-AES sensitivity case. Header + MIC-64 = 104 bits.
+Full RSA: a 2000-bit reading = 3 RSA-1024 blocks = 3072 bits, 35.7 mJ to encrypt, 912 mJ to decrypt. ECIES ≈ 22.3 mJ.
 The v8 column uses the v8-Chain code: at the centre it is identical to v8 unless the packets to the sink carry a
 public-key cost — then the energy-aware relay (and the direct-to-BS rule) count that cost and CHs relay to save it.
 Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
@@ -142,11 +149,18 @@ Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
 | Scenario | LEACH | PEGASIS | v8 |
 |---|---:|---:|---:|
 | No security | 1383 (99.4%) | 1324 (99.4%) | 2501 (99.6%) |
-| Symmetric only (AES + MIC, pre-shared keys) | 1037 (99.1%) | 1196 (99.4%) | 2096 (99.7%) |
-| Hybrid, public key once (RSA-1024 at deployment) + AES | 1019 (99.2%) | 1158 (99.3%) | 2061 (99.6%) |
-| Hybrid, public key once (ECC-160 at deployment) + AES | 1017 (99.1%) | 1141 (99.3%) | 2001 (99.7%) |
-| Hybrid, RSA for every new CH + AES | 395 (99.1%) | 874 (97.7%) | 1336 (96.2%) |
-| Hybrid, ECC for every new CH + AES | 302 (98.1%) | 774 (97.7%) | 1121 (95.2%) |
+| AES-128-CCM* + MIC only (pre-loaded keys) | 1037 (99.1%) | 1196 (99.4%) | 2096 (99.7%) |
+| **ECC + AES scheme: X25519 once + AES-128-CCM* + key distribution (recommended)** | 932 (99.0%) | 1081 (99.4%) | 1856 (99.7%) |
+| ECC + AES scheme: P-256 once + AES-128-CCM* + key distribution | 845 (98.9%) | 981 (99.2%) | 1686 (99.7%) |
+| Same scheme with RSA-3072 key transport (128-bit, ≈ 139 mJ once) | 728 (98.8%) | 863 (99.3%) | 1491 (99.6%) |
+| ECC + AES scheme: secp160r1 once (80-bit) + AES-128-CCM* + key distribution | 971 (99.3%) | 1141 (99.3%) | 1981 (99.7%) |
+| Same scheme with RSA-1024 key transport (80-bit, 15.4 mJ once) | 990 (99.4%) | 1158 (99.3%) | 1996 (99.7%) |
+| ECC + AES scheme + ECDSA signature by every new CH | 281 (98.9%) | 760 (98.0%) | 991 (98.9%) |
+| ECC + AES scheme, software AES (50 nJ/bit, sensitivity) | 557 (98.7%) | 785 (99.2%) | 1126 (99.5%) |
+| ECC-160 once + AES (no key distribution) | 1017 (99.1%) | 1141 (99.3%) | 2001 (99.7%) |
+| RSA-1024 once + AES | 1019 (99.2%) | 1158 (99.3%) | 2061 (99.6%) |
+| ECC for every new CH + AES | 302 (98.1%) | 774 (97.7%) | 1121 (95.2%) |
+| RSA for every new CH + AES | 395 (99.1%) | 874 (97.7%) | 1336 (96.2%) |
 | AES in the cluster + ECC (ECIES) on every packet to the sink | 284 (97.0%) | 774 (97.7%) | 736 (96.3%) |
 | AES in the cluster + RSA on every packet to the sink | 201 (95.3%) | 674 (94.5%) | 371 (96.2%) |
 | Full ECC (every packet) | 1 (23.8%) | 11 (83.3%) | 7 (13.3%) |
@@ -157,11 +171,18 @@ Folders: `4_PROPOSED/extra/security_proposal/` (summary in `summary.csv`).
 | Scenario | LEACH | PEGASIS | v8 |
 |---|---:|---:|---:|
 | No security | 988 (99.4%) | 1374 (99.1%) | 1671 (99.4%) |
-| Symmetric only (AES + MIC, pre-shared keys) | 821 (98.8%) | 1237 (99.1%) | 1356 (99.5%) |
-| Hybrid, public key once (RSA-1024 at deployment) + AES | 798 (99.1%) | 1199 (99.0%) | 1331 (99.3%) |
-| Hybrid, public key once (ECC-160 at deployment) + AES | 786 (99.2%) | 1182 (99.1%) | 1336 (99.4%) |
-| Hybrid, RSA for every new CH + AES | 351 (98.8%) | 894 (97.3%) | 956 (96.5%) |
-| Hybrid, ECC for every new CH + AES | 281 (98.8%) | 796 (96.8%) | 866 (95.7%) |
+| AES-128-CCM* + MIC only (pre-loaded keys) | 821 (98.8%) | 1237 (99.1%) | 1356 (99.5%) |
+| **ECC + AES scheme: X25519 once + AES-128-CCM* + key distribution (recommended)** | 720 (99.0%) | 1118 (98.9%) | 1231 (99.4%) |
+| ECC + AES scheme: P-256 once + AES-128-CCM* + key distribution | 648 (98.9%) | 1014 (98.8%) | 1096 (99.2%) |
+| Same scheme with RSA-3072 key transport (128-bit, ≈ 139 mJ once) | 572 (99.0%) | 893 (98.9%) | 1016 (99.5%) |
+| ECC + AES scheme: secp160r1 once (80-bit) + AES-128-CCM* + key distribution | 764 (99.2%) | 1182 (99.1%) | 1336 (99.5%) |
+| Same scheme with RSA-1024 key transport (80-bit, 15.4 mJ once) | 765 (99.0%) | 1199 (99.0%) | 1336 (99.6%) |
+| ECC + AES scheme + ECDSA signature by every new CH | 262 (99.3%) | 774 (96.5%) | 781 (97.0%) |
+| ECC + AES scheme, software AES (50 nJ/bit, sensitivity) | 504 (98.4%) | 804 (98.6%) | 756 (99.2%) |
+| ECC-160 once + AES (no key distribution) | 786 (99.2%) | 1182 (99.1%) | 1336 (99.4%) |
+| RSA-1024 once + AES | 798 (99.1%) | 1199 (99.0%) | 1331 (99.3%) |
+| ECC for every new CH + AES | 281 (98.8%) | 796 (96.8%) | 866 (95.7%) |
+| RSA for every new CH + AES | 351 (98.8%) | 894 (97.3%) | 956 (96.5%) |
 | AES in the cluster + ECC (ECIES) on every packet to the sink | 264 (95.8%) | 796 (96.8%) | 716 (96.0%) |
 | AES in the cluster + RSA on every packet to the sink | 181 (94.2%) | 674 (95.9%) | 336 (95.3%) |
 | Full ECC (every packet) | 1 (21.9%) | 11 (83.1%) | 6 (14.1%) |

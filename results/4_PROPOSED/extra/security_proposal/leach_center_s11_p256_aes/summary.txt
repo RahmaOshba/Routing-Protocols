@@ -1,0 +1,18 @@
+             FINAL RESULTS
+========================================
+FND = 845 rounds
+HND = 986 rounds
+LND = 1118 rounds
+Initial Network Energy = 50.000000 J
+Total Energy Used      = 41.000000 J
+Final Residual Energy  = 9.000000 J
+Generated Packets      = 97797
+Delivered Packets      = 96690
+Overall PDR            = 0.988681
+
+CSV outputs:
+  leach_EDITED-results.csv
+  leach_EDITED-node-energy.csv
+  leach_EDITED-node-lifetime.csv
+  leach_EDITED-clustering.xml
+========================================

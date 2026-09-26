@@ -19,7 +19,6 @@ let fig = 0;
 const fg = (file, w, cap) => img(file, w, `Figure ${++fig} — ${cap}`);
 const eqn = (file, w) => img(file, w);
 const SH = f => path.join(C.ROOT, 'figures', 'ns3_screens', f);
-const SG = (p, bs, k) => g(`sec_${p}_${bs}_${k}`);
 
 function hybrid(n, k, idea, probs, fixes) {
   const o = g(k + '_ORIGINAL'), e = g(k + '_EDITED'), m = g(k + '_IMPROVED');
@@ -36,7 +35,7 @@ const body = [
   ...titlePage('State-of-the-Art Report', 'Energy-efficient clustering in WSNs — what we did, what we found, and the proposed protocol v8 (+ v8-Chain for a far base station)',
     ['Eng. Rahma Khaled Oshba', 'Supervisors: Dr. Hesham ElZouka · Dr. Amani Saad · Dr. Khaled Saada', 'All numbers come from the repository results/ folder (ns-3.41).'],
     ['1. What we did', '2. Setup and energy model', '3. Classic protocols', '4. Hybrid protocols', '5. Recent work', '6. Proposed protocol (v1 → v8, v8-Chain)',
-      '7. Final comparison — BS at the centre', '8. Final comparison — BS far away', '9. Security — the hybrid scheme of the proposal', '10. Limitations', '11. Conclusion', 'References']),
+      '7. Final comparison — BS at the centre', '8. Final comparison — BS far away', '9. Limitations', '10. Conclusion', 'References']),
 
   H1('1. What we did'),
   N('Reproduced 6 published protocols in ns-3.41: LEACH [1], HEED [3], PEGASIS [4], SH-LEACH [5], H-LEACH [6], EECH-HEED [7].'),
@@ -44,7 +43,7 @@ const body = [
   N('EDITED: ran all of them in one unified environment for a fair comparison.'),
   N('IMPROVED: found and fixed one design flaw in each hybrid.'),
   N('PROPOSED: built a new protocol one change at a time, v1 → v8, plus v8-Chain for a far base station.'),
-  N('Tested every protocol with the BS at the centre and far away, and tested the hybrid cryptography of the proposal (AES + RSA / ECC) against no security and full RSA.'),
+  N('Tested every protocol with the BS at the centre and far away.'),
   callout('Main result', [`v8 (main protocol, BS at the centre): FND ${v8.F} · HND ${v8.H} · LND ${v8.L} · PDR ${pct(v8.P)} — ${C.gain(v8.F, best.F).toFixed(0)} % later first death than the best fixed hybrid (SH-LEACH+, ${best.F}) and ${C.gain(v8.F, leach.F).toFixed(0)} % later than LEACH (${leach.F}).`,
     `v8-Chain (= v8 + energy-aware relay, for a far BS): FND ${v8cf.F} with the BS at (50, −100) — ${C.gain(v8cf.F, v8f.F).toFixed(0)} % over v8 and ${C.gain(v8cf.F, FF('eechheed_IMPROVED')).toFixed(0)} % over the best other protocol.`,
     `Stable over 8 random topologies (v8 FND ${r8.Fmin} – ${r8.Fmax}).`]),
@@ -184,54 +183,17 @@ const body = [
   B(`With a far BS v8 alone (${v8f.F}) is only slightly better than EECH-HEED+ (${FF('eechheed_IMPROVED')}).`),
   B(`v8-Chain reaches ${v8cf.F}: +${C.gain(v8cf.F, v8f.F).toFixed(0)} % over v8, +${C.gain(v8cf.F, FF('eechheed_IMPROVED')).toFixed(0)} % over EECH-HEED+, +${C.gain(v8cf.F, FF('pegasis_EDITED')).toFixed(0)} % over PEGASIS and +${C.gain(v8cf.F, FF('leach_EDITED')).toFixed(0)} % over LEACH.`),
 
-  H1('9. Security — the hybrid scheme of the proposal'),
-  P('The thesis proposal: symmetric cryptography inside the cluster, public-key cryptography only between the CH and the sink, the sink authenticates the CHs and gives them credentials; compare with no security and with full RSA. We added these costs to LEACH, PEGASIS and v8 / v8-Chain with compiler flags (all 0 by default, so every other result is unchanged).'),
-  ...fg('s4_sec_scheme.png', 6.0, 'The hybrid scheme: AES + MIC in the cluster, public key only for CH authentication with the sink.'),
-  ...eqn('eq_security.png', 5.0),
-  H2('9.1 Why not RSA for everything'),
-  ...fg('s5_sec_ops.png', 6.3, 'Energy of one operation on an 8-bit sensor MCU (ATmega128) [16], log scale.'),
-  B('RSA-decrypting one 2000-bit reading (3 RSA-1024 blocks) costs 912 mJ — more than the whole 500 mJ battery.'),
-  B('AES on the same reading costs about 10 µJ (≈ 90 000 times less).'),
-  B('With the heavy private-key work done by the mains-powered sink, the node side of RSA key transport costs 15.4 mJ; ECDH-160 costs 22.3 mJ.'),
-  H2('9.2 Scenarios'),
-  table(['Scenario', 'Every message', 'Public key', 'What a node pays'], [
-    ['No security', '—', '—', 'nothing'],
-    ['AES + MIC only', 'AES + MIC', '— (keys pre-loaded)', '+104 bits, 5 nJ/bit'],
-    ['Hybrid — once per node', 'AES + MIC', 'once at deployment', '+15.4 mJ (RSA) / 22.3 mJ (ECC) once'],
-    ['Hybrid — per new CH', 'AES + MIC', 'every time a node becomes CH', '+15.4 / 22.3 mJ per election'],
-    ['ECC / RSA on CH → sink', 'AES + MIC', 'every packet to the sink', '+22.3 mJ (ECC) / 35.7 mJ (RSA) per packet'],
-    ['Full ECC', 'ECIES', 'every packet', '22.3 mJ send + 22.3 mJ receive'],
-    ['Full RSA', 'RSA-1024 (3 blocks)', 'every packet', '35.7 mJ send + 912 mJ receive']], [2300, 1900, 2200, TEXT_W - 6400]),
-  H2('9.3 Results'),
-  table(['Scenario', 'LEACH', 'PEGASIS', 'v8', 'LEACH far', 'PEGASIS far', 'v8-Chain far'],
-    [['No security', 's0_none'], ['AES + MIC only', 's1_aes_only'], ['Hybrid RSA once', 's6_once_rsa'], ['Hybrid ECC once', 's7_once_ecc'],
-     ['Hybrid RSA per CH', 's2_hybrid_rsa'], ['Hybrid ECC per CH', 's3_hybrid_ecc'], ['ECC on CH → sink', 's8_bs_ecc'], ['RSA on CH → sink', 's9_bs_rsa'], ['Full ECC', 's4_full_ecc'], ['Full RSA', 's5_full_rsa']]
-      .map(([n, k]) => [n, ...[['leach', 'center'], ['pegasis', 'center'], ['v8', 'center'], ['leach', 'far'], ['pegasis', 'far'], ['v8chain', 'far']].map(([p, bs]) => { const x = SG(p, bs, k); return `${x.F} (${pct(x.P)})`; })]),
-    [1900, 1180, 1180, 1180, 1180, 1190, TEXT_W - 7810], { center: j => j > 0, hl: i => i === 2 || i === 3 }),
-  P('FND in rounds, PDR in brackets. The v8 column uses the v8-Chain code: at the centre it equals v8 unless the packets to the sink carry a public-key cost; then the energy-aware relay counts that cost and CHs relay to save it.', { spacing: { after: 120 } }),
-  ...fg('s2_sec_center.png', 6.5, 'FND with each security scheme, BS at the centre.'),
-  ...fg('s2_sec_far.png', 6.5, 'FND with each security scheme, BS far away.'),
-  ...fg('s3_sec_pdr.png', 6.5, 'PDR with each security scheme, BS at the centre.'),
-  H2('9.4 What we learn'),
-  B('Full RSA / full ECC is impossible: FND 1 – 203 rounds and PDR 3 – 24 %. A CH cannot pay 912 mJ to decrypt one packet — the proposal was right that RSA is too heavy for the nodes.'),
-  B(`Use the public key once, not at every CH election: authenticating every new CH with RSA/ECC cuts FND by ${Math.round((1 - SG('v8', 'center', 's2_hybrid_rsa').F / v8.F) * 100)} – ${Math.round((1 - SG('leach', 'center', 's2_hybrid_rsa').F / leach.F) * 100)} %; once per node (then symmetric credentials from the sink) costs v8 only ${Math.round((1 - SG('v8', 'center', 's6_once_rsa').F / v8.F) * 100)} %.`),
-  B(`Lighter than full RSA — ECC only on the packets to the sink (members keep AES): the sender only encrypts and the sink decrypts, so the network works again (PDR ≈ 96 %), but 22.3 mJ on every packet to the sink still cuts FND by about 70 % (v8 ${SG('v8', 'center', 's8_bs_ecc').F}). Protocols that send fewer packets to the sink suffer less: PEGASIS (one leader) ${SG('pegasis', 'center', 's8_bs_ecc').F}; v8 lets its CHs relay to a CH nearer the sink to save ECC operations; LEACH ${SG('leach', 'center', 's8_bs_ecc').F}. ECC is best used once per node for the key agreement.`),
-  B('RSA vs ECC on the node: with the sink doing the private-key work, RSA is slightly cheaper for the node (15.4 vs 22.3 mJ); ECC gives the same security with much smaller keys (160 vs 1024 bits).'),
-  B(`v8 protects best: it re-elects CHs less often (setup every 5 rounds), so it pays fewer authentications. With the recommended hybrid: v8 ${SG('v8', 'center', 's6_once_rsa').F} vs PEGASIS ${SG('pegasis', 'center', 's6_once_rsa').F} vs LEACH ${SG('leach', 'center', 's6_once_rsa').F} — still +${C.gain(SG('v8', 'center', 's6_once_rsa').F, leach.F).toFixed(0)} % over LEACH without any security. Far BS: v8-Chain ${SG('v8chain', 'far', 's6_once_rsa').F} vs PEGASIS ${SG('pegasis', 'far', 's6_once_rsa').F} and LEACH ${SG('leach', 'far', 's6_once_rsa').F}.`),
-  callout('Recommended design', ['AES + 8-byte MIC on every message; public key (RSA or ECC) once per node; the sink authenticates new CHs and gives them credentials with the symmetric key.']),
-
-  H1('10. Limitations'),
+  H1('9. Limitations'),
   B('Analytical radio model for the long runs (no collisions or retransmissions); packet-level only in the small demo.'),
   B('100 static nodes with equal energy in one 100 × 100 m field; two BS positions only.'),
-  B('Security is modelled as energy cost only: public-key energy from published MCU measurements [16], AES energy assumed; attacks are not simulated.'),
+  B(`Uniform random deployment only: 8 random topologies tested (v8 FND ${r8.Fmin} – ${r8.Fmax}); uneven or clustered layouts not tested.`),
   B('Missing paper details (packet size, sensor signal) had to be assumed.'),
 
-  H1('11. Conclusion'),
+  H1('10. Conclusion'),
   B('The reproduced protocols match their papers; in a fair environment LEACH has the best first death of the classic protocols.'),
   B('The three hybrids fail because they break LEACH\'s rotation; one-line fixes restore them.'),
   B(`v8 is the main protocol: the latest first node death of all with the BS at the centre (FND ${v8.F}, PDR ${pct(v8.P)}).`),
   B(`v8-Chain is v8 plus an energy-aware relay, used when the BS is far: FND ${v8cf.F}, the best of all protocols in that case.`),
-  B(`The hybrid cryptography of the proposal (AES + public key once) costs v8 ${Math.round((1 - SG('v8', 'center', 's6_once_rsa').F / v8.F) * 100)} % of lifetime; full RSA breaks every protocol.`),
 
   H1('References'),
   ...C.REFS.map((r, i) => P(`[${i + 1}]  ${r}`, { spacing: { after: 100 } })),

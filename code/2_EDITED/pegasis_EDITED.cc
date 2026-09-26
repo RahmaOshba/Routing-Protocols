@@ -105,6 +105,14 @@ static constexpr double E0 = 0.5;      // J/node
 #ifndef SEC_PK_BS_MJ
 #define SEC_PK_BS_MJ 0.0
 #endif
+//   SEC_KEYDIST     1 = at every cluster set-up the sink sends each node the new
+//                   cluster key, wrapped with the node's own AES key (one extra
+//                   control frame received per node; the sink pays its own TX)
+#ifndef SEC_KEYDIST
+#define SEC_KEYDIST 0
+#endif
+// (PEGASIS has no clusters: chain neighbours keep the pairwise keys agreed at
+//  deployment, so SEC_KEYDIST has no effect in this protocol.)
 static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
 static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent

@@ -157,6 +157,12 @@ static constexpr uint32_t SETUP_INTERVAL = 5; // requested variant: interval=5, 
 #ifndef SEC_PK_BS_MJ
 #define SEC_PK_BS_MJ 0.0
 #endif
+//   SEC_KEYDIST     1 = at every cluster set-up the sink sends each node the new
+//                   cluster key, wrapped with the node's own AES key (one extra
+//                   control frame received per node; the sink pays its own TX)
+#ifndef SEC_KEYDIST
+#define SEC_KEYDIST 0
+#endif
 static constexpr double E_SEC = SEC_NJ_PER_BIT * 1e-9;   // J/bit
 static constexpr double E_AUTH = SEC_AUTH_MJ * 1e-3;     // J per CH election
 static constexpr double E_PK_TX = SEC_PK_TX_MJ * 1e-3;   // J per data packet sent
@@ -538,6 +544,8 @@ static RoundResult SimulateRound(vector<SensorNode>& nodes, uint32_t round, bool
     // ---- Control overhead ONLY on setup rounds (the key saving) ----
     if (isSetupRound) {
         for (auto& n : nodes) if (n.alive && n.finalCH) ChargeAuth(n);   // hybrid security (0 by default)
+        if (SEC_KEYDIST)   // every node receives the new cluster key from the sink (0 by default)
+            for (auto& n : nodes) if (n.alive) n.energy = max(0.0, n.energy - RxEnergy(CONTROL_BITS));
         for (uint32_t c = 0; c < N; ++c) {
             if (!nodes[c].alive || !nodes[c].finalCH) continue;
             const double tx = TxEnergy(CONTROL_BITS, ADV_RANGE);   // unified env: every node hears it and may join
