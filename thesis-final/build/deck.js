@@ -615,6 +615,11 @@ async function build() {
   // ================= 06 PROPOSED =================
   section('06', 'Proposed protocol', 'v1 → v8-Chain — one change per version');
   {
+    const s = base();
+    imgAbs(s, path.join(FIG, 'v8_concept.png'), 0.4, 0.3, 12.5, 6.85);
+    note(s, 'Concept of the proposed protocol: sensors form clusters, the node with the most energy and neighbours (in its LEACH turn) leads, members send short hops, the CH fuses and sends one packet — directly, or through a nearer CH only if that is cheaper (v8-Chain).');
+  }
+  {
     const s = base(); title(s, 'How the protocol was built', 'Each version changes one thing, so its effect can be measured alone');
     const v = [['v1', 'HEED election', F('v1_heed_election_leach_join')], ['v2', 'fairness', F('v2_fairness_penalty')], ['v3', 'single pass + reuse', F('v3_single_pass_reuse_int5')],
       ['v4', 'reuse 15', F('v4_reuse_int15')], ['v5', 'backup CH', F('v5b_energy_aware_repair')], ['v6/v7', 'CH chain', F('v6_chain_center')], ['v8', 'I1 – I5', F('v8_center')], ['v8-Chain', 'smart relay', F('v8_chain_center')]];

@@ -152,6 +152,7 @@ const body = [
   [2400, 2700, 2100, TEXT_W - 7200]),
 
   H1('6. Proposed protocol — v1 → v8, and v8-Chain'),
+  ...fg('v8_concept.png', 6.5, 'Concept of the proposed protocol: clusters, CH election, fusion, CH protection and delivery to the BS.'),
   P([b('v8 is the main protocol. '), 'v8-Chain = v8 + an energy-aware relay between CHs; it gives the same result as v8 when the BS is at the centre and is used only when the BS is far away.']),
   table(['Version', 'What changed', 'FND', 'HND', 'LND', 'PDR', 'FND change'], C.EVOLUTION.map(([n, r, d], i) => { const x = g(r);
     return [n, d, x.F, x.H, x.L, pct(x.P), i ? chg(x.F, g(C.EVOLUTION[i - 1][1]).F) : '—']; }), [1000, 3300, 900, 900, 900, 1200, 1438], { center: j => j > 1, hl: i => i === 10 || i === 11 }),
